@@ -19,6 +19,7 @@ export default async function ModuleFormulasPage({ params }: { params: { id: str
 
     return {
       id: formula.id,
+      key: formula.key,
       label: formula.label,
       unit: formula.unit,
       note: formula.note,

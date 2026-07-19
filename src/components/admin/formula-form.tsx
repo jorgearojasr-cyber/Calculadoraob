@@ -8,6 +8,7 @@ import type { FormulaInput } from "@/app/admin/modulos/[id]/formulas/actions";
 
 type VariableOption = { key: string; label: string; valueType: "NUMBER" | "TEXT" };
 type LossFactorOption = { key: string; label: string; percentage: number };
+type FormulaOption = { key: string; label: string };
 
 const OPS: BuilderOp[] = ["+", "-", "*", "/"];
 
@@ -17,6 +18,7 @@ function emptyTerm(): BuilderTerm {
 
 export function FormulaForm({
   variables,
+  formulas,
   lossFactors,
   initial,
   decompileFailed,
@@ -25,6 +27,7 @@ export function FormulaForm({
   submitLabel,
 }: {
   variables: VariableOption[];
+  formulas: FormulaOption[];
   lossFactors: LossFactorOption[];
   initial?: {
     label: string;
@@ -148,15 +151,16 @@ export function FormulaForm({
               )}
               <select
                 value={term.kind}
-                onChange={(e) =>
-                  updateTerm(
-                    i,
-                    e.target.value === "variable" ? { kind: "variable", variableKey: "" } : { kind: "constant", value: 0 }
-                  )
-                }
+                onChange={(e) => {
+                  const kind = e.target.value;
+                  if (kind === "variable") updateTerm(i, { kind: "variable", variableKey: "" });
+                  else if (kind === "formula") updateTerm(i, { kind: "formula", formulaKey: "" });
+                  else updateTerm(i, { kind: "constant", value: 0 });
+                }}
                 className="rounded-md px-2 py-1.5 text-sm bg-white border border-border outline-none"
               >
                 <option value="variable">Variable</option>
+                <option value="formula">Resultado de otra fórmula</option>
                 <option value="constant">Número fijo</option>
               </select>
               {term.kind === "variable" ? (
@@ -169,6 +173,19 @@ export function FormulaForm({
                   {variables.map((v) => (
                     <option key={v.key} value={v.key}>
                       {v.label}
+                    </option>
+                  ))}
+                </select>
+              ) : term.kind === "formula" ? (
+                <select
+                  value={term.formulaKey}
+                  onChange={(e) => updateTerm(i, { formulaKey: e.target.value })}
+                  className="rounded-md px-2 py-1.5 text-sm bg-white border border-border outline-none min-w-[140px]"
+                >
+                  <option value="">Elige fórmula</option>
+                  {formulas.map((f) => (
+                    <option key={f.key} value={f.key}>
+                      {f.label}
                     </option>
                   ))}
                 </select>

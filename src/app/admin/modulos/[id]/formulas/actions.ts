@@ -39,12 +39,22 @@ async function buildExpressionAndCondition(moduleId: string, input: FormulaInput
   if (terms.some((t) => t.kind === "variable" && !t.variableKey)) {
     throw new Error("Elige una variable para cada término de la fórmula.");
   }
+  if (terms.some((t) => t.kind === "formula" && !t.formulaKey)) {
+    throw new Error("Elige una fórmula para cada término que referencia otro resultado.");
+  }
   if (input.ops.length !== terms.length - 1) {
     throw new Error("La fórmula tiene un operador faltante entre términos.");
   }
 
-  const variables = await prisma.variable.findMany({ where: { moduleId } });
+  const [variables, formulas] = await Promise.all([
+    prisma.variable.findMany({ where: { moduleId } }),
+    prisma.formula.findMany({ where: { moduleId }, select: { key: true } }),
+  ]);
   const variablesByKey = Object.fromEntries(variables.map((v) => [v.key, v]));
+  const formulaKeys = new Set(formulas.map((f) => f.key));
+  if (terms.some((t) => t.kind === "formula" && !formulaKeys.has(t.formulaKey))) {
+    throw new Error("La fórmula referenciada no existe en este módulo.");
+  }
 
   const baseExpression = compileExpression(terms, input.ops);
   const expression = applyModifiers(baseExpression, input.lossFactorKey, input.rounding);

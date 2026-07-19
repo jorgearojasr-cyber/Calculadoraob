@@ -92,7 +92,7 @@ aplican si `metodo_hormigon == "manual"`).
 | Número literal | `7` o `0.5` | Número JSON crudo |
 | Texto literal | `{"str": "manual"}` | String literal, solo útil en comparaciones |
 | Variable | `{"var": "largo"}` | Valor resuelto de una `variables.key` del módulo |
-| Referencia a fórmula | `{"ref": "volumen_bruto"}` | Resultado ya calculado de otra `formulas.key` del mismo módulo |
+| Referencia a fórmula | `{"ref": "volumen_bruto"}` | Resultado ya calculado de otra `formulas.key` del mismo módulo. El builder visual del admin lo expone como término "Resultado de otra fórmula" (tab Fórmulas) — ya no requiere seed/script. |
 | Aritmética | `{"op": "+" \| "-" \| "*" \| "/", "args": [nodo, nodo, ...]}` | 2 o más argumentos; `-` y `/` se aplican de izquierda a derecha |
 | Redondeo | `{"op": "ceil" \| "floor" \| "round", "value": nodo}` | Redondeo simple |
 | Redondeo a múltiplo | `{"op": "ceilTo", "value": nodo, "step": 0.5}` | Redondea hacia arriba al múltiplo de `step` más cercano |

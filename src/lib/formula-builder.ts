@@ -19,11 +19,12 @@ import type { DslNode } from "./formula-engine";
 
 export type BuilderTerm =
   | { kind: "variable"; variableKey: string }
+  | { kind: "formula"; formulaKey: string }
   | { kind: "constant"; value: number };
 
 export type BuilderOp = "+" | "-" | "*" | "/";
 
-export type RoundingMode = "none" | "ceil" | "ceilTo0_5";
+export type RoundingMode = "none" | "ceil" | "ceilTo0_5" | "ceilTo0_1";
 
 export type BuilderCondition = { variableKey: string; value: string } | null;
 
@@ -33,16 +34,22 @@ export const ROUNDING_LABELS: Record<RoundingMode, string> = {
   none: "Sin redondeo",
   ceil: "Hacia arriba (entero)",
   ceilTo0_5: "Hacia arriba al 0.5 más cercano",
+  ceilTo0_1: "Hacia arriba al 0.1 más cercano",
 };
 
 function termToNode(term: BuilderTerm): DslNode {
-  return term.kind === "variable" ? { var: term.variableKey } : term.value;
+  if (term.kind === "variable") return { var: term.variableKey };
+  if (term.kind === "formula") return { ref: term.formulaKey };
+  return term.value;
 }
 
 function nodeToTerm(node: DslNode): BuilderTerm | null {
   if (typeof node === "number") return { kind: "constant", value: node };
   if (typeof node === "object" && node !== null && "var" in node) {
     return { kind: "variable", variableKey: node.var };
+  }
+  if (typeof node === "object" && node !== null && "ref" in node) {
+    return { kind: "formula", formulaKey: node.ref };
   }
   return null;
 }
@@ -90,6 +97,7 @@ export function applyModifiers(
   if (lossFactorKey) node = { op: "lossFactor", key: lossFactorKey, value: node };
   if (rounding === "ceil") node = { op: "ceil", value: node };
   if (rounding === "ceilTo0_5") node = { op: "ceilTo", value: node, step: 0.5 };
+  if (rounding === "ceilTo0_1") node = { op: "ceilTo", value: node, step: 0.1 };
   return node;
 }
 
@@ -107,6 +115,9 @@ export function unwrapModifiers(node: DslNode): {
       current = current.value;
     } else if (current.op === "ceilTo" && current.step === 0.5) {
       rounding = "ceilTo0_5";
+      current = current.value;
+    } else if (current.op === "ceilTo" && current.step === 0.1) {
+      rounding = "ceilTo0_1";
       current = current.value;
     }
   }
@@ -147,12 +158,15 @@ export function decompileCondition(node: DslNode | null | undefined): BuilderCon
 export function describeExpression(
   terms: BuilderTerm[],
   ops: BuilderOp[],
-  variableLabels: Record<string, string>
+  variableLabels: Record<string, string>,
+  formulaLabels: Record<string, string> = {}
 ): string {
   const parts: string[] = [];
   terms.forEach((term, i) => {
     if (i > 0) parts.push(OP_SYMBOLS[ops[i - 1]]);
-    parts.push(term.kind === "variable" ? (variableLabels[term.variableKey] ?? term.variableKey) : String(term.value));
+    if (term.kind === "variable") parts.push(variableLabels[term.variableKey] ?? term.variableKey);
+    else if (term.kind === "formula") parts.push(formulaLabels[term.formulaKey] ?? term.formulaKey);
+    else parts.push(String(term.value));
   });
   return parts.join(" ");
 }

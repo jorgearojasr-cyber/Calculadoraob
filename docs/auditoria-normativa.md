@@ -89,6 +89,39 @@ ficha técnica específica — depende del producto/fabricante real que se use e
 Norma: `OBRA-CERAMICA-COBERTURA-PERDIDA`. Estos valores son típicos de mercado y
 dependen del fabricante; no se citan como norma.
 
+## Módulo Albañilería (muro de bloques/ladrillos) — estado actual
+
+| Contenido | Estado | Fuente |
+|---|---|---|
+| Unidades por m² y mortero por m² según tipo de unidad (ladrillo fiscal, bloque 15/20cm) | **No verificado** | Práctica de obra |
+| Dosificación de cemento (14 bolsas/m³ de mortero) y arena (factor 1.1) | **No verificado** | Práctica de obra |
+| Pérdida estándar de unidades (5%) | **No verificado** | Práctica de obra |
+
+Norma: `OBRA-ALBANILERIA-RENDIMIENTOS`.
+
+## Módulo Excavaciones — estado actual
+
+| Contenido | Estado | Fuente |
+|---|---|---|
+| Esponjamiento según tipo de terreno (25% tierra normal, 35% con arcilla o piedras) | **No verificado** | Práctica de obra |
+| Capacidad aproximada de camión tolva chico (6 m³) | **No verificado** | Práctica de obra / varía por proveedor |
+
+Norma: `OBRA-EXCAVACION-ESPONJAMIENTO`.
+
+## Módulo Fierros (enfierradura) — estado actual
+
+| Contenido | Estado | Fuente |
+|---|---|---|
+| Pesos teóricos de barra por diámetro (6/8/10/12mm) | **No verificado contra norma chilena específica** | Dato físico de fabricación, razonablemente universal |
+| Largo comercial de barra (6m) | **No verificado** | Práctica común |
+
+Norma: `OBRA-FIERROS-PESO-TEORICO`. Este módulo **no diseña** especificación
+estructural (no decide diámetro, cantidad ni traslapo) — solo convierte una
+especificación que el usuario ya tiene (de un plano o profesional) a cantidad
+de material. El disclaimer de este módulo incluye una frase explícita
+reforzando que la enfierradura es un elemento estructural y su especificación
+debe provenir siempre de un profesional habilitado.
+
 ## Cómo se implementó
 
 - **Schema** (`prisma/schema.prisma`): modelo `Norm` (`code`, `title`, `year`, `scope`,

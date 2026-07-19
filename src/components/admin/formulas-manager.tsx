@@ -19,6 +19,7 @@ type LossFactorOption = { id: string; key: string; label: string; percentage: nu
 
 type FormulaRow = {
   id: string;
+  key: string;
   label: string;
   unit: string;
   note: string | null;
@@ -52,6 +53,7 @@ export function FormulasManager({
 
   const variableLabels = Object.fromEntries(variables.map((v) => [v.key, v.label]));
   const lossFactorLabels = Object.fromEntries(lossFactors.map((f) => [f.key, f.label]));
+  const formulaLabels = Object.fromEntries(formulas.map((f) => [f.key, f.label]));
 
   const handleMove = (id: string, direction: "up" | "down") => {
     setMoveError(null);
@@ -182,6 +184,7 @@ export function FormulasManager({
           <div className="mb-6">
             <FormulaForm
               variables={variables}
+              formulas={formulas.map((f) => ({ key: f.key, label: f.label }))}
               lossFactors={lossFactors}
               submitLabel="Crear fórmula"
               onCancel={() => setMode("list")}
@@ -206,6 +209,7 @@ export function FormulasManager({
               <div key={formula.id}>
                 <FormulaForm
                   variables={variables}
+                  formulas={formulas.filter((f) => f.id !== formula.id).map((f) => ({ key: f.key, label: f.label }))}
                   lossFactors={lossFactors}
                   submitLabel="Guardar cambios"
                   decompileFailed={!formula.builder}
@@ -250,7 +254,7 @@ export function FormulasManager({
                   </div>
                   <p className="text-xs font-mono text-ink-muted">
                     {formula.builder
-                      ? describeExpression(formula.builder.terms, formula.builder.ops, variableLabels)
+                      ? describeExpression(formula.builder.terms, formula.builder.ops, variableLabels, formulaLabels)
                       : "(fórmula avanzada, no editable visualmente)"}
                     {formula.builder?.lossFactorKey && (
                       <> · pérdida: {lossFactorLabels[formula.builder.lossFactorKey] ?? formula.builder.lossFactorKey}</>
