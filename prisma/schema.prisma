@@ -1,0 +1,161 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Category {
+  id          String   @id @default(cuid())
+  slug        String   @unique
+  name        String
+  description String
+  icon        String
+  tag         String?
+  order       Int      @default(0)
+  modules     Module[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("categories")
+}
+
+model Module {
+  id          String   @id @default(cuid())
+  slug        String   @unique
+  name        String
+  description String
+  version     Int      @default(1)
+  published   Boolean  @default(false)
+  category    Category @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  categoryId  String
+
+  questions   Question[]
+  variables   Variable[]
+  formulas    Formula[]
+  lossFactors LossFactor[]
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([categoryId])
+  @@map("modules")
+}
+
+enum QuestionType {
+  NUMBER
+  SELECT
+  TEXT
+}
+
+model Question {
+  id       String       @id @default(cuid())
+  module   Module       @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  moduleId String
+  key      String
+  label    String
+  type     QuestionType
+  unit     String?
+  helpText String?
+  order    Int          @default(0)
+
+  options QuestionOption[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([moduleId, key])
+  @@index([moduleId])
+  @@map("questions")
+}
+
+model QuestionOption {
+  id         String   @id @default(cuid())
+  question   Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  questionId String
+  key        String
+  label      String
+  order      Int      @default(0)
+
+  @@unique([questionId, key])
+  @@map("question_options")
+}
+
+enum VariableValueType {
+  NUMBER
+  TEXT
+}
+
+// source: ver docs/formula-dsl.md
+model Variable {
+  id        String             @id @default(cuid())
+  module    Module             @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  moduleId  String
+  key       String
+  label     String             @default("")
+  valueType VariableValueType
+  source    Json
+  order     Int                @default(0)
+
+  @@unique([moduleId, key])
+  @@index([moduleId])
+  @@map("variables")
+}
+
+// Catálogo global de materiales, reutilizable entre módulos.
+model Material {
+  id   String @id @default(cuid())
+  key  String @unique
+  name String
+  unit String
+
+  formulas Formula[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("materials")
+}
+
+// expression / condition: ver docs/formula-dsl.md
+model Formula {
+  id         String    @id @default(cuid())
+  module     Module    @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  moduleId   String
+  key        String
+  label      String
+  unit       String
+  expression Json
+  condition  Json?
+  isResult   Boolean   @default(true)
+  note       String?
+  material   Material? @relation(fields: [materialId], references: [id])
+  materialId String?
+  order      Int       @default(0)
+
+  @@unique([moduleId, key])
+  @@index([moduleId])
+  @@map("formulas")
+}
+
+// condition: ver docs/formula-dsl.md
+model LossFactor {
+  id         String  @id @default(cuid())
+  module     Module  @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  moduleId   String
+  key        String
+  label      String
+  percentage Float
+  condition  Json?
+
+  @@unique([moduleId, key])
+  @@index([moduleId])
+  @@map("loss_factors")
+}
