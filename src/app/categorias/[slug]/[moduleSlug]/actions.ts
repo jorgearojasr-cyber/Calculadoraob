@@ -1,11 +1,28 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
-import { calculateModule, type Answers, type CalculationResult, type DslValue } from "@/lib/formula-engine";
+import {
+  calculateModule,
+  type Answers,
+  type CalculationResult,
+  type DslValue,
+  type InfoResult,
+} from "@/lib/formula-engine";
+
+export type NormSummary = {
+  id: string;
+  code: string;
+  title: string;
+  scope: string;
+  verificationStatus: "CITADO" | "PRACTICA_GENERAL_NO_VERIFICADA";
+  note: string | null;
+};
 
 export type CalculateModuleResult = {
   results: CalculationResult[];
+  infoResults: InfoResult[];
   variables: Record<string, DslValue>;
+  norms: NormSummary[];
 };
 
 export async function calculateModuleAction(
@@ -16,9 +33,9 @@ export async function calculateModuleAction(
     where: { id: moduleId },
     include: {
       questions: { include: { options: true } },
-      variables: true,
-      formulas: { include: { material: true } },
-      lossFactors: true,
+      variables: { include: { norm: true } },
+      formulas: { include: { material: true, norm: true } },
+      lossFactors: { include: { norm: true } },
     },
   });
 
@@ -52,10 +69,26 @@ export async function calculateModuleAction(
     cleanAnswers[question.key] = String(raw);
   }
 
-  return calculateModule({
+  const { results, infoResults, variables } = calculateModule({
     variables: mod.variables,
     formulas: mod.formulas,
     lossFactors: mod.lossFactors,
     answers: cleanAnswers,
   });
+
+  const normsById = new Map<string, NormSummary>();
+  for (const source of [...mod.variables, ...mod.formulas, ...mod.lossFactors]) {
+    if (source.norm) {
+      normsById.set(source.norm.id, {
+        id: source.norm.id,
+        code: source.norm.code,
+        title: source.norm.title,
+        scope: source.norm.scope,
+        verificationStatus: source.norm.verificationStatus,
+        note: source.norm.note,
+      });
+    }
+  }
+
+  return { results, infoResults, variables, norms: Array.from(normsById.values()) };
 }

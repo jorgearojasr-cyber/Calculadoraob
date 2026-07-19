@@ -24,6 +24,16 @@ export type VariableSource =
       questionKey: string;
       table: Record<string, DslValue>;
       default?: DslValue | null;
+    }
+  | {
+      // Lookup combinando dos preguntas de selección (ej: uso + método de
+      // colocación -> grado de hormigón con sufijo). La tabla se indexa con
+      // "claveOpcionPrimaria|claveOpcionSecundaria".
+      type: "LOOKUP2";
+      questionKey: string;
+      secondaryQuestionKey: string;
+      table: Record<string, DslValue>;
+      default?: DslValue | null;
     };
 
 export type Answers = Record<string, string | number>;

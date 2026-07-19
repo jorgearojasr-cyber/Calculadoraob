@@ -102,6 +102,11 @@ model Variable {
   label     String             @default("")
   valueType VariableValueType
   source    Json
+  // Si es true, el valor resuelto de esta variable se muestra en el resultado
+  // (ej: "Tipo de hormigón: G20"), no solo las cantidades de las fórmulas.
+  isResult  Boolean            @default(false)
+  norm      Norm?              @relation(fields: [normId], references: [id], onDelete: SetNull)
+  normId    String?
   order     Int                @default(0)
 
   @@unique([moduleId, key])
@@ -138,6 +143,8 @@ model Formula {
   note       String?
   material   Material? @relation(fields: [materialId], references: [id])
   materialId String?
+  norm       Norm?     @relation(fields: [normId], references: [id], onDelete: SetNull)
+  normId     String?
   order      Int       @default(0)
 
   @@unique([moduleId, key])
@@ -154,8 +161,39 @@ model LossFactor {
   label      String
   percentage Float
   condition  Json?
+  norm       Norm?   @relation(fields: [normId], references: [id], onDelete: SetNull)
+  normId     String?
 
   @@unique([moduleId, key])
   @@index([moduleId])
   @@map("loss_factors")
+}
+
+enum NormVerificationStatus {
+  // El valor está citado con una fuente normativa/técnica identificada.
+  CITADO
+  // Es práctica de obra habitual; no se ha verificado contra una norma o
+  // guía técnica específica todavía.
+  PRACTICA_GENERAL_NO_VERIFICADA
+}
+
+// Catálogo de normas/fuentes técnicas citadas por variables, fórmulas o
+// factores de pérdida. Ver docs/auditoria-normativa.md.
+model Norm {
+  id                 String                 @id @default(cuid())
+  code               String                 @unique
+  title              String
+  year               Int?
+  scope              String
+  verificationStatus NormVerificationStatus
+  note               String?
+
+  variables   Variable[]
+  formulas    Formula[]
+  lossFactors LossFactor[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("norms")
 }

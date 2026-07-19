@@ -31,7 +31,7 @@ export default async function ModuleFormulasPage({ params }: { params: { id: str
       moduleId={params.id}
       formulas={formulaRows}
       variables={variables.map((v) => ({ key: v.key, label: v.label || v.key, valueType: v.valueType }))}
-      lossFactors={lossFactors.map((f) => ({ key: f.key, label: f.label, percentage: f.percentage }))}
+      lossFactors={lossFactors.map((f) => ({ id: f.id, key: f.key, label: f.label, percentage: f.percentage }))}
     />
   );
 }

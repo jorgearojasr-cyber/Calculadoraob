@@ -1,11 +1,12 @@
 import { formatQuantity } from "./format-number";
-import type { CalculationResult } from "./formula-engine";
+import type { CalculationResult, InfoResult } from "./formula-engine";
 
 export function buildCalculationPrompt(input: {
   moduleName: string;
   categoryName: string;
   answersSummary: { label: string; value: string }[];
   results: CalculationResult[];
+  infoResults?: InfoResult[];
 }): string {
   const lines: string[] = [];
 
@@ -19,6 +20,9 @@ export function buildCalculationPrompt(input: {
   }
   lines.push("");
   lines.push("Resultado del cálculo:");
+  for (const info of input.infoResults ?? []) {
+    lines.push(`- ${info.label}: ${info.value}`);
+  }
   for (const result of input.results) {
     lines.push(`- ${result.label}: ${formatQuantity(result.value)} ${result.unit}`);
   }

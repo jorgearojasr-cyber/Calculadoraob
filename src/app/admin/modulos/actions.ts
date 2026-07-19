@@ -112,6 +112,7 @@ export async function publishModuleAction(id: string): Promise<{ error?: string 
 
   revalidatePath("/admin/modulos");
   revalidatePath(`/admin/modulos/${id}`);
+  revalidatePath(`/admin/modulos/${id}/preview`);
   revalidatePath(`/categorias/${mod.category.slug}`);
   revalidatePath(`/categorias/${mod.category.slug}/${mod.slug}`);
   return {};
@@ -126,6 +127,7 @@ export async function unpublishModuleAction(id: string): Promise<{ error?: strin
 
   revalidatePath("/admin/modulos");
   revalidatePath(`/admin/modulos/${id}`);
+  revalidatePath(`/admin/modulos/${id}/preview`);
   revalidatePath(`/categorias/${mod.category.slug}`);
   revalidatePath(`/categorias/${mod.category.slug}/${mod.slug}`);
   return {};

@@ -115,10 +115,10 @@ export function LookupGrid({
         </button>
         <button
           onClick={handleSave}
-          disabled={isPending || columns.length === 0}
+          disabled={isPending}
           className="rounded-full px-4 py-1.5 text-xs font-semibold text-white bg-ink disabled:opacity-50"
         >
-          {isPending ? "Guardando…" : "Guardar tabla"}
+          {isPending ? "Guardando…" : columns.length === 0 ? "Quitar tabla" : "Guardar tabla"}
         </button>
         {saved && <span className="text-xs text-[#1E7A34]">Guardado</span>}
       </div>

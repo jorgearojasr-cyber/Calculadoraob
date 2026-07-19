@@ -4,25 +4,31 @@ import { useState } from "react";
 import { Check, Copy, RotateCcw, Sparkles } from "lucide-react";
 import { formatQuantity } from "@/lib/format-number";
 import { buildCalculationPrompt } from "@/lib/prompt-generator";
-import type { CalculationResult } from "@/lib/formula-engine";
+import type { CalculationResult, InfoResult } from "@/lib/formula-engine";
+import type { NormSummary } from "@/app/categorias/[slug]/[moduleSlug]/actions";
+import { NormsDisclaimer } from "./norms-disclaimer";
 
 export function ResultScreen({
   moduleName,
   categoryName,
   answersSummary,
   results,
+  infoResults,
+  norms,
   onRestart,
 }: {
   moduleName: string;
   categoryName: string;
   answersSummary: { label: string; value: string }[];
   results: CalculationResult[];
+  infoResults: InfoResult[];
+  norms: NormSummary[];
   onRestart: () => void;
 }) {
   const [promptOpen, setPromptOpen] = useState(false);
   const [copied, setCopied] = useState(false);
 
-  const prompt = buildCalculationPrompt({ moduleName, categoryName, answersSummary, results });
+  const prompt = buildCalculationPrompt({ moduleName, categoryName, answersSummary, results, infoResults });
 
   const handleCopy = async () => {
     await navigator.clipboard.writeText(prompt);
@@ -36,6 +42,21 @@ export function ResultScreen({
       <h2 className="font-display text-2xl md:text-3xl font-semibold tracking-tight mb-6">
         Esto es lo que necesitas
       </h2>
+
+      {infoResults.length > 0 && (
+        <div className="grid gap-3 mb-3">
+          {infoResults.map((info) => (
+            <div key={info.key} className="rounded-2xl p-5 bg-white border border-border">
+              <div className="flex items-baseline justify-between gap-4">
+                <span className="font-medium text-[15px]">{info.label}</span>
+                <span className="font-display text-lg font-semibold whitespace-nowrap">
+                  {String(info.value)}
+                </span>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
 
       <div className="grid gap-3">
         {results.map((result) => (
@@ -51,6 +72,8 @@ export function ResultScreen({
           </div>
         ))}
       </div>
+
+      <NormsDisclaimer norms={norms} />
 
       <div className="mt-8 rounded-2xl p-5 bg-white border border-border">
         <p className="text-xs font-mono uppercase tracking-wider text-ink-muted mb-3">

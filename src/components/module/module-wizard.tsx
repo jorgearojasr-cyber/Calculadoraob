@@ -6,8 +6,7 @@ import { ArrowLeft } from "lucide-react";
 import { QuestionStep } from "./question-step";
 import { ResultScreen } from "./result-screen";
 import type { WizardAnswers, WizardQuestion } from "./types";
-import { calculateModuleAction } from "@/app/categorias/[slug]/[moduleSlug]/actions";
-import type { CalculationResult } from "@/lib/formula-engine";
+import { calculateModuleAction, type CalculateModuleResult } from "@/app/categorias/[slug]/[moduleSlug]/actions";
 
 export function ModuleWizard({
   moduleId,
@@ -24,7 +23,7 @@ export function ModuleWizard({
 }) {
   const [stepIndex, setStepIndex] = useState(0);
   const [answers, setAnswers] = useState<WizardAnswers>({});
-  const [results, setResults] = useState<CalculationResult[] | null>(null);
+  const [calculation, setCalculation] = useState<CalculateModuleResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
@@ -42,8 +41,8 @@ export function ModuleWizard({
 
     startTransition(async () => {
       try {
-        const { results } = await calculateModuleAction(moduleId, nextAnswers);
-        setResults(results);
+        const result = await calculateModuleAction(moduleId, nextAnswers);
+        setCalculation(result);
       } catch {
         setError("No pudimos calcular con esos datos. Revisa las respuestas e inténtalo de nuevo.");
       }
@@ -57,7 +56,7 @@ export function ModuleWizard({
 
   const handleRestart = () => {
     setAnswers({});
-    setResults(null);
+    setCalculation(null);
     setError(null);
     setStepIndex(0);
   };
@@ -87,7 +86,7 @@ export function ModuleWizard({
         {moduleName}
       </p>
 
-      {!results && (
+      {!calculation && (
         <>
           <div className="flex items-center gap-2 mb-8">
             <span className="font-mono text-xs text-ink-faint">
@@ -122,12 +121,14 @@ export function ModuleWizard({
         </>
       )}
 
-      {results && (
+      {calculation && (
         <ResultScreen
           moduleName={moduleName}
           categoryName={categoryName}
           answersSummary={answersSummary}
-          results={results}
+          results={calculation.results}
+          infoResults={calculation.infoResults}
+          norms={calculation.norms}
           onRestart={handleRestart}
         />
       )}

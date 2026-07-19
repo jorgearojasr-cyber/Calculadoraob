@@ -15,7 +15,7 @@ type FormulaInput = {
   material: { name: string } | null;
 };
 
-type VariableInput = { key: string; source: unknown };
+type VariableInput = { key: string; label: string; source: unknown; isResult: boolean };
 type LossFactorInput = { key: string; percentage: number; condition: unknown };
 
 export type CalculationResult = {
@@ -27,13 +27,23 @@ export type CalculationResult = {
   materialName: string | null;
 };
 
+export type InfoResult = {
+  key: string;
+  label: string;
+  value: DslValue;
+};
+
 export function calculateModule(input: {
   variables: VariableInput[];
   formulas: FormulaInput[];
   lossFactors: LossFactorInput[];
   answers: Answers;
-}): { results: CalculationResult[]; variables: Record<string, DslValue> } {
+}): { results: CalculationResult[]; infoResults: InfoResult[]; variables: Record<string, DslValue> } {
   const variables = resolveVariables(input.variables, input.answers);
+
+  const infoResults: InfoResult[] = input.variables
+    .filter((v) => v.isResult && variables[v.key] !== undefined)
+    .map((v) => ({ key: v.key, label: v.label || v.key, value: variables[v.key] }));
 
   const lossFactors: Record<string, { percentage: number }> = {};
   for (const factor of input.lossFactors) {
@@ -74,5 +84,5 @@ export function calculateModule(input: {
     }
   }
 
-  return { results, variables };
+  return { results, infoResults, variables };
 }

@@ -15,7 +15,7 @@ import {
 } from "@/app/admin/modulos/[id]/formulas/actions";
 
 type VariableOption = { key: string; label: string; valueType: "NUMBER" | "TEXT" };
-type LossFactorOption = { key: string; label: string; percentage: number };
+type LossFactorOption = { id: string; key: string; label: string; percentage: number };
 
 type FormulaRow = {
   id: string;
@@ -153,7 +153,7 @@ export function FormulasManager({
                 className="text-xs font-mono px-3 py-1.5 rounded-full bg-white border border-border inline-flex items-center gap-2"
               >
                 {f.label} ({Math.round(f.percentage * 100)}%)
-                <button onClick={() => handleDeleteLossFactor(f.key, f.label)} className="text-ink-muted hover:text-safety">
+                <button onClick={() => handleDeleteLossFactor(f.id, f.label)} className="text-ink-muted hover:text-safety">
                   <Trash2 className="w-3 h-3" />
                 </button>
               </span>

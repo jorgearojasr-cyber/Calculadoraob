@@ -21,6 +21,15 @@ export function resolveVariables(
       if (value !== null && value !== undefined) context[variable.key] = value;
       continue;
     }
+
+    if (source.type === "LOOKUP2") {
+      const primaryKey = answers[source.questionKey];
+      const secondaryKey = answers[source.secondaryQuestionKey];
+      const compoundKey = `${primaryKey}|${secondaryKey}`;
+      const value = source.table[compoundKey] ?? source.default ?? null;
+      if (value !== null && value !== undefined) context[variable.key] = value;
+      continue;
+    }
   }
 
   return context;

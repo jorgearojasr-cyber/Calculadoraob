@@ -27,6 +27,45 @@ export async function seedRadierModule(prisma: PrismaClient) {
   await prisma.questionOption.deleteMany({ where: { question: { moduleId: mod.id } } });
   await prisma.question.deleteMany({ where: { moduleId: mod.id } });
 
+  // --- Normas / fuentes citadas — ver docs/auditoria-normativa.md ---
+  const nch170 = await prisma.norm.upsert({
+    where: { code: "NCh170:2016" },
+    update: {
+      title: "Hormigón — Requisitos generales",
+      year: 2016,
+      scope: "Clasificación y requisitos generales del hormigón",
+      verificationStatus: "CITADO",
+      note: "Reemplazó a NCh170of1985: cambia la nomenclatura de grado de H (probeta cúbica 200mm) a G (probeta cilíndrica 150x300mm). Equivalencia aproximada por resistencia.",
+    },
+    create: {
+      code: "NCh170:2016",
+      title: "Hormigón — Requisitos generales",
+      year: 2016,
+      scope: "Clasificación y requisitos generales del hormigón",
+      verificationStatus: "CITADO",
+      note: "Reemplazó a NCh170of1985: cambia la nomenclatura de grado de H (probeta cúbica 200mm) a G (probeta cilíndrica 150x300mm). Equivalencia aproximada por resistencia.",
+    },
+  });
+
+  const practicaObraRadier = await prisma.norm.upsert({
+    where: { code: "OBRA-RADIER-ESPESOR-DOSIF" },
+    update: {
+      title: "Práctica de obra — espesores y dosificación de radier",
+      scope:
+        "Espesor de radier según uso, factor de pérdida de hormigón en vaciado y dosificación volumétrica manual 1:2:3",
+      verificationStatus: "PRACTICA_GENERAL_NO_VERIFICADA",
+      note: "Representa práctica de obra habitual (criterio de maestros/contratistas), no una norma o guía técnica citada. Pendiente de validar contra una fuente específica (ej. OGUC) si en algún momento se verifica.",
+    },
+    create: {
+      code: "OBRA-RADIER-ESPESOR-DOSIF",
+      title: "Práctica de obra — espesores y dosificación de radier",
+      scope:
+        "Espesor de radier según uso, factor de pérdida de hormigón en vaciado y dosificación volumétrica manual 1:2:3",
+      verificationStatus: "PRACTICA_GENERAL_NO_VERIFICADA",
+      note: "Representa práctica de obra habitual (criterio de maestros/contratistas), no una norma o guía técnica citada. Pendiente de validar contra una fuente específica (ej. OGUC) si en algún momento se verifica.",
+    },
+  });
+
   const qUso = await prisma.question.create({
     data: {
       moduleId: mod.id,
@@ -83,11 +122,28 @@ export async function seedRadierModule(prisma: PrismaClient) {
     },
   });
 
+  await prisma.question.create({
+    data: {
+      moduleId: mod.id,
+      key: "colocacion",
+      label: "¿Cómo vas a colocar el hormigón?",
+      type: "SELECT",
+      order: 5,
+      options: {
+        create: [
+          { key: "manual_carretilla", label: "Manual / carretilla", order: 1 },
+          { key: "bomba", label: "Con bomba hormigonera", order: 2 },
+        ],
+      },
+    },
+  });
+
   await prisma.variable.createMany({
     data: [
       {
         moduleId: mod.id,
         key: "largo",
+        label: "Largo",
         valueType: "NUMBER",
         source: { type: "QUESTION", questionKey: "largo" },
         order: 1,
@@ -95,6 +151,7 @@ export async function seedRadierModule(prisma: PrismaClient) {
       {
         moduleId: mod.id,
         key: "ancho",
+        label: "Ancho",
         valueType: "NUMBER",
         source: { type: "QUESTION", questionKey: "ancho" },
         order: 2,
@@ -102,6 +159,7 @@ export async function seedRadierModule(prisma: PrismaClient) {
       {
         moduleId: mod.id,
         key: "espesor_cm",
+        label: "Espesor (cm)",
         valueType: "NUMBER",
         source: {
           type: "LOOKUP",
@@ -113,30 +171,53 @@ export async function seedRadierModule(prisma: PrismaClient) {
             bodega_industrial: 12,
           },
         },
+        normId: practicaObraRadier.id,
         order: 3,
       },
       {
         moduleId: mod.id,
         key: "tipo_hormigon",
+        label: "Tipo de hormigón recomendado",
         valueType: "TEXT",
+        // Grado vigente según NCh170:2016 (G, probeta cilíndrica) + sufijo de
+        // colocación (N=normal, B=bombeado), con el equivalente antiguo (H,
+        // probeta cúbica) entre paréntesis: mucha gente en terreno todavía
+        // pide el hormigón por su nombre antiguo. Combina dos preguntas
+        // (uso + colocación) con un lookup de dos ejes — ver docs/formula-dsl.md.
         source: {
-          type: "LOOKUP",
+          type: "LOOKUP2",
           questionKey: "uso",
+          secondaryQuestionKey: "colocacion",
           table: {
-            patio_terraza: "H-20",
-            antepiso_interior: "H-20",
-            estacionamiento: "H-25",
-            bodega_industrial: "H-30",
+            "patio_terraza|manual_carretilla": "G17-N (equivalente al H20 antiguo)",
+            "patio_terraza|bomba": "G17-B (equivalente al H20 antiguo)",
+            "antepiso_interior|manual_carretilla": "G17-N (equivalente al H20 antiguo)",
+            "antepiso_interior|bomba": "G17-B (equivalente al H20 antiguo)",
+            "estacionamiento|manual_carretilla": "G20-N (equivalente al H25 antiguo)",
+            "estacionamiento|bomba": "G20-B (equivalente al H25 antiguo)",
+            "bodega_industrial|manual_carretilla": "G25-N (equivalente al H30 antiguo)",
+            "bodega_industrial|bomba": "G25-B (equivalente al H30 antiguo)",
           },
         },
+        isResult: true,
+        normId: nch170.id,
         order: 4,
       },
       {
         moduleId: mod.id,
         key: "metodo_hormigon",
+        label: "Método de obtención",
         valueType: "TEXT",
         source: { type: "QUESTION", questionKey: "metodo_hormigon" },
         order: 5,
+      },
+      {
+        moduleId: mod.id,
+        key: "colocacion_metodo",
+        label: "Método de colocación",
+        valueType: "TEXT",
+        source: { type: "QUESTION", questionKey: "colocacion" },
+        order: 6,
       },
     ],
   });
@@ -170,6 +251,7 @@ export async function seedRadierModule(prisma: PrismaClient) {
       key: "perdida_hormigon",
       label: "Pérdida de hormigón en vaciado",
       percentage: 0.07,
+      normId: practicaObraRadier.id,
     },
   });
 
@@ -212,6 +294,7 @@ export async function seedRadierModule(prisma: PrismaClient) {
         unit: "m³",
         expression: volumenConPerdida,
         isResult: false,
+        normId: practicaObraRadier.id,
         order: 2,
       },
       {
@@ -223,6 +306,7 @@ export async function seedRadierModule(prisma: PrismaClient) {
         condition: esPremezclado,
         isResult: true,
         note: "Despacho mínimo habitual de camiones mixer: 3 m³. Si tu cálculo da menos, probablemente igual te cobren el mínimo — consulta con tu proveedor.",
+        normId: practicaObraRadier.id,
         order: 3,
       },
       {
@@ -234,6 +318,7 @@ export async function seedRadierModule(prisma: PrismaClient) {
         condition: esManual,
         isResult: true,
         materialId: cemento.id,
+        normId: practicaObraRadier.id,
         order: 4,
       },
       {
@@ -245,6 +330,7 @@ export async function seedRadierModule(prisma: PrismaClient) {
         condition: esManual,
         isResult: true,
         materialId: arena.id,
+        normId: practicaObraRadier.id,
         order: 5,
       },
       {
@@ -256,6 +342,7 @@ export async function seedRadierModule(prisma: PrismaClient) {
         condition: esManual,
         isResult: true,
         materialId: gravilla.id,
+        normId: practicaObraRadier.id,
         order: 6,
       },
       {
@@ -267,6 +354,7 @@ export async function seedRadierModule(prisma: PrismaClient) {
         condition: esManual,
         isResult: true,
         materialId: agua.id,
+        normId: practicaObraRadier.id,
         order: 7,
       },
     ],
