@@ -1,5 +1,5 @@
 import { BookCheck, TriangleAlert } from "lucide-react";
-import type { NormSummary } from "@/app/categorias/[slug]/[moduleSlug]/actions";
+import type { NormSummary } from "@/app/(app)/categorias/[slug]/[moduleSlug]/actions";
 
 /**
  * Aviso normativo reutilizable para el resultado de cualquier módulo.
@@ -18,7 +18,7 @@ export function NormsDisclaimer({ norms }: { norms: NormSummary[] }) {
       {citadas.length > 0 && (
         <div className="rounded-2xl p-4 bg-white border border-border">
           <div className="flex items-start gap-2.5">
-            <BookCheck className="w-4 h-4 flex-shrink-0 mt-0.5 text-blueprint" />
+            <BookCheck className="w-4 h-4 flex-shrink-0 mt-0.5 text-navy" />
             <div>
               <p className="text-xs font-medium mb-1">Basado en norma técnica</p>
               <ul className="text-xs text-ink-muted grid gap-0.5">

@@ -76,7 +76,7 @@ export default async function AdminModulesPage() {
                   <div className="flex items-center justify-end gap-4">
                     <Link
                       href={`/admin/modulos/${mod.id}`}
-                      className="text-xs font-medium text-blueprint hover:underline"
+                      className="text-xs font-medium text-navy hover:underline"
                     >
                       Editar
                     </Link>

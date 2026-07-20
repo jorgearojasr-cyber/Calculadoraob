@@ -127,7 +127,7 @@ export function QuestionForm({
           <button
             type="button"
             onClick={() => setOptions((prev) => [...prev, { label: "" }])}
-            className="text-xs font-medium text-blueprint inline-flex items-center gap-1 w-fit"
+            className="text-xs font-medium text-navy inline-flex items-center gap-1 w-fit"
           >
             <Plus className="w-3.5 h-3.5" />
             Agregar opción

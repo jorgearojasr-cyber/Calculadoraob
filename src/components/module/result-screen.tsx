@@ -6,8 +6,8 @@ import { Check, Copy, FolderPlus, RotateCcw, Sparkles } from "lucide-react";
 import { formatQuantity } from "@/lib/format-number";
 import { buildCalculationPrompt } from "@/lib/prompt-generator";
 import type { CalculationResult, InfoResult } from "@/lib/formula-engine";
-import type { CalculateModuleResult, NormSummary } from "@/app/categorias/[slug]/[moduleSlug]/actions";
-import { createSavedProjectAction } from "@/app/proyectos/actions";
+import type { CalculateModuleResult, NormSummary } from "@/app/(app)/categorias/[slug]/[moduleSlug]/actions";
+import { createSavedProjectAction } from "@/app/(app)/proyectos/actions";
 import { PENDING_PROJECT_KEY } from "@/lib/pending-project";
 import { NormsDisclaimer } from "./norms-disclaimer";
 
@@ -74,7 +74,7 @@ export function ResultScreen({
 
   return (
     <div>
-      <p className="font-mono text-xs uppercase tracking-wider mb-2 text-blueprint">Resultado</p>
+      <p className="font-mono text-xs uppercase tracking-wider mb-2 text-safety">Resultado</p>
       <h2 className="font-display text-2xl md:text-3xl font-semibold tracking-tight mb-6">
         Esto es lo que necesitas
       </h2>
@@ -128,7 +128,7 @@ export function ResultScreen({
       <div className="mt-8 flex flex-wrap items-center gap-3">
         <button
           onClick={() => setPromptOpen((v) => !v)}
-          className="rounded-full px-6 py-3 text-sm font-semibold text-white flex items-center gap-2 bg-blueprint"
+          className="rounded-full px-6 py-3 text-sm font-semibold text-white flex items-center gap-2 bg-safety"
         >
           <Sparkles className="w-4 h-4" />
           Generar prompt para IA

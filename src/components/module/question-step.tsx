@@ -64,13 +64,13 @@ export function QuestionStep({
                 onClick={() => onAnswer(option.key)}
                 className={`flex items-center justify-between text-left rounded-xl px-5 py-4 border transition-colors ${
                   selected
-                    ? "border-blueprint bg-[#EEF2FB]"
+                    ? "border-safety bg-safety-tint"
                     : "border-border bg-white hover:border-ink"
                 }`}
               >
                 <span className="font-medium text-[15px]">{option.label}</span>
                 {selected ? (
-                  <Check className="w-4 h-4 text-blueprint" />
+                  <Check className="w-4 h-4 text-safety" />
                 ) : (
                   <ArrowRight className="w-4 h-4 text-ink-faint" />
                 )}

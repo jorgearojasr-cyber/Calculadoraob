@@ -45,7 +45,7 @@ export default async function AdminCategoriesPage() {
                 <tr key={category.id} className="border-b border-border last:border-0">
                   <td className="px-4 py-3 font-mono text-ink-muted">{category.order}</td>
                   <td className="px-4 py-3">
-                    <Icon className="w-4 h-4 text-blueprint" />
+                    <Icon className="w-4 h-4 text-navy" />
                   </td>
                   <td className="px-4 py-3 font-medium">{category.name}</td>
                   <td className="px-4 py-3 font-mono text-ink-muted">{category.slug}</td>
@@ -54,7 +54,7 @@ export default async function AdminCategoriesPage() {
                     <div className="flex items-center justify-end gap-4">
                       <Link
                         href={`/admin/categorias/${category.id}`}
-                        className="text-xs font-medium text-blueprint hover:underline"
+                        className="text-xs font-medium text-navy hover:underline"
                       >
                         Editar
                       </Link>

@@ -206,7 +206,7 @@ export function FormulaForm({
           ))}
           <button
             onClick={addTerm}
-            className="text-xs font-medium text-blueprint inline-flex items-center gap-1"
+            className="text-xs font-medium text-navy inline-flex items-center gap-1"
           >
             <Plus className="w-3.5 h-3.5" />
             Agregar término

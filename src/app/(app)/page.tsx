@@ -1,12 +1,10 @@
 import { prisma } from "@/lib/prisma";
-import { SiteNav } from "@/components/home/site-nav";
 import { Hero } from "@/components/home/hero";
 import { CategorySection } from "@/components/home/category-section";
+import { RecentProjects } from "@/components/home/recent-projects";
 import { HowItWorks } from "@/components/home/how-it-works";
 import { TrustSection } from "@/components/home/trust-section";
 import { SiteFooter } from "@/components/home/site-footer";
-
-export const revalidate = 3600;
 
 export default async function Home() {
   const categories = await prisma.category.findMany({
@@ -14,10 +12,10 @@ export default async function Home() {
   });
 
   return (
-    <div className="min-h-screen w-full bg-concrete text-ink font-body">
-      <SiteNav />
+    <div>
       <Hero />
       <CategorySection categories={categories} />
+      <RecentProjects />
       <HowItWorks />
       <TrustSection />
       <SiteFooter />

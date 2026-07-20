@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { updateProgressAction } from "@/app/proyectos/actions";
+import { updateProgressAction } from "@/app/(app)/proyectos/actions";
 
 export function ProgressEditor({ id, initialValue }: { id: string; initialValue: number }) {
   const [value, setValue] = useState(initialValue);
@@ -16,7 +16,7 @@ export function ProgressEditor({ id, initialValue }: { id: string; initialValue:
   };
 
   return (
-    <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+    <div className="flex items-center gap-2 w-full" onClick={(e) => e.stopPropagation()}>
       <input
         type="range"
         min={0}
@@ -25,9 +25,12 @@ export function ProgressEditor({ id, initialValue }: { id: string; initialValue:
         value={value}
         onChange={(e) => commit(Number(e.target.value))}
         disabled={isPending}
-        className="w-24 accent-blueprint"
+        className="h-1.5 flex-1 rounded-full appearance-none cursor-pointer accent-safety"
+        style={{
+          background: `linear-gradient(to right, #E8622C ${value}%, #E4E1D8 ${value}%)`,
+        }}
       />
-      <span className="font-mono text-xs text-ink-muted w-9 text-right">{value}%</span>
+      <span className="font-mono text-xs text-ink-muted w-9 text-right flex-shrink-0">{value}%</span>
     </div>
   );
 }

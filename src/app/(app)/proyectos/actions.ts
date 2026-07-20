@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import type { CalculateModuleResult } from "@/app/categorias/[slug]/[moduleSlug]/actions";
+import type { CalculateModuleResult } from "@/app/(app)/categorias/[slug]/[moduleSlug]/actions";
 
 export type AnswerSummaryItem = { label: string; value: string };
 

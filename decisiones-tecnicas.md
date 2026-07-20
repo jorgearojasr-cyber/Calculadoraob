@@ -50,7 +50,9 @@ Un módulo nuevo se crea agregando filas a estas tablas — **nunca modificando 
    conocimiento, para que los módulos futuros se agreguen sin código.
 4. **Fase 4 — Escalar**: resto de los módulos/categorías usando el admin panel.
 
-## Sistema de diseño (de `docs/diseño/obrabien-home.jsx`)
+## Sistema de diseño
+
+### v1 — de `docs/diseño/obrabien-home.jsx` (superado por v2, ver abajo)
 
 - **Paleta**: base gris "concreto" `#F5F4F1`, texto tinta `#1C1B19`, acento primario
   azul "blueprint" `#2451B0`, acento secundario naranja "seguridad" `#E8622C`,
@@ -60,6 +62,47 @@ Un módulo nuevo se crea agregando filas a estas tablas — **nunca modificando 
 - **Elemento de firma**: grid tipo papel milimetrado de fondo en el hero + ticks de
   plano (líneas de cota) — referencia al mundo de la construcción sin iconografía
   obvia (cascos, ladrillos genéricos).
+
+### v2 — re-skin navy + naranjo acento
+
+Re-skin visual completo (sesión posterior a auth + proyectos guardados). Brief
+original referenciaba imágenes en `docs/diseño/referencia-v2/`
+(`desktop-dashboard.png`, `mobile-app.png`); **no estuvieron disponibles en el
+entorno de esta sesión** — el re-skin se construyó solo a partir de la
+descripción en texto del usuario (paleta, forma del sidebar/bottom-nav, estilo
+de tarjetas). Si más adelante se comparan contra las imágenes reales y hay
+diferencias de detalle, son ajustes finos, no un rediseño.
+
+- **Paleta**: azul marino `navy` `#0F1E3D` (y variantes `navy-light` `#1B2D54`,
+  `navy-lighter` `#2C4370`, `navy-border` `#24365E`) como color estructural
+  dominante — sidebar, bottom-nav mobile, header de admin, badges de marca.
+  Naranjo `safety` `#E8622C` (sin cambios de valor) pasa a ser el acento de
+  interacción — CTAs primarios, estados activos/seleccionados, eyebrows,
+  hover de tarjetas — reemplazando al azul `blueprint` `#2451B0` en ese rol.
+  `blueprint` se mantiene como token de Tailwind (por si se reutiliza) pero
+  ya no se usa como acento activo en ningún componente. Fondo de contenido
+  sigue siendo `concrete` `#F5F4F1` / blanco. Bordes, texto tinta y textos
+  secundarios sin cambios.
+- **Tipografía**: sin cambios — Space Grotesk / IBM Plex Sans / IBM Plex Mono.
+- **Logo**: hexágono simple propio (`src/components/brand/logo-mark.tsx`),
+  outline + tick central, en badge `navy-light` con el trazo en `safety`.
+  Reemplaza el ícono de regla en cuadrado negro de v1.
+- **Layout compartido** (`src/components/layout/app-shell.tsx`): sidebar fijo
+  a la izquierda en desktop (`≥ md`, fondo `navy`) con logo, nav (Inicio,
+  Categorías, Mis proyectos si hay sesión, Admin si `role=admin`) y el
+  usuario/Ingresar abajo. Bottom-nav fijo en mobile (`< md`, fondo `navy`)
+  con Inicio, Categorías, botón central circular naranjo "Nuevo cálculo",
+  Proyectos y Perfil (menú de cerrar sesión/ingresar). Implementado con un
+  route group `src/app/(app)/` que envuelve Home, categorías, wizard,
+  resultado, `/login`, `/registro` y `/proyectos` sin cambiar ninguna URL.
+  `/admin` queda fuera del grupo — conserva su propio layout de tablas, solo
+  con la paleta actualizada (acentos `blueprint`→`navy` en links/tabs).
+- **Costo de rendimiento aceptado**: como el shell necesita saber si hay
+  sesión activa para pintar el sidebar/bottom-nav, todo el route group
+  `(app)` pasó a renderizado dinámico por request (antes Home y las páginas
+  de categoría usaban `revalidate` con ISR). Es un trade-off consciente:
+  navegación consciente de sesión en todo el sitio público, a cambio de
+  perder el cacheo estático de esas rutas.
 
 ## Reglas para Claude Code
 

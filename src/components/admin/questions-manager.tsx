@@ -151,7 +151,7 @@ export function QuestionsManager({ moduleId, questions }: { moduleId: string; qu
               <div className="flex items-center gap-3">
                 <button
                   onClick={() => setMode(question.id)}
-                  className="text-xs font-medium text-blueprint hover:underline inline-flex items-center gap-1"
+                  className="text-xs font-medium text-navy hover:underline inline-flex items-center gap-1"
                 >
                   <Pencil className="w-3.5 h-3.5" />
                   Editar

@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createSavedProjectAction } from "../actions";
 import { PENDING_PROJECT_KEY, type PendingProject } from "@/lib/pending-project";
-import type { CalculateModuleResult } from "@/app/categorias/[slug]/[moduleSlug]/actions";
+import type { CalculateModuleResult } from "@/app/(app)/categorias/[slug]/[moduleSlug]/actions";
 
 export default function GuardarPendientePage() {
   const router = useRouter();
@@ -35,7 +35,7 @@ export default function GuardarPendientePage() {
   }, [router]);
 
   return (
-    <div className="min-h-screen w-full bg-concrete text-ink font-body flex items-center justify-center px-6">
+    <div className="min-h-[80vh] flex items-center justify-center px-6">
       <p className="text-sm text-ink-muted">
         {error ? `No pudimos guardar tu proyecto: ${error}` : "Guardando tu proyecto…"}
       </p>

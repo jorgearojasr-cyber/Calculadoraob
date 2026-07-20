@@ -9,7 +9,7 @@ export function Hero() {
       <div className="blueprint-bg absolute inset-0 [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,black,transparent)]" />
       <div className="max-w-6xl mx-auto px-6 pt-20 pb-16 relative">
         <div className="max-w-2xl">
-          <div className="inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1 rounded-full mb-6 font-mono bg-white border border-border text-blueprint">
+          <div className="inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1 rounded-full mb-6 font-mono bg-white border border-border text-safety">
             <BlueprintTick className="w-3 h-3" />
             Base de conocimiento técnico validado
           </div>
@@ -33,7 +33,7 @@ export function Hero() {
                 disabled
               />
               <button
-                className="flex-shrink-0 rounded-xl px-4 py-2 text-sm font-medium text-white flex items-center gap-1.5 bg-blueprint opacity-60 cursor-not-allowed"
+                className="flex-shrink-0 rounded-xl px-4 py-2 text-sm font-medium text-white flex items-center gap-1.5 bg-safety opacity-60 cursor-not-allowed"
                 disabled
               >
                 Calcular

@@ -49,7 +49,7 @@ function RegistroForm() {
   };
 
   return (
-    <div className="min-h-screen w-full bg-concrete text-ink font-body flex items-center justify-center px-6">
+    <div className="min-h-[80vh] flex items-center justify-center px-6">
       <div className="w-full max-w-sm">
         <h1 className="font-display text-2xl font-semibold tracking-tight mb-6 text-center">
           Crear cuenta
@@ -84,7 +84,7 @@ function RegistroForm() {
           <button
             type="submit"
             disabled={isLoading}
-            className="rounded-full px-6 py-3 text-sm font-semibold text-white bg-blueprint disabled:opacity-50"
+            className="rounded-full px-6 py-3 text-sm font-semibold text-white bg-safety disabled:opacity-50"
           >
             {isLoading ? "Creando cuenta…" : "Crear cuenta"}
           </button>

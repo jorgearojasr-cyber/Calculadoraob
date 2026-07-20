@@ -6,7 +6,7 @@ import { ArrowLeft } from "lucide-react";
 import { QuestionStep } from "./question-step";
 import { ResultScreen } from "./result-screen";
 import type { WizardAnswers, WizardQuestion } from "./types";
-import { calculateModuleAction, type CalculateModuleResult } from "@/app/categorias/[slug]/[moduleSlug]/actions";
+import { calculateModuleAction, type CalculateModuleResult } from "@/app/(app)/categorias/[slug]/[moduleSlug]/actions";
 
 export function ModuleWizard({
   moduleId,
@@ -82,7 +82,7 @@ export function ModuleWizard({
         {categoryName}
       </Link>
 
-      <p className="font-mono text-xs uppercase tracking-wider mt-6 mb-2 text-blueprint">
+      <p className="font-mono text-xs uppercase tracking-wider mt-6 mb-2 text-safety">
         {moduleName}
       </p>
 
@@ -94,7 +94,7 @@ export function ModuleWizard({
             </span>
             <div className="h-1 flex-1 rounded-full bg-border overflow-hidden">
               <div
-                className="h-full bg-blueprint transition-all"
+                className="h-full bg-safety transition-all"
                 style={{ width: `${((stepIndex + 1) / questions.length) * 100}%` }}
               />
             </div>

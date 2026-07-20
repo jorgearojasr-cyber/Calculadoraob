@@ -11,7 +11,7 @@ export function HowItWorks() {
   return (
     <section id="como-funciona" className="py-16 bg-white">
       <div className="max-w-6xl mx-auto px-6">
-        <p className="font-mono text-xs uppercase tracking-wider mb-2 text-blueprint">Proceso</p>
+        <p className="font-mono text-xs uppercase tracking-wider mb-2 text-safety">Proceso</p>
         <h2 className="font-display text-3xl font-semibold tracking-tight mb-10">
           Cuatro pasos, cero jerga técnica
         </h2>
@@ -26,7 +26,7 @@ export function HowItWorks() {
                   </span>
                   <div className="h-px flex-1 bg-border" />
                 </div>
-                <Icon className="w-6 h-6 mb-3 text-blueprint" />
+                <Icon className="w-6 h-6 mb-3 text-safety" />
                 <h3 className="font-semibold text-[15px] mb-1">{step.label}</h3>
                 <p className="text-xs text-ink-muted">{step.desc}</p>
               </div>

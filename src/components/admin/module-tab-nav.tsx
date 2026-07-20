@@ -26,7 +26,7 @@ export function ModuleTabNav({ moduleId }: { moduleId: string }) {
             href={tab.href}
             className={`text-sm px-3 py-2.5 border-b-2 -mb-px transition-colors ${
               active
-                ? "border-blueprint text-ink font-medium"
+                ? "border-navy text-ink font-medium"
                 : "border-transparent text-ink-muted hover:text-ink"
             }`}
           >

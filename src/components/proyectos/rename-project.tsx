@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { Check, Pencil } from "lucide-react";
-import { renameProjectAction } from "@/app/proyectos/actions";
+import { renameProjectAction } from "@/app/(app)/proyectos/actions";
 
 export function RenameProject({ id, initialName }: { id: string; initialName: string }) {
   const [editing, setEditing] = useState(false);
@@ -43,7 +43,7 @@ export function RenameProject({ id, initialName }: { id: string; initialName: st
         className="font-display text-2xl md:text-3xl font-semibold tracking-tight bg-transparent border-b border-ink outline-none"
       />
       <button onClick={commit} aria-label="Guardar nombre">
-        <Check className="w-5 h-5 text-blueprint" />
+        <Check className="w-5 h-5 text-safety" />
       </button>
     </div>
   );

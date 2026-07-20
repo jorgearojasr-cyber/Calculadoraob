@@ -10,7 +10,7 @@ const TRUST_ITEMS: { label: string; icon: LucideIcon }[] = [
 export function TrustSection() {
   return (
     <section id="confianza" className="max-w-6xl mx-auto px-6 py-16">
-      <div className="rounded-3xl p-10 grid md:grid-cols-2 gap-10 items-center bg-ink text-concrete">
+      <div className="rounded-3xl p-10 grid md:grid-cols-2 gap-10 items-center bg-navy text-concrete">
         <div>
           <ShieldCheck className="w-7 h-7 mb-4 text-safety" />
           <h2 className="font-display text-2xl font-semibold tracking-tight mb-3">

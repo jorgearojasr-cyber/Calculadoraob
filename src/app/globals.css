@@ -13,8 +13,8 @@ body {
   }
 
   .blueprint-bg {
-    background-image: linear-gradient(rgba(36, 81, 176, 0.06) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(36, 81, 176, 0.06) 1px, transparent 1px);
+    background-image: linear-gradient(rgba(15, 30, 61, 0.07) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(15, 30, 61, 0.07) 1px, transparent 1px);
     background-size: 28px 28px;
   }
 }

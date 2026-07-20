@@ -31,14 +31,12 @@ export default async function ModulePage({
   }));
 
   return (
-    <div className="min-h-screen w-full bg-concrete text-ink font-body">
-      <ModuleWizard
-        moduleId={mod.id}
-        moduleName={mod.name}
-        categorySlug={mod.category.slug}
-        categoryName={mod.category.name}
-        questions={questions}
-      />
-    </div>
+    <ModuleWizard
+      moduleId={mod.id}
+      moduleName={mod.name}
+      categorySlug={mod.category.slug}
+      categoryName={mod.category.name}
+      questions={questions}
+    />
   );
 }

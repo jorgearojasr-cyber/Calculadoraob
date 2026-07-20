@@ -229,7 +229,7 @@ export function MaterialsManager({
                           <button
                             onClick={handleSaveMaterial}
                             disabled={isPending}
-                            className="text-xs font-medium text-blueprint hover:underline mr-3"
+                            className="text-xs font-medium text-navy hover:underline mr-3"
                           >
                             Guardar
                           </button>
@@ -249,7 +249,7 @@ export function MaterialsManager({
                         <td className="px-4 py-2 text-right">
                           <button
                             onClick={() => startEditMaterial(material)}
-                            className="text-xs font-medium text-blueprint hover:underline inline-flex items-center gap-1 mr-3"
+                            className="text-xs font-medium text-navy hover:underline inline-flex items-center gap-1 mr-3"
                           >
                             <Pencil className="w-3.5 h-3.5" />
                             Editar

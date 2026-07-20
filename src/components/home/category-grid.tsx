@@ -19,19 +19,19 @@ export function CategoryGrid({ categories }: { categories: Category[] }) {
             <a
               key={category.id}
               href={`/categorias/${category.slug}`}
-              className="group relative text-left rounded-2xl p-5 transition-all hover:-translate-y-0.5 bg-white border border-border"
+              className="group relative text-left rounded-2xl p-5 transition-all hover:-translate-y-0.5 bg-white border border-border hover:border-safety/40"
             >
               {category.tag && (
-                <span className="absolute top-4 right-4 text-[10px] font-mono px-2 py-0.5 rounded-full bg-[#FDEDE6] text-safety">
+                <span className="absolute top-4 right-4 text-[10px] font-mono px-2 py-0.5 rounded-full bg-safety-tint text-safety">
                   {category.tag}
                 </span>
               )}
-              <div className="w-10 h-10 rounded-xl flex items-center justify-center mb-4 bg-concrete">
-                <Icon className="w-5 h-5 text-blueprint" />
+              <div className="w-12 h-12 rounded-2xl flex items-center justify-center mb-4 bg-navy/[0.07]">
+                <Icon className="w-6 h-6 text-navy" />
               </div>
               <h3 className="font-semibold text-[15px] mb-1">{category.name}</h3>
               <p className="text-xs text-ink-muted">{category.description}</p>
-              <ChevronRight className="w-4 h-4 absolute bottom-5 right-5 opacity-0 group-hover:opacity-100 transition-opacity text-blueprint" />
+              <ChevronRight className="w-4 h-4 absolute bottom-5 right-5 opacity-0 group-hover:opacity-100 transition-opacity text-safety" />
             </a>
           );
         })}

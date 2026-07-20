@@ -17,7 +17,7 @@ export default async function CategoryPage({ params }: { params: { slug: string 
   const Icon = getCategoryIcon(category.icon);
 
   return (
-    <div className="min-h-screen w-full bg-concrete text-ink font-body">
+    <div>
       <header className="max-w-6xl mx-auto px-6 pt-8">
         <Link href="/" className="inline-flex items-center gap-1.5 text-sm text-ink-muted hover:text-ink">
           <ArrowLeft className="w-4 h-4" />
@@ -27,8 +27,8 @@ export default async function CategoryPage({ params }: { params: { slug: string 
 
       <section className="max-w-6xl mx-auto px-6 pt-8 pb-16">
         <div className="flex items-center gap-4 mb-10">
-          <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-white border border-border">
-            <Icon className="w-6 h-6 text-blueprint" />
+          <div className="w-14 h-14 rounded-2xl flex items-center justify-center bg-navy/[0.07]">
+            <Icon className="w-7 h-7 text-navy" />
           </div>
           <div>
             <h1 className="font-display text-3xl font-semibold tracking-tight">{category.name}</h1>
@@ -48,11 +48,11 @@ export default async function CategoryPage({ params }: { params: { slug: string 
               <Link
                 key={mod.id}
                 href={`/categorias/${category.slug}/${mod.slug}`}
-                className="group relative text-left rounded-2xl p-5 transition-all hover:-translate-y-0.5 bg-white border border-border"
+                className="group relative text-left rounded-2xl p-5 transition-all hover:-translate-y-0.5 bg-white border border-border hover:border-safety/40"
               >
                 <h3 className="font-semibold text-[15px] mb-1">{mod.name}</h3>
                 <p className="text-xs text-ink-muted">{mod.description}</p>
-                <ChevronRight className="w-4 h-4 absolute bottom-5 right-5 opacity-0 group-hover:opacity-100 transition-opacity text-blueprint" />
+                <ChevronRight className="w-4 h-4 absolute bottom-5 right-5 opacity-0 group-hover:opacity-100 transition-opacity text-safety" />
               </Link>
             ))}
           </div>
