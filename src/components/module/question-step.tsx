@@ -18,6 +18,36 @@ export function QuestionStep({
   );
   const [error, setError] = useState<string | null>(null);
 
+  if (question.type === "SELECT" && question.options.length === 1) {
+    const option = question.options[0];
+    const checked = initialValue === option.key;
+    return (
+      <div>
+        <h2 className="font-display text-2xl md:text-3xl font-semibold tracking-tight mb-2">
+          {question.label}
+        </h2>
+        {question.helpText && <p className="text-sm text-ink-muted mb-6">{question.helpText}</p>}
+        <label className="mt-6 flex items-start gap-3 rounded-xl px-5 py-4 border border-border bg-white cursor-pointer">
+          <input
+            type="checkbox"
+            checked={checked}
+            onChange={(e) => onAnswer(e.target.checked ? option.key : "")}
+            className="mt-1 w-4 h-4 flex-shrink-0"
+          />
+          <span className="text-[15px] leading-snug">{option.label}</span>
+        </label>
+        <button
+          onClick={() => onAnswer(option.key)}
+          disabled={!checked}
+          className="mt-6 rounded-full px-6 py-3 text-sm font-semibold text-white flex items-center gap-2 bg-ink disabled:opacity-40 disabled:cursor-not-allowed"
+        >
+          Ver resultado
+          <ArrowRight className="w-4 h-4" />
+        </button>
+      </div>
+    );
+  }
+
   if (question.type === "SELECT") {
     return (
       <div>

@@ -29,8 +29,8 @@ export async function createQuestionAction(
 ): Promise<{ error?: string }> {
   const label = input.label.trim();
   if (!label) return { error: "El texto de la pregunta es obligatorio." };
-  if (input.type === "SELECT" && input.options.filter((o) => o.label.trim()).length < 2) {
-    return { error: "Una pregunta de selección necesita al menos 2 opciones." };
+  if (input.type === "SELECT" && input.options.filter((o) => o.label.trim()).length < 1) {
+    return { error: "Una pregunta de selección necesita al menos 1 opción." };
   }
 
   const existingKeys = (await prisma.question.findMany({ where: { moduleId }, select: { key: true } })).map(
@@ -75,8 +75,8 @@ export async function updateQuestionAction(
 ): Promise<{ error?: string }> {
   const label = input.label.trim();
   if (!label) return { error: "El texto de la pregunta es obligatorio." };
-  if (input.type === "SELECT" && input.options.filter((o) => o.label.trim()).length < 2) {
-    return { error: "Una pregunta de selección necesita al menos 2 opciones." };
+  if (input.type === "SELECT" && input.options.filter((o) => o.label.trim()).length < 1) {
+    return { error: "Una pregunta de selección necesita al menos 1 opción." };
   }
 
   const question = await prisma.question.findUniqueOrThrow({
