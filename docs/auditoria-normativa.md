@@ -150,6 +150,42 @@ Norma: `OBRA-YESOCARTON-RENDIMIENTOS`.
 Norma: `OBRA-PAISAJISMO-PASTO`. Alcance acotado a UN sub-caso (pasto en panes/placas)
 — siembra por semilla y riego quedan como módulos separados a futuro.
 
+## Módulo Piscinas (rectangular, hormigón armado) — estado actual
+
+| Contenido | Estado | Fuente |
+|---|---|---|
+| Espesor típico de muro/losa de piscina (0.20m) | **No verificado** | Práctica de obra |
+| Cobertura y pérdida por revestimiento (cerámica 1.35m²/10%, membrana PVC 1m²/5%) | **No verificado** | Práctica de obra / valor típico de mercado |
+| Caudal de filtro sugerido (volumen de agua en 8 horas) | **Orientativo, no verificado** | La bomba y filtro reales deben dimensionarse con el proveedor del equipo |
+
+Norma: `OBRA-PISCINA-DIMENSIONAMIENTO`. Alcance acotado a piscinas
+**rectangulares** en hormigón armado in situ — no cubre piscinas circulares,
+formas libres, ni fibra de vidrio prefabricada (esa última se cotiza directo
+con el proveedor y no encaja en este tipo de cálculo).
+
+## Módulo Quinchos (estructura y techo) — estado actual
+
+| Contenido | Estado | Fuente |
+|---|---|---|
+| Espaciamiento de postes (2m o 3m según preferencia) | **No verificado** | Práctica de obra |
+| Pérdida por corte de vigas (10%) y tramo comercial (3m) | **No verificado** | Práctica de obra |
+| Inclinación de techo asumida fija (factor 1.15) | **Simplificación, no verificado** | No se pregunta al usuario, a diferencia de Techumbres |
+| Cobertura y pérdida de cubierta | **No verificado** | Mismos valores que Techumbres |
+
+Norma: `OBRA-QUINCHO-ESTRUCTURA`. Alcance acotado a estructura de postes +
+techo — no incluye piso/pavimento (queda para una iteración futura).
+
+## Módulo Impermeabilización — estado actual
+
+| Contenido | Estado | Fuente |
+|---|---|---|
+| Cobertura y pérdida de membrana asfáltica (10m²/rollo, 15%) | **No verificado** | Práctica de obra / valor típico de mercado |
+| Cobertura y pérdida de pintura impermeabilizante (4m²/galón ya con 2 manos, 5%) | **No verificado** | Práctica de obra / valor típico de mercado |
+
+Norma: `OBRA-IMPERMEABILIZACION-RENDIMIENTOS`. Los materiales (rollos vs.
+galones) son mutuamente excluyentes según el tipo de impermeabilizante
+elegido — nunca aparecen ambos en el mismo resultado.
+
 ## Cómo se implementó
 
 - **Schema** (`prisma/schema.prisma`): modelo `Norm` (`code`, `title`, `year`, `scope`,
