@@ -109,6 +109,9 @@ model Question {
   unit     String?
   helpText String?
   order    Int          @default(0)
+  // Preguntas del mismo módulo que comparten este valor se renderizan juntas
+  // en un solo paso del wizard (ver docs/formula-dsl.md).
+  stepGroup String?
 
   options QuestionOption[]
 

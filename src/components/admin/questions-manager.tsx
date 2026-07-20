@@ -18,6 +18,7 @@ type Question = {
   type: "NUMBER" | "SELECT" | "TEXT";
   unit: string | null;
   options: { id: string; key: string; label: string }[];
+  stepGroup: string | null;
 };
 
 const TYPE_LABELS: Record<Question["type"], string> = {
@@ -71,6 +72,7 @@ export function QuestionsManager({ moduleId, questions }: { moduleId: string; qu
         <div className="mb-6">
           <QuestionForm
             submitLabel="Crear pregunta"
+            numberQuestions={questions.filter((q) => q.type === "NUMBER").map((q) => ({ id: q.id, label: q.label }))}
             onCancel={() => setMode("list")}
             onSubmit={async (input: QuestionInput) => {
               const result = await createQuestionAction(moduleId, input);
@@ -93,6 +95,9 @@ export function QuestionsManager({ moduleId, questions }: { moduleId: string; qu
             <div key={question.id}>
               <QuestionForm
                 submitLabel="Guardar cambios"
+                numberQuestions={questions
+                  .filter((q) => q.type === "NUMBER" && q.id !== question.id)
+                  .map((q) => ({ id: q.id, label: q.label }))}
                 onCancel={() => setMode("list")}
                 initial={{
                   label: question.label,
@@ -100,6 +105,9 @@ export function QuestionsManager({ moduleId, questions }: { moduleId: string; qu
                   type: question.type,
                   unit: question.unit ?? "",
                   options: question.options.map((o) => ({ id: o.id, label: o.label })),
+                  groupWithQuestionId: question.stepGroup
+                    ? questions.find((q) => q.id !== question.id && q.stepGroup === question.stepGroup)?.id ?? null
+                    : null,
                 }}
                 onSubmit={async (input: QuestionInput) => {
                   const result = await updateQuestionAction(question.id, input);
@@ -138,6 +146,15 @@ export function QuestionsManager({ moduleId, questions }: { moduleId: string; qu
                   </span>
                   {question.unit && (
                     <span className="text-[10px] font-mono text-ink-muted">{question.unit}</span>
+                  )}
+                  {question.stepGroup && (
+                    <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-navy/[0.08] text-navy">
+                      Agrupada con:{" "}
+                      {questions
+                        .filter((q) => q.id !== question.id && q.stepGroup === question.stepGroup)
+                        .map((q) => q.label)
+                        .join(", ") || "—"}
+                    </span>
                   )}
                 </div>
                 {question.helpText && <p className="text-xs text-ink-muted mb-1">{question.helpText}</p>}

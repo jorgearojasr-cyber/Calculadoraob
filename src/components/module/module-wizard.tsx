@@ -4,9 +4,31 @@ import { useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { QuestionStep } from "./question-step";
+import { QuestionGroupStep } from "./question-group-step";
 import { ResultScreen } from "./result-screen";
 import type { WizardAnswers, WizardQuestion } from "./types";
 import { calculateModuleAction, type CalculateModuleResult } from "@/app/(app)/categorias/[slug]/[moduleSlug]/actions";
+
+// Preguntas con el mismo stepGroup se agrupan en un solo paso del wizard,
+// en el orden en que aparece cada grupo por primera vez.
+function buildSteps(questions: WizardQuestion[]): WizardQuestion[][] {
+  const steps: WizardQuestion[][] = [];
+  const groupIndex = new Map<string, number>();
+
+  for (const question of questions) {
+    if (question.stepGroup) {
+      const existingIndex = groupIndex.get(question.stepGroup);
+      if (existingIndex !== undefined) {
+        steps[existingIndex].push(question);
+        continue;
+      }
+      groupIndex.set(question.stepGroup, steps.length);
+    }
+    steps.push([question]);
+  }
+
+  return steps;
+}
 
 export function ModuleWizard({
   moduleId,
@@ -21,20 +43,20 @@ export function ModuleWizard({
   categoryName: string;
   questions: WizardQuestion[];
 }) {
+  const steps = useMemo(() => buildSteps(questions), [questions]);
   const [stepIndex, setStepIndex] = useState(0);
   const [answers, setAnswers] = useState<WizardAnswers>({});
   const [calculation, setCalculation] = useState<CalculateModuleResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
-  const currentQuestion = questions[stepIndex];
+  const currentGroup = steps[stepIndex];
 
-  const handleAnswer = (value: string | number) => {
-    const nextAnswers = { ...answers, [currentQuestion.key]: value };
+  const advanceOrCalculate = (nextAnswers: WizardAnswers) => {
     setAnswers(nextAnswers);
     setError(null);
 
-    if (stepIndex < questions.length - 1) {
+    if (stepIndex < steps.length - 1) {
       setStepIndex(stepIndex + 1);
       return;
     }
@@ -47,6 +69,14 @@ export function ModuleWizard({
         setError("No pudimos calcular con esos datos. Revisa las respuestas e inténtalo de nuevo.");
       }
     });
+  };
+
+  const handleAnswer = (value: string | number) => {
+    advanceOrCalculate({ ...answers, [currentGroup[0].key]: value });
+  };
+
+  const handleGroupAnswer = (values: Record<string, number>) => {
+    advanceOrCalculate({ ...answers, ...values });
   };
 
   const handleBack = () => {
@@ -90,22 +120,31 @@ export function ModuleWizard({
         <>
           <div className="flex items-center gap-2 mb-8">
             <span className="font-mono text-xs text-ink-faint">
-              {String(stepIndex + 1).padStart(2, "0")} / {String(questions.length).padStart(2, "0")}
+              {String(stepIndex + 1).padStart(2, "0")} / {String(steps.length).padStart(2, "0")}
             </span>
             <div className="h-1 flex-1 rounded-full bg-border overflow-hidden">
               <div
                 className="h-full bg-safety transition-all"
-                style={{ width: `${((stepIndex + 1) / questions.length) * 100}%` }}
+                style={{ width: `${((stepIndex + 1) / steps.length) * 100}%` }}
               />
             </div>
           </div>
 
-          <QuestionStep
-            key={currentQuestion.id}
-            question={currentQuestion}
-            initialValue={answers[currentQuestion.key]}
-            onAnswer={handleAnswer}
-          />
+          {currentGroup.length > 1 ? (
+            <QuestionGroupStep
+              key={currentGroup.map((q) => q.id).join("-")}
+              questions={currentGroup}
+              initialValues={answers}
+              onAnswer={handleGroupAnswer}
+            />
+          ) : (
+            <QuestionStep
+              key={currentGroup[0].id}
+              question={currentGroup[0]}
+              initialValue={answers[currentGroup[0].key]}
+              onAnswer={handleAnswer}
+            />
+          )}
 
           {isPending && <p className="mt-6 text-sm text-ink-muted">Calculando…</p>}
           {error && <p className="mt-6 text-sm text-safety">{error}</p>}

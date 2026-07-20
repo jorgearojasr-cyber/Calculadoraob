@@ -28,6 +28,7 @@ export default async function ModulePage({
     unit: question.unit,
     helpText: question.helpText,
     options: question.options.map((option) => ({ key: option.key, label: option.label })),
+    stepGroup: question.stepGroup,
   }));
 
   return (

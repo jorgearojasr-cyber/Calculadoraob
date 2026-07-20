@@ -12,7 +12,28 @@ export type QuestionInput = {
   type: "NUMBER" | "SELECT" | "TEXT";
   unit: string;
   options: QuestionOptionInput[];
+  // Id de otra pregunta del mismo módulo con la que esta debe mostrarse en
+  // el mismo paso del wizard. null/undefined = sin agrupar.
+  groupWithQuestionId?: string | null;
 };
+
+// Resuelve groupWithQuestionId a un valor de stepGroup compartido. Si la
+// pregunta objetivo todavía no tiene grupo, le asigna uno nuevo (su propio
+// id) para que ambas preguntas queden agrupadas.
+async function resolveStepGroup(
+  moduleId: string,
+  groupWithQuestionId: string | null | undefined
+): Promise<string | null> {
+  if (!groupWithQuestionId) return null;
+
+  const target = await prisma.question.findUnique({ where: { id: groupWithQuestionId } });
+  if (!target || target.moduleId !== moduleId) return null;
+
+  if (target.stepGroup) return target.stepGroup;
+
+  await prisma.question.update({ where: { id: target.id }, data: { stepGroup: target.id } });
+  return target.id;
+}
 
 async function revalidateModulePaths(moduleId: string) {
   const mod = await prisma.module.findUnique({ where: { id: moduleId }, include: { category: true } });
@@ -52,6 +73,9 @@ export async function createQuestionAction(
           })
       : [];
 
+  const stepGroup =
+    input.type === "NUMBER" ? await resolveStepGroup(moduleId, input.groupWithQuestionId) : null;
+
   await prisma.question.create({
     data: {
       moduleId,
@@ -61,6 +85,7 @@ export async function createQuestionAction(
       type: input.type,
       unit: input.type === "NUMBER" ? input.unit.trim() || null : null,
       order,
+      stepGroup,
       options: { create: optionsData },
     },
   });
@@ -88,6 +113,9 @@ export async function updateQuestionAction(
   const toDelete = question.options.filter((o) => !keptIds.has(o.id));
   const existingKeys = question.options.map((o) => o.key);
 
+  const stepGroup =
+    input.type === "NUMBER" ? await resolveStepGroup(question.moduleId, input.groupWithQuestionId) : null;
+
   await prisma.$transaction([
     prisma.question.update({
       where: { id: questionId },
@@ -96,6 +124,7 @@ export async function updateQuestionAction(
         helpText: input.helpText.trim() || null,
         type: input.type,
         unit: input.type === "NUMBER" ? input.unit.trim() || null : null,
+        stepGroup,
       },
     }),
     ...toDelete.map((o) => prisma.questionOption.delete({ where: { id: o.id } })),

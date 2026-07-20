@@ -14,6 +14,7 @@ const TYPE_LABELS: Record<QuestionType, string> = {
 
 export function QuestionForm({
   initial,
+  numberQuestions = [],
   onSubmit,
   onCancel,
   submitLabel,
@@ -24,7 +25,9 @@ export function QuestionForm({
     type: QuestionType;
     unit: string;
     options: QuestionOptionInput[];
+    groupWithQuestionId?: string | null;
   };
+  numberQuestions?: { id: string; label: string }[];
   onSubmit: (input: QuestionInput) => Promise<{ error?: string }>;
   onCancel: () => void;
   submitLabel: string;
@@ -35,6 +38,9 @@ export function QuestionForm({
   const [unit, setUnit] = useState(initial?.unit ?? "");
   const [options, setOptions] = useState<QuestionOptionInput[]>(
     initial?.options ?? [{ label: "" }, { label: "" }]
+  );
+  const [groupWithQuestionId, setGroupWithQuestionId] = useState<string>(
+    initial?.groupWithQuestionId ?? ""
   );
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -50,7 +56,14 @@ export function QuestionForm({
   const handleSubmit = () => {
     setError(null);
     startTransition(async () => {
-      const result = await onSubmit({ label, helpText, type, unit, options });
+      const result = await onSubmit({
+        label,
+        helpText,
+        type,
+        unit,
+        options,
+        groupWithQuestionId: type === "NUMBER" ? groupWithQuestionId || null : null,
+      });
       if (result?.error) setError(result.error);
     });
   };
@@ -100,6 +113,27 @@ export function QuestionForm({
             placeholder='Ej: "m", "cm", "m²"'
             className="rounded-lg px-3 py-2 bg-white border border-border outline-none focus:border-ink w-40"
           />
+        </label>
+      )}
+
+      {type === "NUMBER" && numberQuestions.length > 0 && (
+        <label className="grid gap-1.5 text-sm">
+          <span className="font-medium">Mostrar en el mismo paso que (opcional)</span>
+          <select
+            value={groupWithQuestionId}
+            onChange={(e) => setGroupWithQuestionId(e.target.value)}
+            className="rounded-lg px-3 py-2 bg-white border border-border outline-none focus:border-ink"
+          >
+            <option value="">Ninguna — paso propio</option>
+            {numberQuestions.map((q) => (
+              <option key={q.id} value={q.id}>
+                {q.label}
+              </option>
+            ))}
+          </select>
+          <span className="text-xs text-ink-muted">
+            Ambas preguntas se mostrarán juntas en la misma pantalla del wizard.
+          </span>
         </label>
       )}
 
