@@ -1,32 +1,41 @@
 "use client";
 
 import { useState } from "react";
-import { Check, Copy, RotateCcw, Sparkles } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Check, Copy, FolderPlus, RotateCcw, Sparkles } from "lucide-react";
 import { formatQuantity } from "@/lib/format-number";
 import { buildCalculationPrompt } from "@/lib/prompt-generator";
 import type { CalculationResult, InfoResult } from "@/lib/formula-engine";
-import type { NormSummary } from "@/app/categorias/[slug]/[moduleSlug]/actions";
+import type { CalculateModuleResult, NormSummary } from "@/app/categorias/[slug]/[moduleSlug]/actions";
+import { createSavedProjectAction } from "@/app/proyectos/actions";
+import { PENDING_PROJECT_KEY } from "@/lib/pending-project";
 import { NormsDisclaimer } from "./norms-disclaimer";
 
 export function ResultScreen({
+  moduleId,
   moduleName,
   categoryName,
   answersSummary,
   results,
   infoResults,
   norms,
+  variables,
   onRestart,
 }: {
+  moduleId: string;
   moduleName: string;
   categoryName: string;
   answersSummary: { label: string; value: string }[];
   results: CalculationResult[];
   infoResults: InfoResult[];
   norms: NormSummary[];
+  variables: CalculateModuleResult["variables"];
   onRestart: () => void;
 }) {
+  const router = useRouter();
   const [promptOpen, setPromptOpen] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [saveState, setSaveState] = useState<"idle" | "saving" | "error">("idle");
 
   const prompt = buildCalculationPrompt({ moduleName, categoryName, answersSummary, results, infoResults });
 
@@ -34,6 +43,33 @@ export function ResultScreen({
     await navigator.clipboard.writeText(prompt);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleSaveProject = async () => {
+    setSaveState("saving");
+    const result: CalculateModuleResult = { results, infoResults, variables, norms };
+
+    try {
+      const response = await createSavedProjectAction({
+        moduleId,
+        moduleName,
+        answersSummary,
+        result,
+      });
+
+      if (response.error) {
+        window.localStorage.setItem(
+          PENDING_PROJECT_KEY,
+          JSON.stringify({ moduleId, moduleName, answersSummary, result })
+        );
+        router.push(`/login?callbackUrl=${encodeURIComponent("/proyectos/guardar-pendiente")}`);
+        return;
+      }
+
+      router.push(`/proyectos/${response.id}`);
+    } catch {
+      setSaveState("error");
+    }
   };
 
   return (
@@ -98,6 +134,14 @@ export function ResultScreen({
           Generar prompt para IA
         </button>
         <button
+          onClick={handleSaveProject}
+          disabled={saveState === "saving"}
+          className="rounded-full px-6 py-3 text-sm font-medium border border-ink flex items-center gap-2 disabled:opacity-50"
+        >
+          <FolderPlus className="w-4 h-4" />
+          {saveState === "saving" ? "Guardando…" : "Guardar como proyecto"}
+        </button>
+        <button
           onClick={onRestart}
           className="rounded-full px-6 py-3 text-sm font-medium border border-ink flex items-center gap-2"
         >
@@ -105,6 +149,9 @@ export function ResultScreen({
           Calcular otro radier
         </button>
       </div>
+      {saveState === "error" && (
+        <p className="mt-3 text-sm text-safety">No pudimos guardar el proyecto. Inténtalo de nuevo.</p>
+      )}
 
       {promptOpen && (
         <div className="mt-4 rounded-2xl p-5 bg-white border border-border">

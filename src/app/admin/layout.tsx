@@ -1,21 +1,13 @@
 import Link from "next/link";
-import { TriangleAlert } from "lucide-react";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import { SignOutButton } from "@/components/auth/sign-out-button";
 
-// ⚠️ SEGURIDAD: /admin no tiene autenticación todavía (decisión temporal).
-// Toda la ruta vive bajo el segmento /admin a propósito, para que un
-// middleware de auth (matcher: ["/admin/:path*"]) pueda protegerla más
-// adelante sin reestructurar nada. NO DESPLEGAR A PRODUCCIÓN sin ese
-// middleware — cualquiera con la URL puede editar/borrar la base de
-// conocimiento tal como está hoy.
+export default async function AdminLayout({ children }: { children: React.ReactNode }) {
+  const session = await getServerSession(authOptions);
 
-export default function AdminLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen w-full bg-concrete text-ink font-body">
-      <div className="bg-safety text-white text-xs font-mono px-6 py-2 flex items-center gap-2">
-        <TriangleAlert className="w-3.5 h-3.5 flex-shrink-0" />
-        Panel sin autenticación — no desplegar así a producción.
-      </div>
-
       <header className="max-w-6xl mx-auto px-6 pt-6 flex items-center gap-8">
         <Link href="/admin" className="font-display text-lg font-semibold tracking-tight">
           ObraBien Admin
@@ -34,6 +26,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         <Link href="/" className="ml-auto text-sm text-ink-muted hover:text-ink transition-colors">
           Ver sitio →
         </Link>
+        <div className="flex items-center gap-3 text-sm text-ink-muted">
+          {session?.user?.email}
+          <SignOutButton />
+        </div>
       </header>
 
       <main className="max-w-6xl mx-auto px-6 py-8">{children}</main>

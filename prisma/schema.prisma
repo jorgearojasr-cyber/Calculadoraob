@@ -12,6 +12,49 @@ datasource db {
   provider = "postgresql"
 }
 
+enum Role {
+  user
+  admin
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  name         String?
+  image        String?
+  passwordHash String?
+  role         Role     @default(user)
+
+  savedProjects SavedProject[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("users")
+}
+
+model SavedProject {
+  id       String @id @default(cuid())
+  user     User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId   String
+  module   Module @relation(fields: [moduleId], references: [id], onDelete: Restrict)
+  moduleId String
+
+  name            String
+  // Respuestas del wizard y resultado calculado, guardados como snapshot —
+  // el detalle del proyecto no recalcula contra el módulo actual.
+  answers         Json
+  result          Json
+  progressPercent Int    @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([moduleId])
+  @@map("saved_projects")
+}
+
 model Category {
   id          String   @id @default(cuid())
   slug        String   @unique
@@ -37,10 +80,11 @@ model Module {
   category    Category @relation(fields: [categoryId], references: [id], onDelete: Restrict)
   categoryId  String
 
-  questions   Question[]
-  variables   Variable[]
-  formulas    Formula[]
-  lossFactors LossFactor[]
+  questions     Question[]
+  variables     Variable[]
+  formulas      Formula[]
+  lossFactors   LossFactor[]
+  savedProjects SavedProject[]
 
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt

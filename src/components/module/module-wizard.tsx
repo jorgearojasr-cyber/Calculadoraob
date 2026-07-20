@@ -123,12 +123,14 @@ export function ModuleWizard({
 
       {calculation && (
         <ResultScreen
+          moduleId={moduleId}
           moduleName={moduleName}
           categoryName={categoryName}
           answersSummary={answersSummary}
           results={calculation.results}
           infoResults={calculation.infoResults}
           norms={calculation.norms}
+          variables={calculation.variables}
           onRestart={handleRestart}
         />
       )}
