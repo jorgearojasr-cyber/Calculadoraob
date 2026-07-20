@@ -122,6 +122,34 @@ de material. El disclaimer de este módulo incluye una frase explícita
 reforzando que la enfierradura es un elemento estructural y su especificación
 debe provenir siempre de un profesional habilitado.
 
+## Módulo Techumbres (cubierta) — estado actual
+
+| Contenido | Estado | Fuente |
+|---|---|---|
+| Cobertura útil y pérdida por tipo de cubierta (zinc 2.7m²/10%, tejuela 3.1m²/10%, teja arcilla 0.0625m²/5%) | **No verificado** | Práctica de obra / valor típico de mercado |
+| Factor de conversión área horizontal → área real por inclinación (1.03/1.15/1.30) | **No verificado** | Aproximación geométrica estándar, no cálculo trigonométrico exacto |
+
+Norma: `OBRA-TECHUMBRE-COBERTURAS`.
+
+## Módulo Yeso Cartón (tabiques y cielos) — estado actual
+
+| Contenido | Estado | Fuente |
+|---|---|---|
+| Pérdida por corte (10%), plancha comercial 1.20x2.40m (2.88 m²) | **No verificado** | Práctica de obra |
+| Rendimiento de tornillos (12/m²) y caja estándar (1000 unidades) | **No verificado** | Práctica de obra |
+
+Norma: `OBRA-YESOCARTON-RENDIMIENTOS`.
+
+## Módulo Paisajismo (pasto en panes) — estado actual
+
+| Contenido | Estado | Fuente |
+|---|---|---|
+| Pérdida por recortes/ajustes al instalar pasto (5%) | **No verificado** | Práctica de obra |
+| Espesor típico de capa de tierra de hoja (5cm) | **No verificado** | Práctica de obra |
+
+Norma: `OBRA-PAISAJISMO-PASTO`. Alcance acotado a UN sub-caso (pasto en panes/placas)
+— siembra por semilla y riego quedan como módulos separados a futuro.
+
 ## Cómo se implementó
 
 - **Schema** (`prisma/schema.prisma`): modelo `Norm` (`code`, `title`, `year`, `scope`,
