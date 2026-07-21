@@ -79,17 +79,8 @@ export async function RecentProjects() {
                   <Icon className="w-5 h-5 text-navy" />
                 </div>
                 <h3 className="font-semibold text-[15px] mb-1">{project.name}</h3>
-                <p className="text-xs text-ink-muted mb-4">
+                <p className="text-xs text-ink-muted">
                   {project.module.category.name} · {project.module.name}
-                </p>
-                <div className="h-1.5 rounded-full bg-border overflow-hidden">
-                  <div
-                    className="h-full bg-safety transition-all"
-                    style={{ width: `${project.progressPercent}%` }}
-                  />
-                </div>
-                <p className="mt-2 text-[11px] font-mono text-ink-faint">
-                  {project.progressPercent}% de avance
                 </p>
               </Link>
             );

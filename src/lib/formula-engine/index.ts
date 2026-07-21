@@ -25,6 +25,8 @@ export type CalculationResult = {
   value: number;
   note: string | null;
   materialName: string | null;
+  /** Precio unitario ingresado por el usuario para este cálculo puntual (no persiste globalmente). */
+  unitPrice?: number | null;
 };
 
 export type InfoResult = {

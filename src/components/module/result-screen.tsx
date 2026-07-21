@@ -3,13 +3,13 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Check, Copy, FolderPlus, RotateCcw, Sparkles } from "lucide-react";
-import { formatQuantity } from "@/lib/format-number";
 import { buildCalculationPrompt } from "@/lib/prompt-generator";
 import type { CalculationResult, InfoResult } from "@/lib/formula-engine";
 import type { CalculateModuleResult, NormSummary } from "@/app/(app)/categorias/[slug]/[moduleSlug]/actions";
 import { createSavedProjectAction } from "@/app/(app)/proyectos/actions";
 import { PENDING_PROJECT_KEY } from "@/lib/pending-project";
 import { NormsDisclaimer } from "./norms-disclaimer";
+import { PricedResults } from "./priced-results";
 
 export function ResultScreen({
   moduleId,
@@ -36,6 +36,7 @@ export function ResultScreen({
   const [promptOpen, setPromptOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   const [saveState, setSaveState] = useState<"idle" | "saving" | "error">("idle");
+  const [pricedResults, setPricedResults] = useState<CalculationResult[]>(results);
 
   const prompt = buildCalculationPrompt({ moduleName, categoryName, answersSummary, results, infoResults });
 
@@ -47,7 +48,7 @@ export function ResultScreen({
 
   const handleSaveProject = async () => {
     setSaveState("saving");
-    const result: CalculateModuleResult = { results, infoResults, variables, norms };
+    const result: CalculateModuleResult = { results: pricedResults, infoResults, variables, norms };
 
     try {
       const response = await createSavedProjectAction({
@@ -94,23 +95,7 @@ export function ResultScreen({
         </div>
       )}
 
-      <div className="grid gap-3">
-        {results.map((result) => (
-          <div key={result.key} className="rounded-2xl p-5 bg-white border border-border">
-            <div className="flex items-baseline justify-between gap-4">
-              <span className="font-medium text-[15px]">{result.label}</span>
-              <span className="font-display text-xl font-semibold whitespace-nowrap">
-                {formatQuantity(result.value)}{" "}
-                <span className="text-sm font-body text-ink-muted">{result.unit}</span>
-              </span>
-            </div>
-            {result.materialName && (
-              <p className="mt-1 text-xs font-medium text-ink-muted">{result.materialName}</p>
-            )}
-            {result.note && <p className="mt-2 text-xs text-ink-muted">{result.note}</p>}
-          </div>
-        ))}
-      </div>
+      <PricedResults results={results} onPricesChange={setPricedResults} />
 
       <NormsDisclaimer norms={norms} />
 

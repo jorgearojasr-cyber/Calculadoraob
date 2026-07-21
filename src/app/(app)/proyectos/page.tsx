@@ -3,7 +3,6 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getCategoryIcon } from "@/lib/category-icons";
-import { ProgressEditor } from "@/components/proyectos/progress-editor";
 
 export default async function ProyectosPage() {
   const session = await getServerSession(authOptions);
@@ -51,9 +50,6 @@ export default async function ProyectosPage() {
                       year: "numeric",
                     })}
                   </p>
-                  <div className="mt-3 max-w-xs">
-                    <ProgressEditor id={project.id} initialValue={project.progressPercent} />
-                  </div>
                 </div>
               </div>
             </Link>

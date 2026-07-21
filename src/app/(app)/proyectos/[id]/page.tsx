@@ -4,9 +4,8 @@ import { ArrowLeft } from "lucide-react";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { formatQuantity } from "@/lib/format-number";
 import { NormsDisclaimer } from "@/components/module/norms-disclaimer";
-import { ProgressEditor } from "@/components/proyectos/progress-editor";
+import { PricedResults } from "@/components/module/priced-results";
 import { RenameProject } from "@/components/proyectos/rename-project";
 import type { CalculateModuleResult } from "@/app/(app)/categorias/[slug]/[moduleSlug]/actions";
 import type { AnswerSummaryItem } from "../actions";
@@ -38,11 +37,6 @@ export default async function SavedProjectPage({ params }: { params: { id: strin
 
       <RenameProject id={project.id} initialName={project.name} />
 
-      <div className="mt-4 flex items-center gap-3">
-        <span className="text-xs text-ink-muted flex-shrink-0">Avance</span>
-        <ProgressEditor id={project.id} initialValue={project.progressPercent} />
-      </div>
-
       {result.infoResults.length > 0 && (
         <div className="grid gap-3 mt-8 mb-3">
           {result.infoResults.map((info) => (
@@ -58,18 +52,8 @@ export default async function SavedProjectPage({ params }: { params: { id: strin
         </div>
       )}
 
-      <div className="grid gap-3 mt-8">
-        {result.results.map((item) => (
-          <div key={item.key} className="rounded-2xl p-5 bg-white border border-border">
-            <div className="flex items-baseline justify-between gap-4">
-              <span className="font-medium text-[15px]">{item.label}</span>
-              <span className="font-display text-xl font-semibold whitespace-nowrap">
-                {formatQuantity(item.value)} <span className="text-sm font-body text-ink-muted">{item.unit}</span>
-              </span>
-            </div>
-            {item.note && <p className="mt-2 text-xs text-ink-muted">{item.note}</p>}
-          </div>
-        ))}
+      <div className="mt-8">
+        <PricedResults results={result.results} />
       </div>
 
       <NormsDisclaimer norms={result.norms} />
