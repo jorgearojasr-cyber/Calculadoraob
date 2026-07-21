@@ -23,6 +23,7 @@ export type FormulaInput = {
   lossFactorKey: string | null;
   rounding: RoundingMode;
   note: string;
+  materialLabelTemplate: string;
 };
 
 async function revalidateModulePaths(moduleId: string) {
@@ -99,6 +100,7 @@ export async function createFormulaAction(
       expression,
       condition: condition ?? undefined,
       note: input.note.trim() || null,
+      materialLabelTemplate: input.materialLabelTemplate.trim() || null,
       order: (maxOrder._max.order ?? -1) + 1,
     },
   });
@@ -127,7 +129,14 @@ export async function updateFormulaAction(
 
   await prisma.formula.update({
     where: { id: formulaId },
-    data: { label, unit, expression, condition: condition ?? Prisma.JsonNull, note: input.note.trim() || null },
+    data: {
+      label,
+      unit,
+      expression,
+      condition: condition ?? Prisma.JsonNull,
+      note: input.note.trim() || null,
+      materialLabelTemplate: input.materialLabelTemplate.trim() || null,
+    },
   });
 
   await revalidateModulePaths(formula.moduleId);

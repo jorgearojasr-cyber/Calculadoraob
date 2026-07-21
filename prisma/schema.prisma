@@ -196,6 +196,13 @@ model Formula {
   note       String?
   material   Material? @relation(fields: [materialId], references: [id])
   materialId String?
+  // Plantilla opcional para el nombre de material mostrado en el resultado,
+  // con placeholders {variableKey} interpolados con los valores de variable
+  // ya resueltos al momento del cálculo (ver docs/formula-dsl.md). Si está
+  // presente, reemplaza a material.name — útil cuando el nombre depende de
+  // varias variables de selección (medida, espesor, etc.) y crear un
+  // Material por combinación sería inviable.
+  materialLabelTemplate String?
   norm       Norm?     @relation(fields: [normId], references: [id], onDelete: SetNull)
   normId     String?
   order      Int       @default(0)

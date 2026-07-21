@@ -23,6 +23,7 @@ type FormulaRow = {
   label: string;
   unit: string;
   note: string | null;
+  materialLabelTemplate: string | null;
   builder: {
     terms: BuilderTerm[];
     ops: BuilderOp[];
@@ -215,8 +216,24 @@ export function FormulasManager({
                   decompileFailed={!formula.builder}
                   initial={
                     formula.builder
-                      ? { label: formula.label, unit: formula.unit, note: formula.note ?? "", ...formula.builder }
-                      : { label: formula.label, unit: formula.unit, note: formula.note ?? "", terms: [{ kind: "constant", value: 0 }], ops: [], condition: null, lossFactorKey: null, rounding: "none" }
+                      ? {
+                          label: formula.label,
+                          unit: formula.unit,
+                          note: formula.note ?? "",
+                          materialLabelTemplate: formula.materialLabelTemplate ?? "",
+                          ...formula.builder,
+                        }
+                      : {
+                          label: formula.label,
+                          unit: formula.unit,
+                          note: formula.note ?? "",
+                          materialLabelTemplate: formula.materialLabelTemplate ?? "",
+                          terms: [{ kind: "constant", value: 0 }],
+                          ops: [],
+                          condition: null,
+                          lossFactorKey: null,
+                          rounding: "none",
+                        }
                   }
                   onCancel={() => setMode("list")}
                   onSubmit={async (input: FormulaInput) => {
@@ -270,6 +287,9 @@ export function FormulasManager({
                     </p>
                   )}
                   {formula.note && <p className="text-xs text-ink-muted mt-1 italic">{formula.note}</p>}
+                  {formula.materialLabelTemplate && (
+                    <p className="text-xs text-navy mt-1 font-mono">→ {formula.materialLabelTemplate}</p>
+                  )}
                 </div>
 
                 <div className="flex items-center gap-3">

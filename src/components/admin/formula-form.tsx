@@ -33,6 +33,7 @@ export function FormulaForm({
     label: string;
     unit: string;
     note: string;
+    materialLabelTemplate: string;
     terms: BuilderTerm[];
     ops: BuilderOp[];
     condition: BuilderCondition;
@@ -47,6 +48,7 @@ export function FormulaForm({
   const [label, setLabel] = useState(initial?.label ?? "");
   const [unit, setUnit] = useState(initial?.unit ?? "");
   const [note, setNote] = useState(initial?.note ?? "");
+  const [materialLabelTemplate, setMaterialLabelTemplate] = useState(initial?.materialLabelTemplate ?? "");
   const [terms, setTerms] = useState<BuilderTerm[]>(initial?.terms ?? [emptyTerm()]);
   const [ops, setOps] = useState<BuilderOp[]>(initial?.ops ?? []);
   const [conditionEnabled, setConditionEnabled] = useState(!!initial?.condition);
@@ -96,6 +98,7 @@ export function FormulaForm({
         condition,
         lossFactorKey: lossFactorKey || null,
         rounding,
+        materialLabelTemplate,
       });
       if (result?.error) setError(result.error);
     });
@@ -298,6 +301,23 @@ export function FormulaForm({
           placeholder='Ej: "Despacho mínimo habitual: 3 m³."'
           className="rounded-lg px-3 py-2 bg-white border border-border outline-none focus:border-ink"
         />
+      </label>
+
+      <label className="grid gap-1.5 text-sm">
+        <span className="font-medium">Plantilla de nombre de material (opcional)</span>
+        <input
+          value={materialLabelTemplate}
+          onChange={(e) => setMaterialLabelTemplate(e.target.value)}
+          placeholder='Ej: "Perfil estructural {tipo-perfil-label} {medida-angulo-raw}x{medida-angulo-raw} x {espesor-angulo-raw}mm (piezas de 6m)"'
+          className="rounded-lg px-3 py-2 bg-white border border-border outline-none focus:border-ink font-mono text-xs"
+        />
+        <p className="text-xs text-ink-muted">
+          Si se llena, reemplaza el nombre del material fijo en el resultado. Usa{" "}
+          <code className="font-mono">{"{clave-de-variable}"}</code> para insertar el valor ya
+          resuelto de cualquier variable del módulo (útil cuando el nombre depende de varias
+          selecciones, ej. medida + espesor). Variables disponibles:{" "}
+          {variables.map((v) => v.key).join(", ") || "ninguna todavía"}.
+        </p>
       </label>
 
       {error && <p className="text-sm text-safety">{error}</p>}

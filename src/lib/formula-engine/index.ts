@@ -13,6 +13,7 @@ type FormulaInput = {
   note: string | null;
   order: number;
   material: { name: string } | null;
+  materialLabelTemplate?: string | null;
 };
 
 type VariableInput = { key: string; label: string; source: unknown; isResult: boolean };
@@ -34,6 +35,18 @@ export type InfoResult = {
   label: string;
   value: DslValue;
 };
+
+// Reemplaza placeholders {variableKey} en una plantilla con los valores de
+// variable ya resueltos. Si una variable referenciada no está resuelta
+// (pregunta condicional no respondida en esta rama), deja el placeholder
+// intacto en vez de lanzar — no debería ocurrir si la plantilla solo
+// referencia variables garantizadas por la condición de la fórmula.
+function interpolateMaterialLabel(template: string, variables: Record<string, DslValue>): string {
+  return template.replace(/\{([a-zA-Z0-9_-]+)\}/g, (match, key: string) => {
+    const value = variables[key];
+    return value !== undefined ? String(value) : match;
+  });
+}
 
 export function calculateModule(input: {
   variables: VariableInput[];
@@ -75,13 +88,17 @@ export function calculateModule(input: {
     formulaResults[formula.key] = value;
 
     if (formula.isResult) {
+      const materialName = formula.materialLabelTemplate
+        ? interpolateMaterialLabel(formula.materialLabelTemplate, variables)
+        : formula.material?.name ?? null;
+
       results.push({
         key: formula.key,
         label: formula.label,
         unit: formula.unit,
         value,
         note: formula.note,
-        materialName: formula.material?.name ?? null,
+        materialName,
       });
     }
   }

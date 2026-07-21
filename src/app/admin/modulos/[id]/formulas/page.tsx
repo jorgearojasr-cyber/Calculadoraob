@@ -23,6 +23,7 @@ export default async function ModuleFormulasPage({ params }: { params: { id: str
       label: formula.label,
       unit: formula.unit,
       note: formula.note,
+      materialLabelTemplate: formula.materialLabelTemplate,
       builder: decompiled ? { terms: decompiled.terms, ops: decompiled.ops, condition, lossFactorKey, rounding } : null,
     };
   });
