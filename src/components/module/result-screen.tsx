@@ -104,6 +104,9 @@ export function ResultScreen({
                 <span className="text-sm font-body text-ink-muted">{result.unit}</span>
               </span>
             </div>
+            {result.materialName && (
+              <p className="mt-1 text-xs font-medium text-ink-muted">{result.materialName}</p>
+            )}
             {result.note && <p className="mt-2 text-xs text-ink-muted">{result.note}</p>}
           </div>
         ))}
