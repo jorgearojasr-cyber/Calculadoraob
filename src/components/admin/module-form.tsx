@@ -18,6 +18,7 @@ export function ModuleForm({
     slug: string;
     description: string;
     categoryId: string;
+    searchKeywords?: string | null;
   };
   submitLabel: string;
 }) {
@@ -83,6 +84,19 @@ export function ModuleForm({
             </option>
           ))}
         </select>
+      </label>
+
+      <label className="grid gap-1.5 text-sm">
+        <span className="font-medium">Palabras clave de búsqueda (opcional)</span>
+        <input
+          name="searchKeywords"
+          defaultValue={initial?.searchKeywords ?? ""}
+          placeholder="Ej: radier patio piso hormigón cemento"
+          className="rounded-lg px-3 py-2 bg-white border border-border outline-none focus:border-ink"
+        />
+        <span className="text-xs text-ink-muted">
+          Términos extra para que el buscador de la Home encuentre este módulo aunque no coincidan con el nombre.
+        </span>
       </label>
 
       <p className="text-xs text-ink-muted">

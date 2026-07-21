@@ -1,7 +1,13 @@
-import { ArrowRight, Search } from "lucide-react";
+import Link from "next/link";
+import { ArrowRight } from "lucide-react";
 import { BlueprintTick } from "./blueprint-tick";
+import { SearchBar } from "./search-bar";
 
-const SUGGESTIONS = ["Radier de casa", "Pintar 3 piezas", "Piscina 6x3"];
+const SUGGESTIONS = [
+  { label: "Radier de casa", href: "/categorias/hormigon/radier" },
+  { label: "Pintar 3 piezas", href: "/categorias/pintura/pintura" },
+  { label: "Piscina 6x3", href: "/categorias/piscinas/piscina-rectangular-hormigon-armado" },
+];
 
 export function Hero() {
   return (
@@ -23,33 +29,17 @@ export function Hero() {
             sin necesitar experiencia técnica. Solo responde y nosotros calculamos.
           </p>
 
-          {/* Buscador (visual, la búsqueda funcional llega en Fase 2) */}
-          <div className="mt-8 relative">
-            <div className="flex items-center gap-3 rounded-2xl px-5 py-4 shadow-sm bg-white border-[1.5px] border-ink">
-              <Search className="w-5 h-5 flex-shrink-0 text-ink-muted" />
-              <input
-                placeholder="Ej: cuánto hormigón necesito para un radier de 40m²"
-                className="w-full bg-transparent outline-none text-base placeholder:text-ink-faint"
-                disabled
-              />
-              <button
-                className="flex-shrink-0 rounded-xl px-4 py-2 text-sm font-medium text-white flex items-center gap-1.5 bg-safety opacity-60 cursor-not-allowed"
-                disabled
+          <SearchBar />
+          <div className="mt-3 flex flex-wrap gap-2">
+            {SUGGESTIONS.map((s) => (
+              <Link
+                key={s.label}
+                href={s.href}
+                className="text-xs px-3 py-1.5 rounded-full font-mono bg-white border border-border text-ink-muted hover:border-safety/40 hover:text-ink transition-colors"
               >
-                Calcular
-                <ArrowRight className="w-3.5 h-3.5" />
-              </button>
-            </div>
-            <div className="mt-3 flex flex-wrap gap-2">
-              {SUGGESTIONS.map((s) => (
-                <span
-                  key={s}
-                  className="text-xs px-3 py-1.5 rounded-full font-mono bg-white border border-border text-ink-muted"
-                >
-                  {s}
-                </span>
-              ))}
-            </div>
+                {s.label}
+              </Link>
+            ))}
           </div>
 
           <div className="mt-10 flex items-center gap-6">

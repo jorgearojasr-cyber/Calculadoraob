@@ -98,6 +98,9 @@ model Module {
   slug        String   @unique
   name        String
   description String
+  // Texto libre opcional para mejorar el buscador de la Home sin depender
+  // solo del nombre/descripción exactos (ej. "radier patio piso hormigón").
+  searchKeywords String?
   version     Int      @default(1)
   published   Boolean  @default(false)
   category    Category @relation(fields: [categoryId], references: [id], onDelete: Restrict)

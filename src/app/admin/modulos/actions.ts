@@ -12,6 +12,7 @@ function readModuleForm(formData: FormData) {
   const slugInput = String(formData.get("slug") ?? "").trim();
   const description = String(formData.get("description") ?? "").trim();
   const categoryId = String(formData.get("categoryId") ?? "").trim();
+  const searchKeywordsInput = String(formData.get("searchKeywords") ?? "").trim();
 
   if (!name || !description || !categoryId) {
     throw new Error("Nombre, descripción y categoría son obligatorios.");
@@ -22,6 +23,7 @@ function readModuleForm(formData: FormData) {
     slug: slugInput ? slugify(slugInput) : slugify(name),
     description,
     categoryId,
+    searchKeywords: searchKeywordsInput || null,
   };
 }
 
@@ -46,6 +48,7 @@ export async function createModuleAction(
         slug: data.slug,
         description: data.description,
         categoryId: data.categoryId,
+        searchKeywords: data.searchKeywords,
         published: false, // los módulos nuevos siempre nacen en borrador
       },
     });

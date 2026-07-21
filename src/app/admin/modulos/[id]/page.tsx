@@ -46,6 +46,7 @@ export default async function ModuleGeneralPage({ params }: { params: { id: stri
           slug: mod.slug,
           description: mod.description,
           categoryId: mod.categoryId,
+          searchKeywords: mod.searchKeywords,
         }}
         submitLabel="Guardar cambios"
       />
