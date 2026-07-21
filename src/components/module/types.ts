@@ -7,6 +7,8 @@ export type WizardQuestion = {
   helpText: string | null;
   options: { key: string; label: string }[];
   stepGroup: string | null;
+  visibleIfQuestionKey: string | null;
+  visibleIfValues: string[];
 };
 
 export type WizardAnswers = Record<string, string | number>;

@@ -5,17 +5,27 @@ import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { QuestionStep } from "./question-step";
 import { QuestionGroupStep } from "./question-group-step";
+import { ConditionalRevealStep } from "./conditional-reveal-step";
 import { ResultScreen } from "./result-screen";
 import type { WizardAnswers, WizardQuestion } from "./types";
 import { calculateModuleAction, type CalculateModuleResult } from "@/app/(app)/categorias/[slug]/[moduleSlug]/actions";
 
+function isQuestionVisible(question: WizardQuestion, answers: WizardAnswers): boolean {
+  if (!question.visibleIfQuestionKey) return true;
+  const answer = answers[question.visibleIfQuestionKey];
+  return answer !== undefined && question.visibleIfValues.includes(String(answer));
+}
+
 // Preguntas con el mismo stepGroup se agrupan en un solo paso del wizard,
-// en el orden en que aparece cada grupo por primera vez.
-function buildSteps(questions: WizardQuestion[]): WizardQuestion[][] {
+// en el orden en que aparece cada grupo por primera vez. Preguntas con
+// visibleIfQuestionKey se excluyen si esa condición no se cumple con las
+// respuestas actuales.
+function buildSteps(questions: WizardQuestion[], answers: WizardAnswers): WizardQuestion[][] {
+  const visible = questions.filter((q) => isQuestionVisible(q, answers));
   const steps: WizardQuestion[][] = [];
   const groupIndex = new Map<string, number>();
 
-  for (const question of questions) {
+  for (const question of visible) {
     if (question.stepGroup) {
       const existingIndex = groupIndex.get(question.stepGroup);
       if (existingIndex !== undefined) {
@@ -43,21 +53,29 @@ export function ModuleWizard({
   categoryName: string;
   questions: WizardQuestion[];
 }) {
-  const steps = useMemo(() => buildSteps(questions), [questions]);
   const [stepIndex, setStepIndex] = useState(0);
   const [answers, setAnswers] = useState<WizardAnswers>({});
   const [calculation, setCalculation] = useState<CalculateModuleResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
+  const steps = useMemo(() => buildSteps(questions, answers), [questions, answers]);
   const currentGroup = steps[stepIndex];
 
   const advanceOrCalculate = (nextAnswers: WizardAnswers) => {
     setAnswers(nextAnswers);
     setError(null);
 
-    if (stepIndex < steps.length - 1) {
-      setStepIndex(stepIndex + 1);
+    // steps/stepIndex del render actual reflejan las respuestas ANTERIORES a
+    // esta; recalculamos con nextAnswers para decidir el próximo paso
+    // correctamente cuando esta respuesta cambia qué preguntas son visibles.
+    const nextSteps = buildSteps(questions, nextAnswers);
+    const currentGroupFirstKey = currentGroup[0].key;
+    const currentPosition = nextSteps.findIndex((group) => group.some((q) => q.key === currentGroupFirstKey));
+    const nextIndex = (currentPosition === -1 ? stepIndex : currentPosition) + 1;
+
+    if (nextIndex < nextSteps.length) {
+      setStepIndex(nextIndex);
       return;
     }
 
@@ -75,7 +93,7 @@ export function ModuleWizard({
     advanceOrCalculate({ ...answers, [currentGroup[0].key]: value });
   };
 
-  const handleGroupAnswer = (values: Record<string, number>) => {
+  const handleGroupAnswer = (values: Record<string, string | number>) => {
     advanceOrCalculate({ ...answers, ...values });
   };
 
@@ -92,15 +110,20 @@ export function ModuleWizard({
   };
 
   const answersSummary = useMemo(() => {
-    return questions.map((question) => {
-      const raw = answers[question.key];
-      if (question.type === "SELECT") {
-        const option = question.options.find((o) => o.key === raw);
-        return { label: question.label, value: option?.label ?? "—" };
-      }
-      return { label: question.label, value: raw ? `${raw} ${question.unit ?? ""}`.trim() : "—" };
-    });
+    return questions
+      .filter((question) => isQuestionVisible(question, answers))
+      .map((question) => {
+        const raw = answers[question.key];
+        if (question.type === "SELECT") {
+          const option = question.options.find((o) => o.key === raw);
+          return { label: question.label, value: option?.label ?? "—" };
+        }
+        return { label: question.label, value: raw ? `${raw} ${question.unit ?? ""}`.trim() : "—" };
+      });
   }, [questions, answers]);
+
+  const isConditionalReveal =
+    currentGroup?.length === 2 && currentGroup[0].type === "SELECT" && currentGroup[1].type === "NUMBER";
 
   return (
     <div className="max-w-xl mx-auto px-6 pt-8 pb-20">
@@ -130,7 +153,15 @@ export function ModuleWizard({
             </div>
           </div>
 
-          {currentGroup.length > 1 ? (
+          {isConditionalReveal ? (
+            <ConditionalRevealStep
+              key={currentGroup.map((q) => q.id).join("-")}
+              selectQuestion={currentGroup[0]}
+              numberQuestion={currentGroup[1]}
+              initialValues={answers}
+              onAnswer={handleGroupAnswer}
+            />
+          ) : currentGroup.length > 1 ? (
             <QuestionGroupStep
               key={currentGroup.map((q) => q.id).join("-")}
               questions={currentGroup}

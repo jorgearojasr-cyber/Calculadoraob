@@ -141,8 +141,44 @@ aplican si `metodo_hormigon == "manual"`).
 
 - **Interpolación / tablas continuas** (ej. un valor que varía según m² exactos, no según
   una opción discreta). No lo necesita ningún módulo hoy.
-- **Visibilidad condicional de preguntas** (pregunta B solo si A = X). El piloto de Radier
-  no la necesita — sus 4 preguntas siempre se muestran.
 
-Ambos casos se pueden agregar después como nuevos valores de `source.type` o nuevos `op`
-en el árbol de nodos, sin migrar el schema (todo vive en columnas JSON).
+Se puede agregar después como nuevo valor de `source.type`, sin migrar el schema (todo
+vive en columnas JSON).
+
+## 3. Visibilidad condicional de preguntas (`questions.visibleIfQuestionKey`/`visibleIfValues`)
+
+Una pregunta con `visibleIfQuestionKey` seteado solo se muestra (y solo se pide) cuando
+la respuesta a esa otra pregunta del mismo módulo está incluida en `visibleIfValues`
+(array de option keys). Si no se cumple, el wizard la salta por completo — no cuenta como
+paso ni bloquea el cálculo. `ModuleWizard` recalcula los pasos visibles en cada respuesta
+(`buildSteps(questions, answers)`), así que el total de pasos y la barra de progreso se
+ajustan dinámicamente.
+
+Patrón "¿sabes el dato exacto?" (usado en Cerámica): dos preguntas con el mismo
+`stepGroup`, la primera SELECT con 2 opciones ("No lo sé, usa un promedio" / "Sí, lo
+tengo") y la segunda NUMBER — el wizard las detecta automáticamente por ese shape
+(`ConditionalRevealStep`) y solo revela/pide el campo numérico si se elige la segunda
+opción.
+
+**Gotcha**: si además la pregunta SELECT tiene su propio `visibleIfQuestionKey` (ej.
+solo aplica para ciertos tamaños), la pregunta NUMBER agrupada con ella necesita **el
+mismo** `visibleIfQuestionKey`/`visibleIfValues` — si no, cuando el SELECT está oculto
+la pregunta NUMBER queda "huérfana" (sin su grupo) y el wizard la muestra como paso
+propio, sin condición. La visibilidad se filtra antes de agrupar, así que cada pregunta
+del grupo debe ser visible por sí sola con el mismo criterio.
+
+**Cuidado al escribir `condition` en fórmulas que dependen de una pregunta
+condicionalmente oculta**: `{"var": "x"}` lanza error si `x` nunca se resolvió (pregunta
+nunca mostrada/respondida). Siempre antepón un guard con `and` que se evalúe primero —
+`args` de `and`/`every` se evalúa en cortocircuito, así que si el guard da `false` el
+resto de las cláusulas no se evalúa:
+
+```json
+{"op": "and", "args": [
+  {"op": "!=", "args": [{"var": "tamano"}, {"str": "personalizada"}]},
+  {"op": "==", "args": [{"var": "sabes-tu-dato"}, {"str": "si-lo-tengo"}]}
+]}
+```
+
+**Limitación conocida**: sin pantalla en el admin todavía (igual que `LOOKUP2`) — se
+configura por script. Ver `docs/auditoria-normativa.md`.

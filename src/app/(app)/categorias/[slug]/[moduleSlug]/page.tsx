@@ -29,6 +29,8 @@ export default async function ModulePage({
     helpText: question.helpText,
     options: question.options.map((option) => ({ key: option.key, label: option.label })),
     stepGroup: question.stepGroup,
+    visibleIfQuestionKey: question.visibleIfQuestionKey,
+    visibleIfValues: question.visibleIfValues,
   }));
 
   return (
