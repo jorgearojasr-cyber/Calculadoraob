@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, LayoutGrid, FolderKanban, ShieldCheck, LogIn } from "lucide-react";
+import { Home, LayoutGrid, FolderKanban, ShoppingCart, ShieldCheck, LogIn } from "lucide-react";
 import { Logo } from "@/components/brand/logo";
 import { SignOutButton } from "@/components/auth/sign-out-button";
 
@@ -41,6 +41,12 @@ export function Sidebar({
           <Link href="/proyectos" className={linkClass(pathname.startsWith("/proyectos"))}>
             <FolderKanban className="w-4 h-4" />
             Mis proyectos
+          </Link>
+        )}
+        {user && (
+          <Link href="/lista-compras" className={linkClass(pathname.startsWith("/lista-compras"))}>
+            <ShoppingCart className="w-4 h-4" />
+            Lista de compras
           </Link>
         )}
         {isAdmin && (

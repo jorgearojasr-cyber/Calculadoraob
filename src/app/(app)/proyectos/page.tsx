@@ -1,8 +1,10 @@
 import Link from "next/link";
+import { ShoppingCart } from "lucide-react";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getCategoryIcon } from "@/lib/category-icons";
+import { ShoppingListToggle } from "@/components/proyectos/shopping-list-toggle";
 
 export default async function ProyectosPage() {
   const session = await getServerSession(authOptions);
@@ -16,9 +18,18 @@ export default async function ProyectosPage() {
 
   return (
     <div className="max-w-3xl mx-auto px-6 py-10">
-      <h1 className="font-display text-2xl md:text-3xl font-semibold tracking-tight mb-8">
-        Mis proyectos
-      </h1>
+      <div className="flex items-center justify-between mb-8">
+        <h1 className="font-display text-2xl md:text-3xl font-semibold tracking-tight">
+          Mis proyectos
+        </h1>
+        <Link
+          href="/lista-compras"
+          className="inline-flex items-center gap-1.5 text-sm font-medium text-navy hover:underline"
+        >
+          <ShoppingCart className="w-4 h-4" />
+          Lista de compras
+        </Link>
+      </div>
 
       {projects.length === 0 && (
         <p className="text-sm text-ink-muted">
@@ -50,6 +61,9 @@ export default async function ProyectosPage() {
                       year: "numeric",
                     })}
                   </p>
+                  <div className="mt-2">
+                    <ShoppingListToggle id={project.id} initialValue={project.inShoppingList} />
+                  </div>
                 </div>
               </div>
             </Link>

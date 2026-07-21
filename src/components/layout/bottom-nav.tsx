@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, LayoutGrid, Plus, FolderKanban, User, LogIn } from "lucide-react";
+import { Home, LayoutGrid, Plus, FolderKanban, ShoppingCart, User, LogIn } from "lucide-react";
 import { SignOutButton } from "@/components/auth/sign-out-button";
 
 type NavUser = { name: string | null; email: string | null } | null;
@@ -32,6 +32,14 @@ export function BottomNav({ user }: { user: NavUser }) {
           {user ? (
             <>
               <p className="text-xs text-ink-muted px-2 pb-2 truncate">{user.name ?? user.email}</p>
+              <Link
+                href="/lista-compras"
+                onClick={() => setProfileOpen(false)}
+                className="flex items-center gap-2 text-sm font-medium px-2 py-2 rounded-lg hover:bg-concrete transition-colors"
+              >
+                <ShoppingCart className="w-4 h-4" />
+                Lista de compras
+              </Link>
               <SignOutButton className="w-full text-left text-sm font-medium px-2 py-2 rounded-lg hover:bg-concrete transition-colors" />
             </>
           ) : (

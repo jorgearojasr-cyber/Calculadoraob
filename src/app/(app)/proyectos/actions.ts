@@ -72,3 +72,17 @@ export async function renameProjectAction(id: string, name: string): Promise<{ e
   revalidatePath(`/proyectos/${id}`);
   return {};
 }
+
+export async function toggleShoppingListAction(id: string, include: boolean): Promise<{ error?: string }> {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.id) return { error: "No hay sesión activa." };
+
+  const project = await prisma.savedProject.findUnique({ where: { id } });
+  if (!project || project.userId !== session.user.id) return { error: "Proyecto no encontrado." };
+
+  await prisma.savedProject.update({ where: { id }, data: { inShoppingList: include } });
+
+  revalidatePath("/proyectos");
+  revalidatePath("/lista-compras");
+  return {};
+}

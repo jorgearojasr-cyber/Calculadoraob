@@ -25,7 +25,8 @@ model User {
   passwordHash String?
   role         Role     @default(user)
 
-  savedProjects SavedProject[]
+  savedProjects       SavedProject[]
+  shoppingListChecks  ShoppingListCheck[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -46,6 +47,8 @@ model SavedProject {
   answers         Json
   result          Json
   progressPercent Int    @default(0)
+  // Incluido en /lista-compras (consolidación de materiales entre proyectos).
+  inShoppingList  Boolean @default(false)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -53,6 +56,26 @@ model SavedProject {
   @@index([userId])
   @@index([moduleId])
   @@map("saved_projects")
+}
+
+// Estado de "comprado" por línea consolidada de la lista de compras.
+// La identidad de una línea es (materialName, unit) tal como aparece en el
+// snapshot de CalculationResult — no un Material.id, porque el nombre puede
+// venir de un materialLabelTemplate dinámico sin fila de Material fija.
+model ShoppingListCheck {
+  id           String   @id @default(cuid())
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId       String
+  materialName String
+  unit         String
+  checked      Boolean  @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, materialName, unit])
+  @@index([userId])
+  @@map("shopping_list_checks")
 }
 
 model Category {
