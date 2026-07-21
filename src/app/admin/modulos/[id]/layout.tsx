@@ -30,7 +30,7 @@ export default async function ModuleDetailLayout({
         <span className="text-xs text-ink-muted">{mod.category.name}</span>
         <span
           className={`text-xs font-medium px-2.5 py-1 rounded-full font-mono ${
-            mod.published ? "bg-[#E6F4EA] text-[#1E7A34]" : "bg-[#F1EFE9] text-ink-muted"
+            mod.published ? "bg-success-tint text-success" : "bg-[#F1EFE9] text-ink-muted"
           }`}
         >
           {mod.published ? "Publicado" : "Borrador"}

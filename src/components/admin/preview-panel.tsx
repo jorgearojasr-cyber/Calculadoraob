@@ -48,18 +48,18 @@ export function PreviewPanel({
     <div>
       <div
         className={`rounded-xl p-5 border mb-6 ${
-          canPublish ? "bg-[#E6F4EA] border-[#B7DFC1]" : "bg-[#FDEDE6] border-[#F3C7B1]"
+          canPublish ? "bg-success-tint border-success-border" : "bg-safety-tint border-safety-border"
         }`}
       >
         <div className="flex items-start gap-3">
           {canPublish ? (
-            <CheckCircle2 className="w-5 h-5 text-[#1E7A34] flex-shrink-0 mt-0.5" />
+            <CheckCircle2 className="w-5 h-5 text-success flex-shrink-0 mt-0.5" />
           ) : (
             <TriangleAlert className="w-5 h-5 text-safety flex-shrink-0 mt-0.5" />
           )}
           <div className="flex-1">
             {canPublish ? (
-              <p className="text-sm font-medium text-[#1E7A34]">Listo para publicar.</p>
+              <p className="text-sm font-medium text-success">Listo para publicar.</p>
             ) : (
               <>
                 <p className="text-sm font-medium text-safety mb-1">

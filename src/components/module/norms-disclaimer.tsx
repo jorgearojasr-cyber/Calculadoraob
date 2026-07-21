@@ -12,6 +12,9 @@ export function NormsDisclaimer({ norms }: { norms: NormSummary[] }) {
 
   const citadas = norms.filter((n) => n.verificationStatus === "CITADO");
   const noVerificadas = norms.filter((n) => n.verificationStatus === "PRACTICA_GENERAL_NO_VERIFICADA");
+  const noVerificadasNotes = Array.from(
+    new Set(noVerificadas.map((n) => n.note).filter((note): note is string => !!note))
+  );
 
   return (
     <div className="mt-6 grid gap-3">
@@ -35,21 +38,24 @@ export function NormsDisclaimer({ norms }: { norms: NormSummary[] }) {
       )}
 
       {noVerificadas.length > 0 && (
-        <div className="rounded-2xl p-4 bg-[#FDEDE6] border border-[#F3C7B1]">
+        <div className="rounded-2xl p-4 bg-safety-tint border border-safety-border">
           <div className="flex items-start gap-2.5">
             <TriangleAlert className="w-4 h-4 flex-shrink-0 mt-0.5 text-safety" />
             <div>
               <p className="text-xs font-medium text-safety mb-1">
                 Valores no verificados contra una norma específica
               </p>
-              <p className="text-xs text-ink-muted">
-                {noVerificadas
-                  .map((n) => n.note)
-                  .find((note) => !!note) ??
-                  "Estos valores representan práctica de obra habitual, no una norma citada."}{" "}
-                Confírmalos con un profesional habilitado antes de usarlos en una obra que requiera
-                aprobación municipal.
-              </p>
+              <div className="text-xs text-ink-muted grid gap-1.5">
+                {noVerificadasNotes.length === 0 ? (
+                  <p>Estos valores representan práctica de obra habitual, no una norma citada.</p>
+                ) : (
+                  noVerificadasNotes.map((note) => <p key={note}>{note}</p>)
+                )}
+                <p>
+                  Confírmalos con un profesional habilitado antes de usarlos en una obra que requiera
+                  aprobación municipal.
+                </p>
+              </div>
             </div>
           </div>
         </div>

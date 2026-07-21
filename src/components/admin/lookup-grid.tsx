@@ -120,7 +120,7 @@ export function LookupGrid({
         >
           {isPending ? "Guardando…" : columns.length === 0 ? "Quitar tabla" : "Guardar tabla"}
         </button>
-        {saved && <span className="text-xs text-[#1E7A34]">Guardado</span>}
+        {saved && <span className="text-xs text-success">Guardado</span>}
       </div>
 
       {error && <p className="text-sm text-safety mt-2">{error}</p>}
