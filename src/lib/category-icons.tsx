@@ -10,6 +10,8 @@ import {
   Droplets,
   Zap,
   Trees,
+  Fence,
+  Frame,
   HelpCircle,
   type LucideIcon,
 } from "lucide-react";
@@ -26,6 +28,8 @@ const CATEGORY_ICONS: Record<string, LucideIcon> = {
   Droplets,
   Zap,
   Trees,
+  Fence,
+  Frame,
 };
 
 export function getCategoryIcon(name: string): LucideIcon {
