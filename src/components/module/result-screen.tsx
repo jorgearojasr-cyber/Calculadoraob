@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Check, Copy, FolderPlus, RotateCcw, Sparkles } from "lucide-react";
+import Link from "next/link";
+import { ArrowRight, Check, Copy, FolderPlus, RotateCcw, Sparkles } from "lucide-react";
 import { buildCalculationPrompt } from "@/lib/prompt-generator";
 import type { CalculationResult, InfoResult } from "@/lib/formula-engine";
 import type { CalculateModuleResult, NormSummary } from "@/app/(app)/categorias/[slug]/[moduleSlug]/actions";
@@ -10,6 +11,21 @@ import { createSavedProjectAction } from "@/app/(app)/proyectos/actions";
 import { PENDING_PROJECT_KEY } from "@/lib/pending-project";
 import { NormsDisclaimer } from "./norms-disclaimer";
 import { PricedResults } from "./priced-results";
+
+// Opciones válidas de la pregunta de tipo en el módulo Malla electrosoldada
+// — usado solo para decidir si el ?tipo= de preselección es seguro de
+// enviar (si la malla recomendada no tiene equivalente ahí, se omite el
+// parámetro y el link igual funciona, solo sin preselección).
+const MALLA_MODULE_OPTION_KEYS = ["c-92", "c-139", "c-188", "c-257"];
+
+function buildMallaCalculatorHref(recomendacion: string): string {
+  const match = recomendacion.match(/C-(\d+)/i);
+  const tipoKey = match ? `c-${match[1]}` : null;
+  const base = "/categorias/fierros/malla-electrosoldada";
+  return tipoKey && MALLA_MODULE_OPTION_KEYS.includes(tipoKey)
+    ? `${base}?tipo=${tipoKey}`
+    : base;
+}
 
 export function ResultScreen({
   moduleId,
@@ -90,6 +106,15 @@ export function ResultScreen({
                   {String(info.value)}
                 </span>
               </div>
+              {info.key === "malla_recomendada" && (
+                <Link
+                  href={buildMallaCalculatorHref(String(info.value))}
+                  className="mt-3 inline-flex items-center gap-1.5 text-sm font-medium underline underline-offset-4 text-safety"
+                >
+                  Calcular cantidad de malla
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </Link>
+              )}
             </div>
           ))}
         </div>

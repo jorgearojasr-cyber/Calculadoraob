@@ -46,15 +46,17 @@ export function ModuleWizard({
   categorySlug,
   categoryName,
   questions,
+  initialAnswers,
 }: {
   moduleId: string;
   moduleName: string;
   categorySlug: string;
   categoryName: string;
   questions: WizardQuestion[];
+  initialAnswers?: WizardAnswers;
 }) {
   const [stepIndex, setStepIndex] = useState(0);
-  const [answers, setAnswers] = useState<WizardAnswers>({});
+  const [answers, setAnswers] = useState<WizardAnswers>(initialAnswers ?? {});
   const [calculation, setCalculation] = useState<CalculateModuleResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
