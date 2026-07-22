@@ -16,6 +16,7 @@ export type NormSummary = {
   scope: string;
   verificationStatus: "CITADO" | "PRACTICA_GENERAL_NO_VERIFICADA";
   note: string | null;
+  reinforcedWarning: boolean;
 };
 
 export type CalculateModuleResult = {
@@ -86,6 +87,7 @@ export async function calculateModuleAction(
         scope: source.norm.scope,
         verificationStatus: source.norm.verificationStatus,
         note: source.norm.note,
+        reinforcedWarning: source.norm.reinforcedWarning,
       });
     }
   }

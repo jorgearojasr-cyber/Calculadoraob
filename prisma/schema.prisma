@@ -280,6 +280,11 @@ model Norm {
   scope              String
   verificationStatus NormVerificationStatus
   note               String?
+  // Marca normas cuya nota exige explícitamente el criterio de un
+  // profesional habilitado (elemento estructural o instalación regulada:
+  // Vigas, Losas, Fierros, Gas, etc.) — usado para agregar una advertencia
+  // reforzada al prompt de IA generado desde el resultado.
+  reinforcedWarning Boolean @default(false)
 
   variables   Variable[]
   formulas    Formula[]

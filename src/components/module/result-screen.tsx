@@ -54,7 +54,7 @@ export function ResultScreen({
   const [saveState, setSaveState] = useState<"idle" | "saving" | "error">("idle");
   const [pricedResults, setPricedResults] = useState<CalculationResult[]>(results);
 
-  const prompt = buildCalculationPrompt({ moduleName, categoryName, answersSummary, results, infoResults });
+  const prompt = buildCalculationPrompt({ moduleName, categoryName, answersSummary, results, infoResults, norms });
 
   const handleCopy = async () => {
     await navigator.clipboard.writeText(prompt);
