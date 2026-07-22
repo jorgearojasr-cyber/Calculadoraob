@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { PreviewPanel } from "@/components/admin/preview-panel";
 import { validateModuleForPublish } from "@/lib/module-validation";
+import type { WizardQuestion } from "@/components/module/types";
 
 export const dynamic = "force-dynamic";
 
@@ -32,6 +33,7 @@ export default async function ModulePreviewPage({ params }: { params: { id: stri
     stepGroup: question.stepGroup,
     visibleIfQuestionKey: question.visibleIfQuestionKey,
     visibleIfValues: question.visibleIfValues,
+    defaultSource: question.defaultSource as WizardQuestion["defaultSource"],
   }));
 
   return (

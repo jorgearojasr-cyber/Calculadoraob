@@ -40,6 +40,22 @@ function buildSteps(questions: WizardQuestion[], answers: WizardAnswers): Wizard
   return steps;
 }
 
+// Precarga (editable) el valor sugerido de una pregunta NUMBER aún sin
+// responder, vía defaultSource.table, si la pregunta de la que depende ya
+// fue contestada. No pisa una respuesta que el usuario ya dio.
+function withSuggestedDefaults(questions: WizardQuestion[], answers: WizardAnswers): WizardAnswers {
+  const result: WizardAnswers = { ...answers };
+  for (const question of questions) {
+    if (result[question.key] !== undefined) continue;
+    if (question.defaultSource?.type !== "LOOKUP") continue;
+    const dependencyAnswer = answers[question.defaultSource.questionKey];
+    if (dependencyAnswer === undefined) continue;
+    const suggested = question.defaultSource.table[String(dependencyAnswer)];
+    if (suggested !== undefined) result[question.key] = suggested;
+  }
+  return result;
+}
+
 export function ModuleWizard({
   moduleId,
   moduleName,
@@ -127,6 +143,11 @@ export function ModuleWizard({
   const isConditionalReveal =
     currentGroup?.length === 2 && currentGroup[0].type === "SELECT" && currentGroup[1].type === "NUMBER";
 
+  const stepInitialValues = useMemo(
+    () => (currentGroup ? withSuggestedDefaults(currentGroup, answers) : answers),
+    [currentGroup, answers]
+  );
+
   return (
     <div className="max-w-xl mx-auto px-6 pt-8 pb-20">
       <Link
@@ -160,21 +181,21 @@ export function ModuleWizard({
               key={currentGroup.map((q) => q.id).join("-")}
               selectQuestion={currentGroup[0]}
               numberQuestion={currentGroup[1]}
-              initialValues={answers}
+              initialValues={stepInitialValues}
               onAnswer={handleGroupAnswer}
             />
           ) : currentGroup.length > 1 ? (
             <QuestionGroupStep
               key={currentGroup.map((q) => q.id).join("-")}
               questions={currentGroup}
-              initialValues={answers}
+              initialValues={stepInitialValues}
               onAnswer={handleGroupAnswer}
             />
           ) : (
             <QuestionStep
               key={currentGroup[0].id}
               question={currentGroup[0]}
-              initialValue={answers[currentGroup[0].key]}
+              initialValue={stepInitialValues[currentGroup[0].key]}
               onAnswer={handleAnswer}
             />
           )}

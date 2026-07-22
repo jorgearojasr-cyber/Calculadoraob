@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { ModuleWizard } from "@/components/module/module-wizard";
+import type { WizardQuestion } from "@/components/module/types";
 
 export default async function ModulePage({
   params,
@@ -44,6 +45,7 @@ export default async function ModulePage({
     stepGroup: question.stepGroup,
     visibleIfQuestionKey: question.visibleIfQuestionKey,
     visibleIfValues: question.visibleIfValues,
+    defaultSource: question.defaultSource as WizardQuestion["defaultSource"],
   }));
 
   return (

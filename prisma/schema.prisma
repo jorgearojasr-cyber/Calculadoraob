@@ -145,6 +145,13 @@ model Question {
   visibleIfQuestionKey String?
   visibleIfValues      String[] @default([])
 
+  // Valor sugerido (editable) para precargar el campo NUMBER, calculado por
+  // LOOKUP contra la respuesta de otra pregunta ya contestada — ej. sugerir
+  // dimensiones típicas de fundación según el "uso" elegido. Sin admin UI
+  // todavía — se configura por script. Forma: { type: "LOOKUP", questionKey,
+  // table: { [answerKey]: number } }.
+  defaultSource Json?
+
   options QuestionOption[]
 
   createdAt DateTime @default(now())
