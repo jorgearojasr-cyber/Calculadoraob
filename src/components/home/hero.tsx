@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { ArrowRight } from "lucide-react";
 import { BlueprintTick } from "./blueprint-tick";
 import { SearchBar } from "./search-bar";
 
@@ -43,15 +42,11 @@ export function Hero() {
           </div>
 
           <div className="mt-10 flex items-center gap-6">
-            <a
-              href="#categorias"
-              className="rounded-full px-6 py-3 text-sm font-semibold text-white flex items-center gap-2 bg-ink"
-            >
-              Explorar categorías
-              <ArrowRight className="w-4 h-4" />
-            </a>
             <a href="#como-funciona" className="text-sm font-medium underline underline-offset-4 text-ink-muted">
               Ver cómo funciona
+            </a>
+            <a href="#categorias" className="text-sm font-medium underline underline-offset-4 text-ink-faint">
+              Ver categorías técnicas
             </a>
           </div>
         </div>

@@ -111,6 +111,7 @@ model Module {
   formulas      Formula[]
   lossFactors   LossFactor[]
   savedProjects SavedProject[]
+  projectTaskLinks ProjectTaskModule[]
 
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -294,4 +295,66 @@ model Norm {
   updatedAt DateTime @updatedAt
 
   @@map("norms")
+}
+
+// Fase 2 — capa de descubrimiento por proyecto sobre la Home, encima de
+// Category/Module (que no se tocan). Ver docs/fase2-home-por-proyecto.md
+// si se agrega más adelante.
+model ProjectGroup {
+  id    String @id @default(cuid())
+  slug  String @unique
+  name  String
+  icon  String
+  order Int    @default(0)
+  // Tono especial de presentación (ej. "avanzado" para "Herramientas
+  // avanzadas" — tratamiento visual más discreto en la Home).
+  tone  String?
+
+  tasks ProjectTask[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("project_groups")
+}
+
+model ProjectTask {
+  id      String       @id @default(cuid())
+  slug    String       @unique
+  name    String
+  order   Int          @default(0)
+  group   ProjectGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  groupId String
+
+  moduleLinks ProjectTaskModule[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([groupId])
+  @@map("project_tasks")
+}
+
+// Vincula una ProjectTask a uno o más Module existentes. Si una tarea
+// tiene 2+ links, la página /empezar/[taskSlug] muestra un selector; si
+// tiene 1 solo, redirige directo al módulo.
+model ProjectTaskModule {
+  id       String      @id @default(cuid())
+  task     ProjectTask @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  taskId   String
+  module   Module      @relation(fields: [moduleId], references: [id], onDelete: Restrict)
+  moduleId String
+  // Etiqueta para desambiguar cuando hay 2+ módulos (ej. "Rectangular").
+  label    String?
+  // Query string opcional a anexar al entrar al módulo (ej.
+  // "tipo=bodega_industrial"), para preseleccionar la primera pregunta.
+  presetQuery String?
+  order    Int @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([taskId])
+  @@index([moduleId])
+  @@map("project_task_modules")
 }

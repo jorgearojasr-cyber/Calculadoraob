@@ -67,7 +67,7 @@ export function BottomNav({ user }: { user: NavUser }) {
 
         <div className="flex-1 flex items-center justify-center">
           <Link
-            href="/#categorias"
+            href="/#empezar"
             aria-label="Nuevo cálculo"
             className="w-12 h-12 -mt-6 rounded-full bg-safety text-white flex items-center justify-center shadow-lg border-4 border-concrete"
           >

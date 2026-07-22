@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { Hero } from "@/components/home/hero";
+import { ProjectGroupsSection } from "@/components/home/project-groups-section";
 import { CategorySection } from "@/components/home/category-section";
 import { RecentProjects } from "@/components/home/recent-projects";
 import { HowItWorks } from "@/components/home/how-it-works";
@@ -14,8 +15,9 @@ export default async function Home() {
   return (
     <div>
       <Hero />
-      <CategorySection categories={categories} />
+      <ProjectGroupsSection />
       <RecentProjects />
+      <CategorySection categories={categories} />
       <HowItWorks />
       <TrustSection />
       <SiteFooter />

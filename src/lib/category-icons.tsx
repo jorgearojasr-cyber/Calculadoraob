@@ -12,6 +12,10 @@ import {
   Trees,
   Fence,
   Frame,
+  Sun,
+  Sofa,
+  HardHat,
+  Wrench,
   HelpCircle,
   type LucideIcon,
 } from "lucide-react";
@@ -30,6 +34,10 @@ const CATEGORY_ICONS: Record<string, LucideIcon> = {
   Trees,
   Fence,
   Frame,
+  Sun,
+  Sofa,
+  HardHat,
+  Wrench,
 };
 
 export function getCategoryIcon(name: string): LucideIcon {

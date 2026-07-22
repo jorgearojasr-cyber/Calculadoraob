@@ -35,7 +35,7 @@ export function Sidebar({
         </Link>
         <Link href="/#categorias" className={linkClass(pathname.startsWith("/categorias"))}>
           <LayoutGrid className="w-4 h-4" />
-          Categorías
+          Categorías técnicas
         </Link>
         {user && (
           <Link href="/proyectos" className={linkClass(pathname.startsWith("/proyectos"))}>
