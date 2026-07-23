@@ -2,7 +2,11 @@ import { prisma } from "@/lib/prisma";
 import { ProjectGroupBlock } from "./project-group-block";
 
 export async function ProjectGroupsSection() {
+  // Solo grupos con al menos una tarea sembrada — un grupo sin contenido
+  // real (ej. "Reparar" hoy) queda en la base de datos pero no aparece en
+  // la Home hasta que se le agregue una tarea.
   const groups = await prisma.projectGroup.findMany({
+    where: { tasks: { some: {} } },
     orderBy: { order: "asc" },
     include: { tasks: { orderBy: { order: "asc" } } },
   });
