@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { ModuleWizard } from "@/components/module/module-wizard";
 import type { WizardQuestion } from "@/components/module/types";
+import type { ModuleGuideData } from "@/components/module/guide-section";
 
 export default async function ModulePage({
   params,
@@ -18,6 +19,7 @@ export default async function ModulePage({
         orderBy: { order: "asc" },
         include: { options: { orderBy: { order: "asc" } } },
       },
+      guide: true,
     },
   });
 
@@ -48,6 +50,23 @@ export default async function ModulePage({
     defaultSource: question.defaultSource as WizardQuestion["defaultSource"],
   }));
 
+  const guide: ModuleGuideData | null = mod.guide
+    ? {
+        summary: mod.guide.summary,
+        tools: mod.guide.tools,
+        estimatedTime: mod.guide.estimatedTime,
+        difficulty: mod.guide.difficulty,
+        recommendedPeople: mod.guide.recommendedPeople,
+        tipsBeforeStart: mod.guide.tipsBeforeStart,
+        commonMistakes: mod.guide.commonMistakes,
+        safetyRecommendations: mod.guide.safetyRecommendations,
+        bestPractice: mod.guide.bestPractice,
+        masterTip: mod.guide.masterTip,
+        faqs: mod.guide.faqs as ModuleGuideData["faqs"],
+        stepByStepSummary: mod.guide.stepByStepSummary,
+      }
+    : null;
+
   return (
     <ModuleWizard
       moduleId={mod.id}
@@ -56,6 +75,7 @@ export default async function ModulePage({
       categoryName={mod.category.name}
       questions={questions}
       initialAnswers={initialAnswers}
+      guide={guide}
     />
   );
 }

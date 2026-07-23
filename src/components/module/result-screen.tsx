@@ -10,6 +10,7 @@ import { createSavedProjectAction } from "@/app/(app)/proyectos/actions";
 import { PENDING_PROJECT_KEY } from "@/lib/pending-project";
 import { NormsDisclaimer } from "./norms-disclaimer";
 import { PricedResults } from "./priced-results";
+import { GuideSection, type ModuleGuideData } from "./guide-section";
 
 export function ResultScreen({
   moduleId,
@@ -21,6 +22,7 @@ export function ResultScreen({
   norms,
   variables,
   onRestart,
+  guide,
 }: {
   moduleId: string;
   moduleName: string;
@@ -31,6 +33,7 @@ export function ResultScreen({
   norms: NormSummary[];
   variables: CalculateModuleResult["variables"];
   onRestart: () => void;
+  guide?: ModuleGuideData | null;
 }) {
   const router = useRouter();
   const [promptOpen, setPromptOpen] = useState(false);
@@ -98,6 +101,8 @@ export function ResultScreen({
       <PricedResults results={results} onPricesChange={setPricedResults} />
 
       <NormsDisclaimer norms={norms} />
+
+      {guide && <GuideSection guide={guide} />}
 
       <div className="mt-8 rounded-2xl p-5 bg-white border border-border">
         <p className="text-xs font-mono uppercase tracking-wider text-ink-muted mb-3">

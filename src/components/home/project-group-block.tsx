@@ -43,17 +43,23 @@ export function ProjectGroupBlock({
         </div>
         <h3 className="font-display text-lg font-semibold tracking-tight">{group.name}</h3>
       </div>
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-        {group.tasks.map((task) => (
-          <Link
-            key={task.id}
-            href={`/empezar/${task.slug}`}
-            className="group relative rounded-2xl p-5 bg-white border border-border hover:border-safety/40 hover:-translate-y-0.5 transition-all"
-          >
-            <span className="font-semibold text-[15px]">{task.name}</span>
-          </Link>
-        ))}
-      </div>
+      {group.tasks.length === 0 ? (
+        <div className="rounded-2xl p-10 text-center bg-white border border-border">
+          <p className="text-ink-muted">Próximamente más proyectos en esta categoría.</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+          {group.tasks.map((task) => (
+            <Link
+              key={task.id}
+              href={`/empezar/${task.slug}`}
+              className="group relative rounded-2xl p-5 bg-white border border-border hover:border-safety/40 hover:-translate-y-0.5 transition-all"
+            >
+              <span className="font-semibold text-[15px]">{task.name}</span>
+            </Link>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

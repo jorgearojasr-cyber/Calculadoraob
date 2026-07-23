@@ -112,12 +112,43 @@ model Module {
   lossFactors   LossFactor[]
   savedProjects SavedProject[]
   projectTaskLinks ProjectTaskModule[]
+  // Contenido "resultado enriquecido" opcional (piloto, ver ModuleGuide) —
+  // hoy solo existe para Radier, no se genera en vivo por IA.
+  guide         ModuleGuide?
 
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
   @@index([categoryId])
   @@map("modules")
+}
+
+// Contenido editorial estático que acompaña el resultado de un módulo
+// (piloto de "resultado enriquecido"): consejos prácticos redactados a
+// mano, no generados en vivo por IA. Relación 1:1 opcional — la mayoría de
+// los módulos no la tienen. `faqs` es un array JSON de {question, answer}.
+model ModuleGuide {
+  id       String @id @default(cuid())
+  module   Module @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  moduleId String @unique
+
+  summary                String
+  tools                  String[]
+  estimatedTime          String
+  difficulty             String
+  recommendedPeople      String
+  tipsBeforeStart        String[]
+  commonMistakes         String[]
+  safetyRecommendations  String[]
+  bestPractice           String
+  masterTip              String
+  faqs                   Json
+  stepByStepSummary      String[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("module_guides")
 }
 
 enum QuestionType {

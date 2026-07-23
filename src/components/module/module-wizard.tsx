@@ -8,6 +8,7 @@ import { QuestionGroupStep } from "./question-group-step";
 import { ConditionalRevealStep } from "./conditional-reveal-step";
 import { ResultScreen } from "./result-screen";
 import type { WizardAnswers, WizardQuestion } from "./types";
+import type { ModuleGuideData } from "./guide-section";
 import { calculateModuleAction, type CalculateModuleResult } from "@/app/(app)/categorias/[slug]/[moduleSlug]/actions";
 
 function isQuestionVisible(question: WizardQuestion, answers: WizardAnswers): boolean {
@@ -63,6 +64,7 @@ export function ModuleWizard({
   categoryName,
   questions,
   initialAnswers,
+  guide,
 }: {
   moduleId: string;
   moduleName: string;
@@ -70,6 +72,7 @@ export function ModuleWizard({
   categoryName: string;
   questions: WizardQuestion[];
   initialAnswers?: WizardAnswers;
+  guide?: ModuleGuideData | null;
 }) {
   const [stepIndex, setStepIndex] = useState(0);
   const [answers, setAnswers] = useState<WizardAnswers>(initialAnswers ?? {});
@@ -225,6 +228,7 @@ export function ModuleWizard({
           norms={calculation.norms}
           variables={calculation.variables}
           onRestart={handleRestart}
+          guide={guide}
         />
       )}
     </div>
