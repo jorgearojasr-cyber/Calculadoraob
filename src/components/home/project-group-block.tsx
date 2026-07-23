@@ -12,7 +12,7 @@ export function ProjectGroupBlock({
 
   if (isAdvanced) {
     return (
-      <div className="pt-8 border-t border-border">
+      <div id="modo-profesional" className="pt-8 border-t border-border scroll-mt-24">
         <div className="flex items-center gap-2.5 mb-4">
           <Icon className="w-4 h-4 text-ink-faint" />
           <h3 className="text-sm font-semibold text-ink-muted">{group.name}</h3>
@@ -36,7 +36,7 @@ export function ProjectGroupBlock({
   }
 
   return (
-    <div>
+    <div id={`grupo-${group.slug}`} className="scroll-mt-24">
       <div className="flex items-center gap-2.5 mb-4">
         <div className="w-9 h-9 rounded-xl flex items-center justify-center bg-navy/[0.07]">
           <Icon className="w-4.5 h-4.5 text-navy" />

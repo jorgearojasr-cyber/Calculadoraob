@@ -2,18 +2,21 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, LayoutGrid, FolderKanban, ShoppingCart, ShieldCheck, LogIn } from "lucide-react";
+import { Home, Compass, FolderKanban, ShoppingCart, BookOpen, Wrench, ShieldCheck, LogIn } from "lucide-react";
 import { Logo } from "@/components/brand/logo";
 import { SignOutButton } from "@/components/auth/sign-out-button";
+import { AssistantWidget, type AssistantGroup } from "@/components/assistant/assistant-widget";
 
 type SidebarUser = { name: string | null; email: string | null; image: string | null } | null;
 
 export function Sidebar({
   isAdmin,
   user,
+  assistantGroups,
 }: {
   isAdmin: boolean;
   user: SidebarUser;
+  assistantGroups: AssistantGroup[];
 }) {
   const pathname = usePathname();
 
@@ -33,9 +36,9 @@ export function Sidebar({
           <Home className="w-4 h-4" />
           Inicio
         </Link>
-        <Link href="/#categorias" className={linkClass(pathname.startsWith("/categorias"))}>
-          <LayoutGrid className="w-4 h-4" />
-          Categorías técnicas
+        <Link href="/#empezar" className={linkClass(false)}>
+          <Compass className="w-4 h-4" />
+          Proyectos
         </Link>
         {user && (
           <Link href="/proyectos" className={linkClass(pathname.startsWith("/proyectos"))}>
@@ -46,9 +49,18 @@ export function Sidebar({
         {user && (
           <Link href="/lista-compras" className={linkClass(pathname.startsWith("/lista-compras"))}>
             <ShoppingCart className="w-4 h-4" />
-            Lista de compras
+            Listas de compras
           </Link>
         )}
+        <Link href="/guias" className={linkClass(pathname.startsWith("/guias"))}>
+          <BookOpen className="w-4 h-4" />
+          Guías y consejos
+        </Link>
+        <Link href="/#modo-profesional" className={linkClass(false)}>
+          <Wrench className="w-4 h-4" />
+          <span className="flex-1">Modo profesional</span>
+          <span className="text-[9px] font-mono px-1.5 py-0.5 rounded-full bg-safety text-white">Nuevo</span>
+        </Link>
         {isAdmin && (
           <>
             <div className="h-px bg-navy-border my-2" />
@@ -61,6 +73,7 @@ export function Sidebar({
       </nav>
 
       <div className="mt-auto pt-4 border-t border-navy-border">
+        <AssistantWidget groups={assistantGroups} variant="sidebar" />
         {user ? (
           <div className="flex items-center gap-2.5 px-2">
             {user.image ? (

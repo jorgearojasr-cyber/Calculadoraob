@@ -3,12 +3,13 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, LayoutGrid, Plus, FolderKanban, ShoppingCart, User, LogIn } from "lucide-react";
+import { Home, Compass, FolderKanban, ShoppingCart, User, LogIn } from "lucide-react";
 import { SignOutButton } from "@/components/auth/sign-out-button";
+import { AssistantWidget, type AssistantGroup } from "@/components/assistant/assistant-widget";
 
 type NavUser = { name: string | null; email: string | null } | null;
 
-export function BottomNav({ user }: { user: NavUser }) {
+export function BottomNav({ user, assistantGroups }: { user: NavUser; assistantGroups: AssistantGroup[] }) {
   const pathname = usePathname();
   const [profileOpen, setProfileOpen] = useState(false);
 
@@ -60,24 +61,18 @@ export function BottomNav({ user }: { user: NavUser }) {
           <Home className="w-5 h-5" />
           Inicio
         </Link>
-        <Link href="/#categorias" className={itemClass(pathname.startsWith("/categorias"))}>
-          <LayoutGrid className="w-5 h-5" />
-          Categorías
+        <Link href="/#empezar" className={itemClass(false)}>
+          <Compass className="w-5 h-5" />
+          Proyectos
         </Link>
 
         <div className="flex-1 flex items-center justify-center">
-          <Link
-            href="/#empezar"
-            aria-label="Nuevo cálculo"
-            className="w-12 h-12 -mt-6 rounded-full bg-safety text-white flex items-center justify-center shadow-lg border-4 border-concrete"
-          >
-            <Plus className="w-6 h-6" />
-          </Link>
+          <AssistantWidget groups={assistantGroups} variant="fab" />
         </div>
 
         <Link href="/proyectos" className={itemClass(pathname.startsWith("/proyectos"))}>
           <FolderKanban className="w-5 h-5" />
-          Proyectos
+          Mis proyectos
         </Link>
         <button onClick={() => setProfileOpen((v) => !v)} className={itemClass(profileOpen)}>
           <User className="w-5 h-5" />
