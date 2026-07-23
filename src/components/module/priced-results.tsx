@@ -53,13 +53,26 @@ export function PricedResults({
     return { result, priceStr, subtotal };
   });
 
+  // Agrupa cada resultado secundario (isSecondary) bajo el resultado
+  // principal no-secundario inmediatamente anterior en el orden, para
+  // renderizarlo anidado y más chico dentro de la misma tarjeta.
+  type Row = (typeof rows)[number];
+  const groups: { primary: Row; secondaries: Row[] }[] = [];
+  for (const row of rows) {
+    if (row.result.isSecondary && groups.length > 0) {
+      groups[groups.length - 1].secondaries.push(row);
+    } else {
+      groups.push({ primary: row, secondaries: [] });
+    }
+  }
+
   return (
     <div className="grid gap-3">
-      {rows.map(({ result, priceStr, subtotal }) => (
+      {groups.map(({ primary: { result, priceStr, subtotal }, secondaries }) => (
         <div key={result.key} className="rounded-2xl p-5 bg-white border border-border">
-          <div className="flex items-baseline justify-between gap-4">
+          <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
             <span className="font-medium text-[15px]">{result.label}</span>
-            <span className="font-display text-xl font-semibold whitespace-nowrap">
+            <span className="font-display text-xl font-semibold text-right">
               {formatQuantity(result.value)}{" "}
               <span className="text-sm font-body text-ink-muted">{result.unit}</span>
             </span>
@@ -87,6 +100,22 @@ export function PricedResults({
                   Subtotal: ${currencyFormatter.format(subtotal)}
                 </span>
               )}
+            </div>
+          )}
+
+          {secondaries.length > 0 && (
+            <div className="mt-3 pt-3 border-t border-border/60 grid gap-2">
+              {secondaries.map(({ result: sec }) => (
+                <div key={sec.key}>
+                  <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5">
+                    <span className="text-xs text-ink-muted">{sec.label}</span>
+                    <span className="text-sm font-medium text-ink-muted text-right">
+                      {formatQuantity(sec.value)} <span className="text-xs">{sec.unit}</span>
+                    </span>
+                  </div>
+                  {sec.note && <p className="mt-1 text-xs text-ink-muted/80">{sec.note}</p>}
+                </div>
+              ))}
             </div>
           )}
         </div>

@@ -10,6 +10,7 @@ type FormulaInput = {
   expression: unknown;
   condition: unknown;
   isResult: boolean;
+  isSecondary?: boolean;
   note: string | null;
   order: number;
   material: { name: string } | null;
@@ -26,6 +27,8 @@ export type CalculationResult = {
   value: number;
   note: string | null;
   materialName: string | null;
+  /** Resultado secundario/de referencia: se renderiza anidado y más chico dentro de la tarjeta del resultado principal anterior. */
+  isSecondary?: boolean;
   /** Precio unitario ingresado por el usuario para este cálculo puntual (no persiste globalmente). */
   unitPrice?: number | null;
 };
@@ -99,6 +102,7 @@ export function calculateModule(input: {
         value,
         note: formula.note,
         materialName,
+        isSecondary: formula.isSecondary ?? false,
       });
     }
   }

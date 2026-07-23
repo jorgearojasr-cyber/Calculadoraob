@@ -1,7 +1,9 @@
 export type QuestionDefaultSource = {
   type: "LOOKUP";
   questionKey: string;
-  table: Record<string, number>;
+  // number para preguntas NUMBER (ej. dimensiones sugeridas), string para
+  // preguntas SELECT (ej. preseleccionar una opción según otra respuesta).
+  table: Record<string, number | string>;
 };
 
 export type WizardQuestion = {

@@ -227,6 +227,10 @@ model Formula {
   expression Json
   condition  Json?
   isResult   Boolean   @default(true)
+  // Resultado secundario/de referencia (ej. "equivale a X sacos") — se
+  // renderiza más chico, anidado dentro de la tarjeta del resultado
+  // principal inmediatamente anterior, no como su propia tarjeta.
+  isSecondary Boolean  @default(false)
   note       String?
   material   Material? @relation(fields: [materialId], references: [id])
   materialId String?
