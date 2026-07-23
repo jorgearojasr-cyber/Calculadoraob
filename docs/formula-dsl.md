@@ -99,6 +99,8 @@ aplican si `metodo_hormigon == "manual"`).
 | Factor de pérdida | `{"op": "lossFactor", "key": "perdida_hormigon", "value": nodo}` | `nodo * (1 + loss_factors[key].percentage)` |
 | Comparación (solo en `condition`) | `{"op": "==" \| "!=" \| ">" \| ">=" \| "<" \| "<=", "args": [nodo, nodo]}` | Evalúa a booleano |
 | Lógicos (solo en `condition`) | `{"op": "and" \| "or", "args": [bool, bool, ...]}`, `{"op": "not", "value": bool}` | Combinan condiciones |
+| Máximo/mínimo | `{"op": "max" \| "min", "args": [nodo, nodo, ...]}` | Útil para acotar un resultado (ej. `max(0, x)` para que nunca sea negativo) |
+| Primer valor disponible | `{"op": "coalesce", "args": [nodo, nodo, ...]}` | Evalúa los args en orden; para un arg `{"ref": "x"}` cuya fórmula no se calculó esta vez (condición falsa), lo salta en vez de lanzar error, y sigue con el siguiente. Útil para converger varias fórmulas condicionadas mutuamente excluyentes (ej. una por cada opción de un `SELECT`) en un único valor referenciable después. El último arg suele ser un literal de respaldo (ej. `0`) para garantizar que siempre resuelva. |
 
 ### Reglas de evaluación
 

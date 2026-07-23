@@ -130,6 +130,25 @@ export function evaluateNode(node: DslNode, ctx: EvalContext): DslValue {
     case "not":
       return evaluateNode(node.value, ctx) !== true;
 
+    case "max":
+    case "min": {
+      const values = node.args.map((arg) => asNumber(evaluateNode(arg, ctx), node.op));
+      return node.op === "max" ? Math.max(...values) : Math.min(...values);
+    }
+
+    case "coalesce": {
+      for (const arg of node.args) {
+        if (typeof arg === "object" && arg !== null && "ref" in arg) {
+          if (ctx.formulaResults[arg.ref] !== undefined) {
+            return ctx.formulaResults[arg.ref];
+          }
+          continue;
+        }
+        return evaluateNode(arg, ctx);
+      }
+      throw new Error(`"coalesce" no encontró ningún valor disponible`);
+    }
+
     default:
       throw new Error(`Operador de DSL desconocido: ${JSON.stringify(node)}`);
   }
