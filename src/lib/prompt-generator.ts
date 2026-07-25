@@ -23,7 +23,7 @@ function buildMaterialsList(results: CalculationResult[]): string {
 // Heurística de género gramatical español a partir de la primera palabra
 // del nombre del módulo (ej. "Viga" -> "una", "Radier" -> "un") — no es
 // perfecta para todos los casos, pero cubre la gran mayoría.
-function inferArticle(moduleName: string): "un" | "una" {
+export function inferArticle(moduleName: string): "un" | "una" {
   const firstWord = moduleName.trim().split(/\s+/)[0]?.toLowerCase() ?? "";
   if (/(ción|sión|dad|tud)$/.test(firstWord)) return "una";
   return firstWord.endsWith("a") ? "una" : "un";
