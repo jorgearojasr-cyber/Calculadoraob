@@ -1,6 +1,8 @@
 import Link from "next/link";
+import { prisma } from "@/lib/prisma";
 import { BlueprintTick } from "./blueprint-tick";
 import { SearchBar } from "./search-bar";
+import { HeroStarter } from "./hero-starter";
 
 const SUGGESTIONS = [
   { label: "Radier de casa", href: "/categorias/hormigon/radier" },
@@ -8,7 +10,21 @@ const SUGGESTIONS = [
   { label: "Piscina 6x3", href: "/categorias/piscinas/piscina-rectangular-hormigon-armado" },
 ];
 
-export function Hero() {
+export async function Hero() {
+  // Misma data que ya alimenta el asistente "Preguntar ahora" (ProjectGroup
+  // con tareas activas) — el punto de entrada conversacional del Hero
+  // reutiliza el mismo árbol de reglas fijas, no uno nuevo.
+  const groups = await prisma.projectGroup.findMany({
+    where: { tasks: { some: {} } },
+    orderBy: { order: "asc" },
+    select: {
+      id: true,
+      name: true,
+      icon: true,
+      tasks: { orderBy: { order: "asc" }, select: { id: true, slug: true, name: true } },
+    },
+  });
+
   return (
     <section className="relative overflow-hidden">
       <div className="blueprint-bg absolute inset-0 [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,black,transparent)]" />
@@ -41,11 +57,17 @@ export function Hero() {
             ))}
           </div>
 
+          {groups.length > 0 && (
+            <div className="mt-8">
+              <HeroStarter groups={groups} />
+            </div>
+          )}
+
           <div className="mt-10 flex items-center gap-6">
             <a href="#como-funciona" className="text-sm font-medium underline underline-offset-4 text-ink-muted">
               Ver cómo funciona
             </a>
-            <a href="#categorias" className="text-sm font-medium underline underline-offset-4 text-ink-faint">
+            <a href="/?vista=material#empezar" className="text-sm font-medium underline underline-offset-4 text-ink-faint">
               Ver categorías técnicas
             </a>
           </div>

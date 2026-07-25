@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import type { Category, ProjectGroup, ProjectTask } from "@/generated/prisma/client";
 import { ProjectGroupBlock } from "./project-group-block";
 import { CategoryGrid } from "./category-grid";
@@ -23,7 +24,9 @@ export function ExplorationToggle({
   categories: Category[];
   popularTasks: PopularTask[];
 }) {
-  const [view, setView] = useState<"proyecto" | "material">("proyecto");
+  const searchParams = useSearchParams();
+  const initialView = searchParams.get("vista") === "material" ? "material" : "proyecto";
+  const [view, setView] = useState<"proyecto" | "material">(initialView);
 
   return (
     <section id="empezar" className="max-w-6xl mx-auto px-6 py-16">

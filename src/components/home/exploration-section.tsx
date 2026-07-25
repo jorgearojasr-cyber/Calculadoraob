@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { prisma } from "@/lib/prisma";
 import { ExplorationToggle } from "./exploration-toggle";
 
@@ -32,5 +33,9 @@ export async function ExplorationSection() {
 
   if (groups.length === 0 && categories.length === 0) return null;
 
-  return <ExplorationToggle groups={groups} categories={categories} popularTasks={popularTasks} />;
+  return (
+    <Suspense fallback={null}>
+      <ExplorationToggle groups={groups} categories={categories} popularTasks={popularTasks} />
+    </Suspense>
+  );
 }
