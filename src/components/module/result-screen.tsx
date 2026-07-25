@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Check, Copy, FolderPlus, RotateCcw, Sparkles } from "lucide-react";
-import { buildCalculationPrompt, inferArticle } from "@/lib/prompt-generator";
+import { buildCalculationPrompt, buildRestartLabel } from "@/lib/prompt-generator";
 import type { CalculationResult, InfoResult } from "@/lib/formula-engine";
 import type { CalculateModuleResult, NormSummary } from "@/app/(app)/categorias/[slug]/[moduleSlug]/actions";
 import { createSavedProjectAction } from "@/app/(app)/proyectos/actions";
@@ -139,7 +139,7 @@ export function ResultScreen({
           className="rounded-full px-6 py-3 text-sm font-medium border border-ink flex items-center gap-2"
         >
           <RotateCcw className="w-4 h-4" />
-          Calcular {inferArticle(moduleName) === "un" ? "otro" : "otra"} {moduleName}
+          {buildRestartLabel(moduleName)}
         </button>
       </div>
       {saveState === "error" && (

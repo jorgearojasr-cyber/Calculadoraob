@@ -29,6 +29,25 @@ export function inferArticle(moduleName: string): "un" | "una" {
   return firstWord.endsWith("a") ? "una" : "un";
 }
 
+// Nombres de módulo que ya empiezan con un verbo ("Calcular consumo
+// eléctrico...") rompen el patrón "Calcular otro/otra {nombre}" del botón
+// de reinicio (queda "Calcular otro Calcular..."). Para esos casos se usa
+// "Volver a {nombre en minúscula}" en su lugar.
+const RESTART_VERB_PREFIXES = ["Calcular", "Instalar", "Cambiar", "Hacer"];
+
+export function buildRestartLabel(moduleName: string): string {
+  const startsWithVerb = RESTART_VERB_PREFIXES.some((verb) =>
+    moduleName.toLowerCase().startsWith(`${verb.toLowerCase()} `)
+  );
+
+  if (startsWithVerb) {
+    return `Volver a ${moduleName.charAt(0).toLowerCase()}${moduleName.slice(1)}`;
+  }
+
+  const article = inferArticle(moduleName) === "un" ? "otro" : "otra";
+  return `Calcular ${article} ${moduleName}`;
+}
+
 export function buildCalculationPrompt(input: {
   moduleName: string;
   categoryName: string;
