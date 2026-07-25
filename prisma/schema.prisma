@@ -362,12 +362,47 @@ model ProjectTask {
   groupId String
 
   moduleLinks ProjectTaskModule[]
+  // Si está seteado, /empezar/[slug] redirige directo a /guias-rapidas/[quickGuide.slug]
+  // en vez de resolver moduleLinks — una tarea usa moduleLinks O quickGuide, no ambos.
+  quickGuide   QuickGuide? @relation(fields: [quickGuideId], references: [id], onDelete: SetNull)
+  quickGuideId String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([groupId])
   @@map("project_tasks")
+}
+
+// Guía práctica autocontenida sin cálculo de materiales (1-2 piezas, nada
+// que cuantificar) — a diferencia de Module, no tiene preguntas ni
+// fórmulas. Ver /guias-rapidas/[slug].
+model QuickGuide {
+  id               String   @id @default(cuid())
+  slug             String   @unique
+  title            String
+  shortDescription String
+  tools            String[]
+  estimatedTime    String
+  difficulty       String
+  peopleNeeded     String
+  steps            String[]
+  tips             String[]
+  commonMistakes   String[]
+  masterTip        String
+  faqs             Json
+  // Mismo patrón que Norm.reinforcedWarning — advertencia destacada para
+  // trabajos que involucran electricidad viva o riesgo similar.
+  reinforcedWarning     Boolean @default(false)
+  reinforcedWarningText String?
+  order                 Int     @default(0)
+
+  tasks ProjectTask[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("quick_guides")
 }
 
 // Vincula una ProjectTask a uno o más Module existentes. Si una tarea

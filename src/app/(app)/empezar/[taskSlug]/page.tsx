@@ -11,10 +11,16 @@ export default async function StartTaskPage({ params }: { params: { taskSlug: st
         orderBy: { order: "asc" },
         include: { module: { include: { category: true } } },
       },
+      quickGuide: { select: { slug: true } },
     },
   });
 
   if (!task) notFound();
+
+  // Guía rápida sin cálculo: va directo a la guía, nunca a un wizard.
+  if (task.quickGuide) {
+    redirect(`/guias-rapidas/${task.quickGuide.slug}`);
+  }
 
   // Un solo módulo: sin paso intermedio, directo al wizard.
   if (task.moduleLinks.length === 1) {
