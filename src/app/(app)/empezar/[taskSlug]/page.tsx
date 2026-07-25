@@ -12,10 +12,17 @@ export default async function StartTaskPage({ params }: { params: { taskSlug: st
         include: { module: { include: { category: true } } },
       },
       quickGuide: { select: { slug: true } },
+      plan: { select: { slug: true } },
     },
   });
 
   if (!task) notFound();
+
+  // Piloto de "Plan de fases": va directo al plan, nunca a la lista simple
+  // de módulos ni al wizard de uno solo.
+  if (task.plan) {
+    redirect(`/plan/${task.plan.slug}`);
+  }
 
   // Guía rápida sin cálculo: va directo a la guía, nunca a un wizard.
   if (task.quickGuide) {

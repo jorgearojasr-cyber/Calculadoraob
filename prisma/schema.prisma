@@ -27,6 +27,7 @@ model User {
 
   savedProjects       SavedProject[]
   shoppingListChecks  ShoppingListCheck[]
+  planPhaseCompletions ProjectPlanPhaseCompletion[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -112,6 +113,7 @@ model Module {
   lossFactors   LossFactor[]
   savedProjects SavedProject[]
   projectTaskLinks ProjectTaskModule[]
+  planPhaseLinks   ProjectPlanPhaseModule[]
   // Contenido "resultado enriquecido" opcional (piloto, ver ModuleGuide) —
   // hoy solo existe para Radier, no se genera en vivo por IA.
   guide         ModuleGuide?
@@ -366,6 +368,11 @@ model ProjectTask {
   // en vez de resolver moduleLinks — una tarea usa moduleLinks O quickGuide, no ambos.
   quickGuide   QuickGuide? @relation(fields: [quickGuideId], references: [id], onDelete: SetNull)
   quickGuideId String?
+  // Si está seteado, /empezar/[slug] redirige directo a /plan/[plan.slug] (piloto de
+  // "Plan de fases" para proyectos compuestos) — una tarea usa moduleLinks O
+  // quickGuide O plan, nunca más de uno a la vez.
+  plan   ProjectPlan? @relation(fields: [planId], references: [id], onDelete: SetNull)
+  planId String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -427,4 +434,84 @@ model ProjectTaskModule {
   @@index([taskId])
   @@index([moduleId])
   @@map("project_task_modules")
+}
+
+// Piloto de "Plan de fases": capa encima de Module, igual criterio que
+// ProjectGroup/ProjectTask — una secuencia ordenada de fases para un
+// proyecto compuesto (ej. "Construir una bodega o ampliación"), en vez de
+// la lista plana de accesos a módulos sin secuencia real que usaba
+// ProjectTaskModule para este caso. Un solo piloto por ahora: no
+// generalizar a otros ProjectTask sin validar el patrón primero.
+model ProjectPlan {
+  id          String @id @default(cuid())
+  slug        String @unique
+  title       String
+  description String
+
+  phases ProjectPlanPhase[]
+  tasks  ProjectTask[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("project_plans")
+}
+
+model ProjectPlanPhase {
+  id     String      @id @default(cuid())
+  plan   ProjectPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+  planId String
+  order  Int         @default(0)
+  // Nombre en lenguaje cotidiano, ej. "1. Hacer la base".
+  name   String
+
+  moduleLinks ProjectPlanPhaseModule[]
+  completions ProjectPlanPhaseCompletion[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([planId])
+  @@map("project_plan_phases")
+}
+
+// Mismo patrón que ProjectTaskModule: normalmente 1 módulo por fase, pero
+// soporta 2+ para reutilizar el mismo selector de ambigüedad si alguna
+// fase futura lo necesitara (no se ejercita en el piloto actual, donde
+// las 3 fases mapean 1:1).
+model ProjectPlanPhaseModule {
+  id       String           @id @default(cuid())
+  phase    ProjectPlanPhase @relation(fields: [phaseId], references: [id], onDelete: Cascade)
+  phaseId  String
+  module   Module           @relation(fields: [moduleId], references: [id], onDelete: Restrict)
+  moduleId String
+  label    String?
+  presetQuery String?
+  order    Int @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([phaseId])
+  @@index([moduleId])
+  @@map("project_plan_phase_modules")
+}
+
+// Estado manual de "fase lista" por usuario — un checkbox explícito, no
+// una inferencia automática desde SavedProject (evita ambigüedad sobre
+// qué cuenta como "completado"). Mismo patrón que ShoppingListCheck.
+model ProjectPlanPhaseCompletion {
+  id        String           @id @default(cuid())
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+  phase     ProjectPlanPhase @relation(fields: [phaseId], references: [id], onDelete: Cascade)
+  phaseId   String
+  completed Boolean          @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, phaseId])
+  @@index([userId])
+  @@map("project_plan_phase_completions")
 }
