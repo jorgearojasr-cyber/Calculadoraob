@@ -4,6 +4,13 @@ import { useMemo, useState } from "react";
 import { ArrowRight, Check } from "lucide-react";
 import type { WizardQuestion } from "./types";
 import { checkRangeWarning, parseTypicalRange } from "@/lib/range-hint";
+import { EquipmentChecklistStep } from "./equipment-checklist-step";
+
+// Caso especial: en vez de pedir el Watt total como número directo, se
+// reemplaza por una lista de equipos comunes preseleccionables (ver
+// equipment-checklist-step.tsx) — el tipo de la pregunta en la base sigue
+// siendo NUMBER, solo cambia cómo se ingresa el valor.
+const EQUIPMENT_CHECKLIST_KEY = "suma-la-potencia-total-de-los-equipos-que-iran-conectados-watts";
 
 export function QuestionStep({
   question,
@@ -31,6 +38,10 @@ export function QuestionStep({
     if (!textValue || !Number.isFinite(num) || num <= 0) return null;
     return checkRangeWarning(num, typicalRange);
   }, [typicalRange, textValue]);
+
+  if (question.key === EQUIPMENT_CHECKLIST_KEY) {
+    return <EquipmentChecklistStep question={question} initialValue={initialValue} onAnswer={onAnswer} />;
+  }
 
   if (question.type === "SELECT" && question.options.length === 1) {
     const option = question.options[0];
