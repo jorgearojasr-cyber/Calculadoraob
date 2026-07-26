@@ -120,16 +120,9 @@ export function ResultScreen({
 
       <div className="mt-8 flex flex-wrap items-center gap-3">
         <button
-          onClick={() => setPromptOpen((v) => !v)}
-          className="rounded-full px-6 py-3 text-sm font-semibold text-white flex items-center gap-2 bg-safety"
-        >
-          <Sparkles className="w-4 h-4" />
-          Generar prompt para IA
-        </button>
-        <button
           onClick={handleSaveProject}
           disabled={saveState === "saving"}
-          className="rounded-full px-6 py-3 text-sm font-medium border border-ink flex items-center gap-2 disabled:opacity-50"
+          className="rounded-full px-6 py-3 text-sm font-semibold text-white flex items-center gap-2 bg-safety disabled:opacity-50"
         >
           <FolderPlus className="w-4 h-4" />
           {saveState === "saving" ? "Guardando…" : "Guardar como proyecto"}
@@ -145,6 +138,14 @@ export function ResultScreen({
       {saveState === "error" && (
         <p className="mt-3 text-sm text-safety">No pudimos guardar el proyecto. Inténtalo de nuevo.</p>
       )}
+
+      <button
+        onClick={() => setPromptOpen((v) => !v)}
+        className="mt-4 text-sm font-medium text-ink-muted hover:text-ink flex items-center gap-1.5"
+      >
+        <Sparkles className="w-3.5 h-3.5" />
+        Generar prompt para IA
+      </button>
 
       {promptOpen && (
         <div className="mt-4 rounded-2xl p-5 bg-white border border-border">

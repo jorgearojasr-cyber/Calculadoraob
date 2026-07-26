@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { ArrowRight, Check } from "lucide-react";
 import type { WizardQuestion } from "./types";
+import { checkRangeWarning, parseTypicalRange } from "@/lib/range-hint";
 
 // Combina una pregunta SELECT con una pregunta NUMBER que solo se revela
 // (dentro del mismo paso) si se elige la segunda opción del SELECT — ej.
@@ -29,6 +30,17 @@ export function ConditionalRevealStep({
 
   const revealOptionKey = selectQuestion.options[1]?.key;
   const isRevealed = selected === revealOptionKey;
+
+  const typicalRange = useMemo(
+    () => parseTypicalRange(numberQuestion.helpText, numberQuestion.key),
+    [numberQuestion.helpText, numberQuestion.key]
+  );
+  const rangeWarning = useMemo(() => {
+    if (!typicalRange) return null;
+    const num = Number(numberValue.replace(",", "."));
+    if (!numberValue || !Number.isFinite(num) || num <= 0) return null;
+    return checkRangeWarning(num, typicalRange);
+  }, [typicalRange, numberValue]);
 
   const handleSelect = (key: string) => {
     setSelected(key);
@@ -97,6 +109,7 @@ export function ConditionalRevealStep({
             {numberQuestion.unit && <span className="font-mono text-sm text-ink-muted">{numberQuestion.unit}</span>}
           </div>
           {error && <p className="mt-2 text-sm text-safety">{error}</p>}
+          {!error && rangeWarning && <p className="mt-2 text-sm text-amber-600">{rangeWarning}</p>}
           <button
             onClick={handleSubmitNumber}
             className="mt-6 rounded-full px-6 py-3 text-sm font-semibold text-white flex items-center gap-2 bg-ink"

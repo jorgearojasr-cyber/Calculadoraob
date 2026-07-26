@@ -29,9 +29,19 @@ function GuideList({ items }: { items: string[] }) {
   );
 }
 
-function GuideDetails({ title, icon: Icon, children }: { title: string; icon: typeof Wrench; children: ReactNode }) {
+function GuideDetails({
+  title,
+  icon: Icon,
+  children,
+  defaultOpen = true,
+}: {
+  title: string;
+  icon: typeof Wrench;
+  children: ReactNode;
+  defaultOpen?: boolean;
+}) {
   return (
-    <details className="group rounded-2xl bg-white border border-border overflow-hidden">
+    <details open={defaultOpen} className="group rounded-2xl bg-white border border-border overflow-hidden">
       <summary className="flex items-center gap-2.5 p-5 cursor-pointer select-none list-none [&::-webkit-details-marker]:hidden">
         <Icon className="w-4 h-4 text-ink-muted shrink-0" />
         <span className="font-semibold text-[15px] flex-1">{title}</span>
@@ -94,7 +104,7 @@ export function GuideSection({ guide }: { guide: ModuleGuideData }) {
           <GuideList items={guide.safetyRecommendations} />
         </GuideDetails>
 
-        <GuideDetails title="Preguntas frecuentes" icon={HelpCircle}>
+        <GuideDetails title="Preguntas frecuentes" icon={HelpCircle} defaultOpen={false}>
           <div className="grid gap-4">
             {guide.faqs.map((faq, i) => (
               <div key={i}>

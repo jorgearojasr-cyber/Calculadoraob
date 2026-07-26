@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { ArrowRight, Check } from "lucide-react";
 import type { WizardQuestion } from "./types";
+import { checkRangeWarning, parseTypicalRange } from "@/lib/range-hint";
 
 export function QuestionStep({
   question,
@@ -17,6 +18,19 @@ export function QuestionStep({
     initialValue !== undefined ? String(initialValue) : ""
   );
   const [error, setError] = useState<string | null>(null);
+
+  const isNumber = question.type === "NUMBER";
+
+  const typicalRange = useMemo(
+    () => (isNumber ? parseTypicalRange(question.helpText, question.key) : null),
+    [isNumber, question.helpText, question.key]
+  );
+  const rangeWarning = useMemo(() => {
+    if (!typicalRange) return null;
+    const num = Number(textValue.replace(",", "."));
+    if (!textValue || !Number.isFinite(num) || num <= 0) return null;
+    return checkRangeWarning(num, typicalRange);
+  }, [typicalRange, textValue]);
 
   if (question.type === "SELECT" && question.options.length === 1) {
     const option = question.options[0];
@@ -82,8 +96,6 @@ export function QuestionStep({
     );
   }
 
-  const isNumber = question.type === "NUMBER";
-
   const handleSubmit = () => {
     if (isNumber) {
       const num = Number(textValue.replace(",", "."));
@@ -124,6 +136,7 @@ export function QuestionStep({
         {question.unit && <span className="font-mono text-sm text-ink-muted">{question.unit}</span>}
       </div>
       {error && <p className="mt-2 text-sm text-safety">{error}</p>}
+      {!error && rangeWarning && <p className="mt-2 text-sm text-amber-600">{rangeWarning}</p>}
       <button
         onClick={handleSubmit}
         className="mt-6 rounded-full px-6 py-3 text-sm font-semibold text-white flex items-center gap-2 bg-ink"

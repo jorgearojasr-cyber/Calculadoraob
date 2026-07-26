@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { ArrowRight } from "lucide-react";
 import type { WizardQuestion } from "./types";
+import { checkRangeWarning, parseTypicalRange } from "@/lib/range-hint";
 
 export function QuestionGroupStep({
   questions,
@@ -23,6 +24,15 @@ export function QuestionGroupStep({
   const setValue = (key: string, value: string) => {
     setValues((prev) => ({ ...prev, [key]: value }));
   };
+
+  const rangeWarnings: Record<string, string | null> = {};
+  for (const question of questions) {
+    const range = parseTypicalRange(question.helpText, question.key);
+    const raw = values[question.key] ?? "";
+    const num = Number(raw.replace(",", "."));
+    rangeWarnings[question.key] =
+      range && raw && Number.isFinite(num) && num > 0 ? checkRangeWarning(num, range) : null;
+  }
 
   const handleSubmit = () => {
     const parsed: Record<string, number> = {};
@@ -61,6 +71,9 @@ export function QuestionGroupStep({
               />
               {question.unit && <span className="font-mono text-sm text-ink-muted">{question.unit}</span>}
             </div>
+            {rangeWarnings[question.key] && (
+              <p className="mt-2 text-sm text-amber-600">{rangeWarnings[question.key]}</p>
+            )}
           </div>
         ))}
       </div>
