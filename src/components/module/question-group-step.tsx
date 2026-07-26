@@ -4,6 +4,42 @@ import { useState } from "react";
 import { ArrowRight } from "lucide-react";
 import type { WizardQuestion } from "./types";
 import { checkRangeWarning, parseTypicalRange } from "@/lib/range-hint";
+import { MeasureDiagram } from "./measure-diagram";
+
+// Piloto de diagramas de medida — solo estos 3 grupos de preguntas, por
+// stepGroup. No generalizar sin revisar el resto de estepGroups primero.
+const PILOT_DIAGRAMS: Record<
+  string,
+  {
+    shape: "rectangle" | "rectangle-with-depth";
+    primaryKey: string;
+    primaryLabel: string;
+    secondaryKey: string;
+    secondaryLabel: string;
+    depthKey?: string;
+    depthLabel?: string;
+  }
+> = {
+  "ducha-dims": {
+    shape: "rectangle",
+    primaryKey: "ancho-de-la-ducha-metros",
+    primaryLabel: "ancho",
+    secondaryKey: "profundidad-de-la-ducha-metros",
+    secondaryLabel: "profundidad",
+  },
+  "sendero-dims": {
+    shape: "rectangle",
+    primaryKey: "largo-del-sendero-metros",
+    primaryLabel: "largo",
+    secondaryKey: "ancho-del-sendero-metros",
+    secondaryLabel: "ancho",
+  },
+  // Piscina rectangular (largo/ancho/profundidad, 3 campos) queda fuera:
+  // con 3 campos apilados, el layout en 375px ya llena el viewport sin
+  // margen (scrollHeight == innerHeight); cualquier diagrama, incluso solo
+  // largo x ancho, empuja "Siguiente" fuera de la vista. Se prioriza el
+  // requisito de no romper el layout mobile sobre el diagrama en este caso.
+};
 
 export function QuestionGroupStep({
   questions,
@@ -24,6 +60,9 @@ export function QuestionGroupStep({
   const setValue = (key: string, value: string) => {
     setValues((prev) => ({ ...prev, [key]: value }));
   };
+
+  const stepGroup = questions[0]?.stepGroup;
+  const diagram = stepGroup ? PILOT_DIAGRAMS[stepGroup] : undefined;
 
   const rangeWarnings: Record<string, string | null> = {};
   for (const question of questions) {
@@ -51,6 +90,16 @@ export function QuestionGroupStep({
 
   return (
     <div>
+      {diagram && (
+        <div className="mb-5 rounded-2xl p-4 bg-white border border-border">
+          <MeasureDiagram
+            shape={diagram.shape}
+            primaryLabel={diagram.primaryLabel}
+            secondaryLabel={diagram.secondaryLabel}
+            depthLabel={diagram.depthLabel}
+          />
+        </div>
+      )}
       <div className="grid gap-5">
         {questions.map((question, i) => (
           <div key={question.id}>
