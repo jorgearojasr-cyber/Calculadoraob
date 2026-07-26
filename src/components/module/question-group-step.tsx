@@ -58,6 +58,10 @@ const DIMENSION_DIAGRAMS: Record<
   cmrv640ny00013oseqrvvxb50: { shape: "rectangle", primaryLabel: "largo", secondaryLabel: "ancho" }, // Techo inclinado (bajo teja/zinc)
   "area-pasto-sintetico": { shape: "rectangle", primaryLabel: "largo", secondaryLabel: "ancho" }, // Pasto sintético
   "jardinera-muro-dims": { shape: "rectangle", primaryLabel: "largo", secondaryLabel: "alto" }, // Jardinera de albañilería
+  "fachada-dims": { shape: "rectangle", primaryLabel: "largo", secondaryLabel: "alto" }, // Pintar una fachada exterior
+  "fachada-vano-1": { shape: "rectangle", primaryLabel: "ancho", secondaryLabel: "alto" }, // Fachada exterior — vano 1
+  "fachada-vano-2": { shape: "rectangle", primaryLabel: "ancho", secondaryLabel: "alto" }, // Fachada exterior — vano 2
+  "fachada-vano-3": { shape: "rectangle", primaryLabel: "ancho", secondaryLabel: "alto" }, // Fachada exterior — vano 3
 
   // Excluidos deliberadamente (quedan documentados para no volver a auditarlos):
   // - Piscina rectangular / Piscina circular, grupo "espesor de muros x
