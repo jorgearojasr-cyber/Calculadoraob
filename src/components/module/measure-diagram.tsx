@@ -3,8 +3,8 @@
 import { useId } from "react";
 
 // Diagrama SVG simple para mostrar QUÉ medida se está pidiendo (no
-// reemplaza el campo numérico). Piloto: solo 3 preguntas agrupadas
-// (Ducha, Sendero, Piscina rectangular) — ver PILOT_DIAGRAMS en
+// reemplaza el campo numérico). Generalizado a todos los grupos de
+// exactamente 2 campos de medida — ver DIMENSION_DIAGRAMS en
 // question-group-step.tsx.
 export function MeasureDiagram({
   shape,
@@ -12,7 +12,7 @@ export function MeasureDiagram({
   secondaryLabel,
   depthLabel,
 }: {
-  shape: "rectangle" | "rectangle-with-depth" | "circle";
+  shape: "rectangle" | "rectangle-with-depth" | "circle" | "circle-with-depth";
   primaryLabel: string;
   secondaryLabel?: string;
   depthLabel?: string;
@@ -34,9 +34,14 @@ export function MeasureDiagram({
     </marker>
   );
 
-  if (shape === "circle") {
+  if (shape === "circle" || shape === "circle-with-depth") {
+    const showCircleDepth = shape === "circle-with-depth" && depthLabel;
     return (
-      <svg viewBox="0 0 220 140" className="w-full max-w-[220px] mx-auto" aria-hidden="true">
+      <svg
+        viewBox={showCircleDepth ? "0 0 300 140" : "0 0 220 140"}
+        className={showCircleDepth ? "w-full max-w-[320px] mx-auto" : "w-full max-w-[220px] mx-auto"}
+        aria-hidden="true"
+      >
         <defs>{arrowDefs}</defs>
         <circle cx="110" cy="70" r="50" className="fill-concrete stroke-border" strokeWidth="2" />
         <line
@@ -52,6 +57,33 @@ export function MeasureDiagram({
         <text x="110" y="62" textAnchor="middle" className="fill-ink-muted text-[11px] font-mono">
           {primaryLabel}
         </text>
+
+        {/* Profundidad: corte lateral aparte, junto al círculo (vista en planta) */}
+        {showCircleDepth && (
+          <>
+            <rect x="214" y="24" width="56" height="86" rx="2" className="fill-concrete stroke-border" strokeWidth="2" />
+            <line x1="214" y1="24" x2="270" y2="24" className="stroke-border" strokeWidth="1.5" strokeDasharray="3 3" />
+            <line
+              x1="284"
+              y1="24"
+              x2="284"
+              y2="110"
+              className="stroke-ink-faint"
+              strokeWidth="1.5"
+              markerStart={`url(#${markerId})`}
+              markerEnd={`url(#${markerId})`}
+            />
+            <text
+              x="292"
+              y="67"
+              textAnchor="middle"
+              className="fill-ink-muted text-[11px] font-mono"
+              transform="rotate(-90 292 67)"
+            >
+              {depthLabel}
+            </text>
+          </>
+        )}
       </svg>
     );
   }
