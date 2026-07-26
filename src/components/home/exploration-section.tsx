@@ -8,9 +8,9 @@ import { ExplorationToggle } from "./exploration-toggle";
 const CURATED_TASK_SLUGS = [
   "construir-un-radier",
   "pintar-una-habitacion",
-  "levantar-un-muro",
   "construir-una-piscina",
-  "construir-un-quincho",
+  "cambiar-o-instalar-un-wc",
+  "hacer-un-sendero",
 ];
 
 export async function ExplorationSection() {
