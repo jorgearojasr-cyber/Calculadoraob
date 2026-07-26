@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, Info } from "lucide-react";
 import type { WizardQuestion } from "./types";
 import { checkRangeWarning, parseTypicalRange } from "@/lib/range-hint";
 import { MeasureDiagram } from "./measure-diagram";
@@ -64,6 +64,15 @@ const DIMENSION_DIAGRAMS: Record<
   "fachada-vano-3": { shape: "rectangle", primaryLabel: "ancho", secondaryLabel: "alto" }, // Fachada exterior — vano 3
   "cielo-metalcon-dims": { shape: "rectangle", primaryLabel: "largo", secondaryLabel: "ancho" }, // Cielo raso en Metalcon
 
+  // Grupos de 3 campos y Escalera: excluidos originalmente porque el paso
+  // llenaba el viewport de 375px sin margen. Habilitados tras el rediseño
+  // de layout compacto (labels chicos, helpText colapsado tras el ícono
+  // (i), 2 columnas en desktop) — ver `compact` más abajo.
+  cmrsikxe00001wssef5v6idtl: { shape: "rectangle-with-depth", primaryLabel: "largo", secondaryLabel: "ancho", depthLabel: "profundidad" }, // Piscina rectangular
+  cmrsc8n1d000mdwse1soq1ay1: { shape: "rectangle-with-depth", primaryLabel: "largo", secondaryLabel: "ancho", depthLabel: "profundidad" }, // Excavación
+  cmrtx07qt0002zsseetlhr5x5: { shape: "rectangle-with-depth", primaryLabel: "ancho", secondaryLabel: "alto", depthLabel: "profundidad" }, // Pilar / columna
+  cmrtxsb9800042wse1m5gzn6c: { shape: "rectangle", primaryLabel: "huella", secondaryLabel: "contrahuella" }, // Escalera
+
   // Excluidos deliberadamente (quedan documentados para no volver a auditarlos):
   // - Piscina rectangular / Piscina circular, grupo "espesor de muros x
   //   espesor de losa": ambos campos son espesores de partes distintas
@@ -73,15 +82,6 @@ const DIMENSION_DIAGRAMS: Record<
   // - Cercha de techo, grupo "cuántas cerchas x largo de cada cercha":
   //   el primer campo es una cantidad, no una medida — no es una pareja
   //   espacial representable en este diagrama.
-  // - Piscina rectangular (largo/ancho/profundidad, 3 campos): descartado
-  //   en el piloto — en 375px ese paso llena el viewport sin margen y
-  //   cualquier diagrama empuja "Siguiente" fuera de la vista.
-  // - Escalera (huella x contrahuella): técnicamente 2 campos, pero cada
-  //   uno repite un helpText largo ("Si no sabes estas medidas, lo típico
-  //   en una vivienda es huella 28cm y contrahuella 18cm.") que ya deja el
-  //   paso casi al límite del viewport en 375px; con el diagrama, empuja
-  //   "Siguiente" ~10px fuera de la vista sin scroll. Se excluye por la
-  //   regla dura de layout, no por el número de campos.
 };
 
 export function QuestionGroupStep({
@@ -99,6 +99,7 @@ export function QuestionGroupStep({
     )
   );
   const [error, setError] = useState<string | null>(null);
+  const [openHelp, setOpenHelp] = useState<Record<string, boolean>>({});
 
   const setValue = (key: string, value: string) => {
     setValues((prev) => ({ ...prev, [key]: value }));
@@ -106,6 +107,18 @@ export function QuestionGroupStep({
 
   const stepGroup = questions[0]?.stepGroup;
   const diagram = stepGroup ? DIMENSION_DIAGRAMS[stepGroup] : undefined;
+
+  // Layout compacto para grupos de 3+ campos: los pasos apilados con
+  // heading grande + helpText siempre visible llenaban el viewport de
+  // 375px sin margen (por eso Piscina rectangular y Escalera quedaron
+  // sin diagrama en su momento). En compacto: labels más chicos, menos
+  // espaciado, 2 columnas en desktop, y helpText detrás de un ícono (i).
+  const compact = questions.length >= 3;
+  // El helpText también se colapsa fuera del modo compacto cuando es
+  // largo (caso Escalera: 2 campos que repiten un helpText de ~95
+  // caracteres cada uno) — regla por largo, no por módulo puntual.
+  const isHelpCollapsed = (q: WizardQuestion) =>
+    Boolean(q.helpText) && (compact || (q.helpText?.length ?? 0) > 80);
 
   const rangeWarnings: Record<string, string | null> = {};
   for (const question of questions) {
@@ -143,31 +156,59 @@ export function QuestionGroupStep({
           />
         </div>
       )}
-      <div className="grid gap-5">
-        {questions.map((question, i) => (
-          <div key={question.id}>
-            <h2 className="font-display text-xl md:text-2xl font-semibold tracking-tight mb-2">
-              {question.label}
-            </h2>
-            {question.helpText && <p className="text-sm text-ink-muted mb-3">{question.helpText}</p>}
-            <div className="flex items-center gap-3 rounded-2xl px-5 py-4 bg-white border-[1.5px] border-ink">
-              <input
-                type="text"
-                inputMode="decimal"
-                autoFocus={i === 0}
-                value={values[question.key]}
-                onChange={(e) => setValue(question.key, e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
-                placeholder="0"
-                className="w-full bg-transparent outline-none text-2xl font-display placeholder:text-ink-faint"
-              />
-              {question.unit && <span className="font-mono text-sm text-ink-muted">{question.unit}</span>}
+      <div className={compact ? "grid gap-3 sm:grid-cols-2" : "grid gap-5"}>
+        {questions.map((question, i) => {
+          const collapsedHelp = isHelpCollapsed(question);
+          return (
+            <div key={question.id}>
+              <div className="flex items-center gap-1.5 mb-2">
+                {compact ? (
+                  <span className="font-semibold text-[15px]">{question.label}</span>
+                ) : (
+                  <h2 className="font-display text-xl md:text-2xl font-semibold tracking-tight">
+                    {question.label}
+                  </h2>
+                )}
+                {collapsedHelp && (
+                  <button
+                    type="button"
+                    onClick={() => setOpenHelp((prev) => ({ ...prev, [question.key]: !prev[question.key] }))}
+                    aria-label={`Más información sobre ${question.label}`}
+                    aria-expanded={!!openHelp[question.key]}
+                    className="shrink-0 text-ink-faint hover:text-ink"
+                  >
+                    <Info className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
+              {question.helpText && (!collapsedHelp || openHelp[question.key]) && (
+                <p className="text-sm text-ink-muted mb-2">{question.helpText}</p>
+              )}
+              <div
+                className={`flex items-center gap-3 rounded-2xl bg-white border-[1.5px] border-ink ${
+                  compact ? "px-4 py-3" : "px-5 py-4"
+                }`}
+              >
+                <input
+                  type="text"
+                  inputMode="decimal"
+                  autoFocus={i === 0}
+                  value={values[question.key]}
+                  onChange={(e) => setValue(question.key, e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
+                  placeholder="0"
+                  className={`w-full bg-transparent outline-none font-display placeholder:text-ink-faint ${
+                    compact ? "text-xl" : "text-2xl"
+                  }`}
+                />
+                {question.unit && <span className="font-mono text-sm text-ink-muted">{question.unit}</span>}
+              </div>
+              {rangeWarnings[question.key] && (
+                <p className="mt-2 text-sm text-amber-600">{rangeWarnings[question.key]}</p>
+              )}
             </div>
-            {rangeWarnings[question.key] && (
-              <p className="mt-2 text-sm text-amber-600">{rangeWarnings[question.key]}</p>
-            )}
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       {error && <p className="mt-4 text-sm text-safety">{error}</p>}
