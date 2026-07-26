@@ -62,6 +62,7 @@ const DIMENSION_DIAGRAMS: Record<
   "fachada-vano-1": { shape: "rectangle", primaryLabel: "ancho", secondaryLabel: "alto" }, // Fachada exterior — vano 1
   "fachada-vano-2": { shape: "rectangle", primaryLabel: "ancho", secondaryLabel: "alto" }, // Fachada exterior — vano 2
   "fachada-vano-3": { shape: "rectangle", primaryLabel: "ancho", secondaryLabel: "alto" }, // Fachada exterior — vano 3
+  "cielo-metalcon-dims": { shape: "rectangle", primaryLabel: "largo", secondaryLabel: "ancho" }, // Cielo raso en Metalcon
 
   // Excluidos deliberadamente (quedan documentados para no volver a auditarlos):
   // - Piscina rectangular / Piscina circular, grupo "espesor de muros x

@@ -33,7 +33,7 @@ export function inferArticle(moduleName: string): "un" | "una" {
 // eléctrico...") rompen el patrón "Calcular otro/otra {nombre}" del botón
 // de reinicio (queda "Calcular otro Calcular..."). Para esos casos se usa
 // "Volver a {nombre en minúscula}" en su lugar.
-const RESTART_VERB_PREFIXES = ["Calcular", "Instalar", "Cambiar", "Hacer", "Pintar", "Preparar"];
+const RESTART_VERB_PREFIXES = ["Calcular", "Instalar", "Cambiar", "Hacer", "Pintar", "Preparar", "Terminar"];
 
 export function buildRestartLabel(moduleName: string): string {
   const startsWithVerb = RESTART_VERB_PREFIXES.some((verb) =>
