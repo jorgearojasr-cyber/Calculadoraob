@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { STALE_SESSION_ERROR, isStaleUserError } from "@/lib/stale-session";
 import type { CalculateModuleResult } from "@/app/(app)/categorias/[slug]/[moduleSlug]/actions";
 
 export type AnswerSummaryItem = { label: string; value: string };
@@ -23,16 +24,25 @@ export async function createSavedProjectAction(input: {
     month: "short",
   })}`;
 
-  const project = await prisma.savedProject.create({
-    data: {
-      userId: session.user.id,
-      moduleId: input.moduleId,
-      name: input.name?.trim() || defaultName,
-      answers: input.answersSummary,
-      result: input.result,
-      progressPercent: 0,
-    },
-  });
+  let project;
+  try {
+    project = await prisma.savedProject.create({
+      data: {
+        userId: session.user.id,
+        moduleId: input.moduleId,
+        name: input.name?.trim() || defaultName,
+        answers: input.answersSummary,
+        result: input.result,
+        progressPercent: 0,
+      },
+    });
+  } catch (error) {
+    // Sesión válida pero usuario borrado de la base: el frontend ya trata
+    // cualquier error de esta acción guardando el proyecto pendiente y
+    // redirigiendo a /login, que es exactamente lo que corresponde aquí.
+    if (isStaleUserError(error)) return { error: STALE_SESSION_ERROR };
+    throw error;
+  }
 
   revalidatePath("/proyectos");
   return { id: project.id };

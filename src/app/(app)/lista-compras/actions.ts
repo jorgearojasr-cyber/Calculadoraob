@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { STALE_SESSION_ERROR, isStaleUserError } from "@/lib/stale-session";
 
 export async function toggleShoppingCheckAction(
   materialName: string,
@@ -13,11 +14,16 @@ export async function toggleShoppingCheckAction(
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) return { error: "No hay sesión activa." };
 
-  await prisma.shoppingListCheck.upsert({
-    where: { userId_materialName_unit: { userId: session.user.id, materialName, unit } },
-    create: { userId: session.user.id, materialName, unit, checked },
-    update: { checked },
-  });
+  try {
+    await prisma.shoppingListCheck.upsert({
+      where: { userId_materialName_unit: { userId: session.user.id, materialName, unit } },
+      create: { userId: session.user.id, materialName, unit, checked },
+      update: { checked },
+    });
+  } catch (error) {
+    if (isStaleUserError(error)) return { error: STALE_SESSION_ERROR };
+    throw error;
+  }
 
   revalidatePath("/lista-compras");
   return {};

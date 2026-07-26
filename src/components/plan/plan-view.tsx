@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Check, Circle, Calculator } from "lucide-react";
 import { togglePhaseCompletionAction } from "@/app/(app)/plan/[slug]/actions";
+import { STALE_SESSION_ERROR, STALE_SESSION_MESSAGE } from "@/lib/stale-session";
 
 export type PlanPhaseLink = { label: string | null; href: string; moduleName: string };
 export type PlanPhaseData = {
@@ -22,6 +23,7 @@ export function PlanView({ planSlug, phases }: { planSlug: string; phases: PlanP
     new Set(phases.filter((p) => p.completed).map((p) => p.id))
   );
   const [, startTransition] = useTransition();
+  const [sessionError, setSessionError] = useState<string | null>(null);
   const router = useRouter();
 
   const completedCount = completedIds.size;
@@ -43,13 +45,25 @@ export function PlanView({ planSlug, phases }: { planSlug: string; phases: PlanP
           else next.add(phaseId);
           return next;
         });
-        router.push(`/login?callbackUrl=${encodeURIComponent(`/plan/${planSlug}`)}`);
+        if (result.error === STALE_SESSION_ERROR) {
+          setSessionError(STALE_SESSION_MESSAGE);
+        } else {
+          router.push(`/login?callbackUrl=${encodeURIComponent(`/plan/${planSlug}`)}`);
+        }
       }
     });
   };
 
   return (
     <div>
+      {sessionError && (
+        <div className="rounded-2xl p-4 mb-4 bg-safety-tint border border-safety/30 text-sm text-safety">
+          {sessionError}{" "}
+          <Link href={`/login?callbackUrl=${encodeURIComponent(`/plan/${planSlug}`)}`} className="font-semibold underline">
+            Iniciar sesión
+          </Link>
+        </div>
+      )}
       <div className="rounded-2xl p-5 bg-white border border-border mb-6">
         <div className="flex items-center justify-between mb-2">
           <p className="text-sm font-semibold">

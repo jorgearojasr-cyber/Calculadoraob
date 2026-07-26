@@ -6,6 +6,7 @@ import { ShoppingCart, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { formatQuantity } from "@/lib/format-number";
 import { clearShoppingListAction, toggleShoppingCheckAction } from "@/app/(app)/lista-compras/actions";
+import { STALE_SESSION_ERROR, STALE_SESSION_MESSAGE } from "@/lib/stale-session";
 import type { ShoppingListData, ShoppingListLine } from "@/lib/shopping-list";
 
 const currencyFormatter = new Intl.NumberFormat("es-CL", { maximumFractionDigits: 0 });
@@ -15,6 +16,7 @@ export function ShoppingListView({ data }: { data: ShoppingListData }) {
   const [lines, setLines] = useState<ShoppingListLine[]>(data.lines);
   const [isPending, startTransition] = useTransition();
   const [clearing, setClearing] = useState(false);
+  const [sessionError, setSessionError] = useState<string | null>(null);
 
   const handleToggleCheck = (line: ShoppingListLine) => {
     const next = !line.checked;
@@ -22,7 +24,16 @@ export function ShoppingListView({ data }: { data: ShoppingListData }) {
       prev.map((l) => (l.materialName === line.materialName && l.unit === line.unit ? { ...l, checked: next } : l))
     );
     startTransition(async () => {
-      await toggleShoppingCheckAction(line.materialName, line.unit, next);
+      const result = await toggleShoppingCheckAction(line.materialName, line.unit, next);
+      if (result.error) {
+        // Revierte el check optimista — la acción no se guardó.
+        setLines((prev) =>
+          prev.map((l) =>
+            l.materialName === line.materialName && l.unit === line.unit ? { ...l, checked: !next } : l
+          )
+        );
+        if (result.error === STALE_SESSION_ERROR) setSessionError(STALE_SESSION_MESSAGE);
+      }
     });
   };
 
@@ -69,6 +80,14 @@ export function ShoppingListView({ data }: { data: ShoppingListData }) {
 
   return (
     <div>
+      {sessionError && (
+        <div className="rounded-2xl p-4 mb-4 bg-safety-tint border border-safety/30 text-sm text-safety">
+          {sessionError}{" "}
+          <Link href="/login?callbackUrl=%2Flista-compras" className="font-semibold underline">
+            Iniciar sesión
+          </Link>
+        </div>
+      )}
       <div className="flex items-center justify-between mb-4">
         <p className="text-xs text-ink-muted">
           {data.includedProjectCount} proyecto(s) incluido(s) · {lines.length} material(es)
