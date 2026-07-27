@@ -83,22 +83,27 @@ export function PricedResults({
           {result.note && <p className="mt-2 text-xs text-ink-muted">{result.note}</p>}
 
           {result.materialName && (
-            <div className="mt-3 pt-3 border-t border-border flex flex-wrap items-center gap-3">
-              <label className="text-xs text-ink-muted flex items-center gap-2">
-                Precio unitario ($)
-                <input
-                  type="text"
-                  inputMode="decimal"
-                  value={priceStr}
-                  onChange={(e) => handlePriceChange(result.key, e.target.value)}
-                  placeholder="0"
-                  className="w-24 rounded-lg px-2 py-1 border border-border text-sm outline-none focus:border-ink"
-                />
-              </label>
-              {subtotal !== null && (
-                <span className="ml-auto text-sm font-semibold">
-                  Subtotal: ${currencyFormatter.format(subtotal)}
-                </span>
+            <div className="mt-3 pt-3 border-t border-border">
+              <div className="flex flex-wrap items-center gap-3">
+                <label className="text-xs text-ink-muted flex items-center gap-2">
+                  Precio unitario ($)
+                  <input
+                    type="text"
+                    inputMode="decimal"
+                    value={priceStr}
+                    onChange={(e) => handlePriceChange(result.key, e.target.value)}
+                    placeholder="0"
+                    className="w-24 rounded-lg px-2 py-1 border border-border text-sm outline-none focus:border-ink"
+                  />
+                </label>
+                {subtotal !== null && (
+                  <span className="ml-auto text-sm font-semibold">
+                    Subtotal: ${currencyFormatter.format(subtotal)}
+                  </span>
+                )}
+              </div>
+              {result.referencePriceNote && (
+                <p className="mt-1.5 text-[11px] text-ink-faint">{result.referencePriceNote}</p>
               )}
             </div>
           )}

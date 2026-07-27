@@ -39,7 +39,17 @@ export function ResultScreen({
   const [promptOpen, setPromptOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   const [saveState, setSaveState] = useState<"idle" | "saving" | "error">("idle");
-  const [pricedResults, setPricedResults] = useState<CalculationResult[]>(results);
+  // Precarga el precio de referencia (sugerencia editable) como unitPrice
+  // inicial, para que lo que se ve en pantalla sea lo mismo que se guarda
+  // si el usuario no lo edita.
+  const [seededResults] = useState<CalculationResult[]>(() =>
+    results.map((r) =>
+      r.materialName && r.unitPrice == null && r.referencePrice != null
+        ? { ...r, unitPrice: r.referencePrice }
+        : r
+    )
+  );
+  const [pricedResults, setPricedResults] = useState<CalculationResult[]>(seededResults);
 
   const prompt = buildCalculationPrompt({ moduleName, categoryName, answersSummary, results, infoResults, norms });
 
@@ -98,7 +108,7 @@ export function ResultScreen({
         </div>
       )}
 
-      <PricedResults results={results} onPricesChange={setPricedResults} />
+      <PricedResults results={seededResults} onPricesChange={setPricedResults} />
 
       <NormsDisclaimer norms={norms} />
 

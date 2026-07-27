@@ -240,6 +240,14 @@ model Material {
   key  String @unique
   name String
   unit String
+  // Precio de referencia aproximado en CLP por unidad (tabla estática,
+  // actualizada a mano — NO precios en vivo). Se precarga como sugerencia
+  // editable en el campo de precio del resultado, solo cuando la unidad
+  // de la línea coincide con la del material. referencePriceNote lleva el
+  // texto visible con fuente y fecha ("Precio de referencia aproximado
+  // (Sodimac, jul 2026)...").
+  referencePrice     Int?
+  referencePriceNote String?
 
   formulas Formula[]
 

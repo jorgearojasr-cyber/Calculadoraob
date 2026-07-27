@@ -13,7 +13,12 @@ type FormulaInput = {
   isSecondary?: boolean;
   note: string | null;
   order: number;
-  material: { name: string } | null;
+  material: {
+    name: string;
+    unit?: string;
+    referencePrice?: number | null;
+    referencePriceNote?: string | null;
+  } | null;
   materialLabelTemplate?: string | null;
 };
 
@@ -31,6 +36,10 @@ export type CalculationResult = {
   isSecondary?: boolean;
   /** Precio unitario ingresado por el usuario para este cálculo puntual (no persiste globalmente). */
   unitPrice?: number | null;
+  /** Precio de referencia aproximado del material (CLP por unidad, tabla estática) — solo sugerencia editable. */
+  referencePrice?: number | null;
+  /** Texto visible con fuente y fecha del precio de referencia. */
+  referencePriceNote?: string | null;
 };
 
 export type InfoResult = {
@@ -104,6 +113,13 @@ export function calculateModule(input: {
         ? interpolateMaterialLabel(formula.materialLabelTemplate, variables)
         : formula.material?.name ?? null;
 
+      // El precio de referencia solo aplica si la unidad de esta línea de
+      // resultado coincide con la unidad del material (ej. Pintura interior
+      // vende el mismo material en galón/cuarto/cuñete sobre un material en
+      // litros — ahí un precio por litro daría subtotales incorrectos).
+      const hasReferencePrice =
+        formula.material?.referencePrice != null && formula.material.unit === formula.unit;
+
       results.push({
         key: formula.key,
         label: formula.label,
@@ -112,6 +128,8 @@ export function calculateModule(input: {
         note: formula.note,
         materialName,
         isSecondary: formula.isSecondary ?? false,
+        referencePrice: hasReferencePrice ? formula.material!.referencePrice : null,
+        referencePriceNote: hasReferencePrice ? formula.material!.referencePriceNote ?? null : null,
       });
     }
   }
