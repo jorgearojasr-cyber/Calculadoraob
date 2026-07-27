@@ -154,9 +154,13 @@ export function ResultScreen({
         <p className="mt-3 text-sm text-safety">No pudimos guardar el proyecto. Inténtalo de nuevo.</p>
       )}
 
+      <p className="mt-4 text-xs text-ink-faint">
+        Copia este prompt y pégalo en tu IA favorita (ChatGPT, Claude, Gemini) para recibir consejos
+        personalizados sobre tu proyecto.
+      </p>
       <button
         onClick={() => setPromptOpen((v) => !v)}
-        className="mt-4 text-sm font-medium text-ink-muted hover:text-ink flex items-center gap-1.5"
+        className="mt-1.5 text-sm font-medium text-ink-muted hover:text-ink flex items-center gap-1.5"
       >
         <Sparkles className="w-3.5 h-3.5" />
         Generar prompt para IA

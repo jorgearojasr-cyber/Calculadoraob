@@ -1,6 +1,7 @@
 "use client";
 
 import { useId } from "react";
+import { formatQuantity } from "@/lib/format-number";
 
 // Diagrama SVG simple para mostrar QUÉ medida se está pidiendo (no
 // reemplaza el campo numérico). Generalizado a todos los grupos de
@@ -11,14 +12,53 @@ export function MeasureDiagram({
   primaryLabel,
   secondaryLabel,
   depthLabel,
+  primaryValue,
+  secondaryValue,
+  depthValue,
+  primaryUnit,
+  secondaryUnit,
+  depthUnit,
 }: {
   shape: "rectangle" | "rectangle-with-depth" | "circle" | "circle-with-depth";
   primaryLabel: string;
   secondaryLabel?: string;
   depthLabel?: string;
+  // Valores en vivo de los campos numéricos asociados (string crudo del
+  // input, con coma o punto decimal) — opcional: si no se pasan, el
+  // resumen "Ingresaste: ..." simplemente no se muestra.
+  primaryValue?: string;
+  secondaryValue?: string;
+  depthValue?: string;
+  primaryUnit?: string;
+  secondaryUnit?: string;
+  depthUnit?: string;
 }) {
   const rawId = useId();
   const markerId = `md-arrow-${rawId.replace(/[^a-zA-Z0-9]/g, "")}`;
+
+  // Resumen en vivo arriba del diagrama, ej. "Ingresaste: 3,5 m × 2,8 m".
+  // Se arma con los mismos campos que tiene el diagrama (2 o 3 según el
+  // shape) — un guión para el que todavía no se ha llenado, para que el
+  // resumen aparezca desde el primer campo y se complete en tiempo real.
+  const formatPart = (raw: string | undefined, unit: string | undefined) => {
+    if (!raw) return "—";
+    const num = Number(raw.replace(",", "."));
+    if (!Number.isFinite(num) || num <= 0) return "—";
+    return unit ? `${formatQuantity(num)} ${unit}` : formatQuantity(num);
+  };
+
+  const summaryParts = [
+    primaryValue !== undefined ? formatPart(primaryValue, primaryUnit) : null,
+    secondaryLabel && secondaryValue !== undefined ? formatPart(secondaryValue, secondaryUnit) : null,
+    depthLabel && depthValue !== undefined ? formatPart(depthValue, depthUnit) : null,
+  ].filter((part): part is string => part !== null);
+
+  const summary =
+    summaryParts.length > 0 ? (
+      <p className="text-xs font-mono text-ink-muted text-center mb-2">
+        Ingresaste: {summaryParts.join(" × ")}
+      </p>
+    ) : null;
 
   const arrowDefs = (
     <marker
@@ -37,6 +77,8 @@ export function MeasureDiagram({
   if (shape === "circle" || shape === "circle-with-depth") {
     const showCircleDepth = shape === "circle-with-depth" && depthLabel;
     return (
+      <>
+      {summary}
       <svg
         viewBox={showCircleDepth ? "0 0 300 140" : "0 0 220 140"}
         className={showCircleDepth ? "w-full max-w-[320px] mx-auto" : "w-full max-w-[220px] mx-auto"}
@@ -85,12 +127,15 @@ export function MeasureDiagram({
           </>
         )}
       </svg>
+      </>
     );
   }
 
   const showDepth = shape === "rectangle-with-depth" && depthLabel;
 
   return (
+    <>
+    {summary}
     <svg
       viewBox={showDepth ? "0 0 300 150" : "0 0 220 150"}
       className={showDepth ? "w-full max-w-[320px] mx-auto" : "w-full max-w-[240px] mx-auto"}
@@ -168,5 +213,6 @@ export function MeasureDiagram({
         </>
       )}
     </svg>
+    </>
   );
 }

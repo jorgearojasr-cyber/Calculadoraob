@@ -144,6 +144,15 @@ export function QuestionGroupStep({
     onAnswer(parsed);
   };
 
+  // El diagrama vincula sus campos (primario/secundario/profundidad) con
+  // `questions` en ese mismo orden posicional — así fueron auditados al
+  // armar DIMENSION_DIAGRAMS (ej. circle-with-depth es [diámetro,
+  // profundidad], sin secundario, así que el segundo campo es profundidad).
+  const diagramSecondaryQuestion = diagram?.secondaryLabel ? questions[1] : undefined;
+  const diagramDepthQuestion = diagram?.depthLabel
+    ? questions[diagram.secondaryLabel ? 2 : 1]
+    : undefined;
+
   return (
     <div>
       {diagram && (
@@ -153,6 +162,12 @@ export function QuestionGroupStep({
             primaryLabel={diagram.primaryLabel}
             secondaryLabel={diagram.secondaryLabel}
             depthLabel={diagram.depthLabel}
+            primaryValue={values[questions[0].key]}
+            primaryUnit={questions[0].unit ?? undefined}
+            secondaryValue={diagramSecondaryQuestion ? values[diagramSecondaryQuestion.key] : undefined}
+            secondaryUnit={diagramSecondaryQuestion?.unit ?? undefined}
+            depthValue={diagramDepthQuestion ? values[diagramDepthQuestion.key] : undefined}
+            depthUnit={diagramDepthQuestion?.unit ?? undefined}
           />
         </div>
       )}

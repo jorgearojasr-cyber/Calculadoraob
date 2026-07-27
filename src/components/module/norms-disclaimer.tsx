@@ -1,5 +1,6 @@
 import { BookCheck, TriangleAlert } from "lucide-react";
 import type { NormSummary } from "@/app/(app)/categorias/[slug]/[moduleSlug]/actions";
+import { CollapsibleHelp } from "./collapsible-help";
 
 /**
  * Aviso normativo reutilizable para el resultado de cualquier módulo.
@@ -22,8 +23,10 @@ export function NormsDisclaimer({ norms }: { norms: NormSummary[] }) {
         <div className="rounded-2xl p-4 bg-white border border-border">
           <div className="flex items-start gap-2.5">
             <BookCheck className="w-4 h-4 flex-shrink-0 mt-0.5 text-navy" />
-            <div>
-              <p className="text-xs font-medium mb-1">Basado en norma técnica</p>
+            <CollapsibleHelp
+              label={`Basado en norma técnica: ${citadas.map((n) => n.code).join(", ")}`}
+              ariaLabel="Más detalle sobre las normas técnicas citadas"
+            >
               <ul className="text-xs text-ink-muted grid gap-0.5">
                 {citadas.map((norm) => (
                   <li key={norm.id}>
@@ -32,7 +35,7 @@ export function NormsDisclaimer({ norms }: { norms: NormSummary[] }) {
                   </li>
                 ))}
               </ul>
-            </div>
+            </CollapsibleHelp>
           </div>
         </div>
       )}
@@ -41,10 +44,11 @@ export function NormsDisclaimer({ norms }: { norms: NormSummary[] }) {
         <div className="rounded-2xl p-4 bg-safety-tint border border-safety-border">
           <div className="flex items-start gap-2.5">
             <TriangleAlert className="w-4 h-4 flex-shrink-0 mt-0.5 text-safety" />
-            <div>
-              <p className="text-xs font-medium text-safety mb-1">
-                Valores no verificados contra una norma específica
-              </p>
+            <CollapsibleHelp
+              label="Valores no verificados contra una norma específica"
+              ariaLabel="Más detalle sobre estos valores no verificados"
+              labelClassName="text-safety"
+            >
               <div className="text-xs text-ink-muted grid gap-1.5">
                 {noVerificadasNotes.length === 0 ? (
                   <p>Estos valores representan práctica de obra habitual, no una norma citada.</p>
@@ -56,7 +60,7 @@ export function NormsDisclaimer({ norms }: { norms: NormSummary[] }) {
                   aprobación municipal.
                 </p>
               </div>
-            </div>
+            </CollapsibleHelp>
           </div>
         </div>
       )}
