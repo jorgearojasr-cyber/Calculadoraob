@@ -119,3 +119,94 @@ export async function saveLookupTableAction(
   await revalidateModulePaths(moduleId);
   return {};
 }
+
+export type Lookup2ColumnInput = {
+  id?: string;
+  label: string;
+  valueType: "NUMBER" | "TEXT";
+  // Celdas indexadas por "claveOpcionPrimaria|claveOpcionSecundaria".
+  cells: Record<string, string>;
+};
+
+export async function saveLookup2TableAction(
+  moduleId: string,
+  primaryQuestionId: string,
+  secondaryQuestionId: string,
+  columns: Lookup2ColumnInput[]
+): Promise<{ error?: string }> {
+  if (columns.some((c) => !c.label.trim())) {
+    return { error: "Cada columna de la tabla necesita un nombre." };
+  }
+  if (primaryQuestionId === secondaryQuestionId) {
+    return { error: "Elige dos preguntas distintas." };
+  }
+
+  const [primary, secondary] = await Promise.all([
+    prisma.question.findUniqueOrThrow({
+      where: { id: primaryQuestionId },
+      include: { options: { orderBy: { order: "asc" } } },
+    }),
+    prisma.question.findUniqueOrThrow({
+      where: { id: secondaryQuestionId },
+      include: { options: { orderBy: { order: "asc" } } },
+    }),
+  ]);
+
+  const allVariables = await prisma.variable.findMany({ where: { moduleId } });
+  const existingForPair = allVariables.filter((v) => {
+    const source = v.source as unknown as VariableSource;
+    return (
+      source.type === "LOOKUP2" &&
+      source.questionKey === primary.key &&
+      source.secondaryQuestionKey === secondary.key
+    );
+  });
+
+  const keptIds = new Set(columns.filter((c) => c.id).map((c) => c.id));
+  const toDelete = existingForPair.filter((v) => !keptIds.has(v.id));
+  const existingKeys = allVariables.map((v) => v.key);
+  const maxOrder = Math.max(-1, ...allVariables.map((v) => v.order));
+
+  await prisma.$transaction([
+    ...toDelete.map((v) => prisma.variable.delete({ where: { id: v.id } })),
+    ...columns.map((col, i) => {
+      const table: Record<string, DslValue> = {};
+      for (const primaryOption of primary.options) {
+        for (const secondaryOption of secondary.options) {
+          const compoundKey = `${primaryOption.key}|${secondaryOption.key}`;
+          const raw = col.cells[compoundKey] ?? "";
+          table[compoundKey] = col.valueType === "NUMBER" ? Number(raw) || 0 : raw;
+        }
+      }
+      const source: VariableSource = {
+        type: "LOOKUP2",
+        questionKey: primary.key,
+        secondaryQuestionKey: secondary.key,
+        table,
+      };
+
+      if (col.id) {
+        return prisma.variable.update({
+          where: { id: col.id },
+          data: { label: col.label.trim(), valueType: col.valueType, source },
+        });
+      }
+
+      const key = uniqueSlug(col.label.trim(), existingKeys);
+      existingKeys.push(key);
+      return prisma.variable.create({
+        data: {
+          moduleId,
+          key,
+          label: col.label.trim(),
+          valueType: col.valueType,
+          source,
+          order: maxOrder + 1 + i,
+        },
+      });
+    }),
+  ]);
+
+  await revalidateModulePaths(moduleId);
+  return {};
+}

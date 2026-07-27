@@ -15,6 +15,10 @@ export type QuestionInput = {
   // Id de otra pregunta del mismo módulo con la que esta debe mostrarse en
   // el mismo paso del wizard. null/undefined = sin agrupar.
   groupWithQuestionId?: string | null;
+  // Id (no key) de otra pregunta del mismo módulo de la que depende la
+  // visibilidad de esta. null/undefined = siempre visible.
+  visibleIfQuestionId?: string | null;
+  visibleIfValues?: string[];
 };
 
 // Resuelve groupWithQuestionId a un valor de stepGroup compartido. Si la
@@ -33,6 +37,27 @@ async function resolveStepGroup(
 
   await prisma.question.update({ where: { id: target.id }, data: { stepGroup: target.id } });
   return target.id;
+}
+
+// Resuelve la pareja (visibleIfQuestionKey, visibleIfValues) a partir del id
+// de pregunta elegido en el admin. Si la pregunta objetivo no existe, no es
+// del mismo módulo, o no quedó ningún valor seleccionado, se guarda como
+// "siempre visible" en vez de dejar una condición a medio configurar.
+async function resolveVisibility(
+  moduleId: string,
+  visibleIfQuestionId: string | null | undefined,
+  visibleIfValues: string[] | undefined
+): Promise<{ visibleIfQuestionKey: string | null; visibleIfValues: string[] }> {
+  if (!visibleIfQuestionId || !visibleIfValues || visibleIfValues.length === 0) {
+    return { visibleIfQuestionKey: null, visibleIfValues: [] };
+  }
+
+  const target = await prisma.question.findUnique({ where: { id: visibleIfQuestionId } });
+  if (!target || target.moduleId !== moduleId) {
+    return { visibleIfQuestionKey: null, visibleIfValues: [] };
+  }
+
+  return { visibleIfQuestionKey: target.key, visibleIfValues };
 }
 
 async function revalidateModulePaths(moduleId: string) {
@@ -75,6 +100,7 @@ export async function createQuestionAction(
 
   const stepGroup =
     input.type === "NUMBER" ? await resolveStepGroup(moduleId, input.groupWithQuestionId) : null;
+  const visibility = await resolveVisibility(moduleId, input.visibleIfQuestionId, input.visibleIfValues);
 
   await prisma.question.create({
     data: {
@@ -86,6 +112,7 @@ export async function createQuestionAction(
       unit: input.type === "NUMBER" ? input.unit.trim() || null : null,
       order,
       stepGroup,
+      ...visibility,
       options: { create: optionsData },
     },
   });
@@ -115,6 +142,11 @@ export async function updateQuestionAction(
 
   const stepGroup =
     input.type === "NUMBER" ? await resolveStepGroup(question.moduleId, input.groupWithQuestionId) : null;
+  const visibility = await resolveVisibility(
+    question.moduleId,
+    input.visibleIfQuestionId,
+    input.visibleIfValues
+  );
 
   await prisma.$transaction([
     prisma.question.update({
@@ -125,6 +157,7 @@ export async function updateQuestionAction(
         type: input.type,
         unit: input.type === "NUMBER" ? input.unit.trim() || null : null,
         stepGroup,
+        ...visibility,
       },
     }),
     ...toDelete.map((o) => prisma.questionOption.delete({ where: { id: o.id } })),

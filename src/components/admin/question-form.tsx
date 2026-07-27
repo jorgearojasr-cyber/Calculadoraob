@@ -12,9 +12,17 @@ const TYPE_LABELS: Record<QuestionType, string> = {
   TEXT: "Texto corto",
 };
 
+type OtherQuestion = {
+  id: string;
+  type: QuestionType;
+  label: string;
+  options: { key: string; label: string }[];
+};
+
 export function QuestionForm({
   initial,
   numberQuestions = [],
+  otherQuestions = [],
   onSubmit,
   onCancel,
   submitLabel,
@@ -26,8 +34,11 @@ export function QuestionForm({
     unit: string;
     options: QuestionOptionInput[];
     groupWithQuestionId?: string | null;
+    visibleIfQuestionId?: string | null;
+    visibleIfValues?: string[];
   };
   numberQuestions?: { id: string; label: string }[];
+  otherQuestions?: OtherQuestion[];
   onSubmit: (input: QuestionInput) => Promise<{ error?: string }>;
   onCancel: () => void;
   submitLabel: string;
@@ -42,8 +53,21 @@ export function QuestionForm({
   const [groupWithQuestionId, setGroupWithQuestionId] = useState<string>(
     initial?.groupWithQuestionId ?? ""
   );
+  const [visibleIfQuestionId, setVisibleIfQuestionId] = useState<string>(
+    initial?.visibleIfQuestionId ?? ""
+  );
+  const [visibleIfValues, setVisibleIfValues] = useState<string[]>(initial?.visibleIfValues ?? []);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+
+  const selectQuestions = otherQuestions.filter((q) => q.type === "SELECT");
+  const visibilityTarget = selectQuestions.find((q) => q.id === visibleIfQuestionId);
+
+  const toggleVisibleIfValue = (optionKey: string) => {
+    setVisibleIfValues((prev) =>
+      prev.includes(optionKey) ? prev.filter((v) => v !== optionKey) : [...prev, optionKey]
+    );
+  };
 
   const updateOption = (index: number, value: string) => {
     setOptions((prev) => prev.map((o, i) => (i === index ? { ...o, label: value } : o)));
@@ -63,6 +87,8 @@ export function QuestionForm({
         unit,
         options,
         groupWithQuestionId: type === "NUMBER" ? groupWithQuestionId || null : null,
+        visibleIfQuestionId: visibleIfQuestionId || null,
+        visibleIfValues: visibleIfQuestionId ? visibleIfValues : [],
       });
       if (result?.error) setError(result.error);
     });
@@ -166,6 +192,48 @@ export function QuestionForm({
             <Plus className="w-3.5 h-3.5" />
             Agregar opción
           </button>
+        </div>
+      )}
+
+      {selectQuestions.length > 0 && (
+        <div className="grid gap-1.5 text-sm border-t border-border pt-4">
+          <span className="font-medium">Mostrar esta pregunta solo si (opcional)</span>
+          <div className="flex items-center gap-2">
+            <select
+              value={visibleIfQuestionId}
+              onChange={(e) => {
+                setVisibleIfQuestionId(e.target.value);
+                setVisibleIfValues([]);
+              }}
+              className="rounded-lg px-3 py-2 bg-white border border-border outline-none focus:border-ink"
+            >
+              <option value="">Siempre visible</option>
+              {selectQuestions.map((q) => (
+                <option key={q.id} value={q.id}>
+                  {q.label}
+                </option>
+              ))}
+            </select>
+            {visibilityTarget && <span className="text-ink-muted">respondió</span>}
+          </div>
+
+          {visibilityTarget && (
+            <div className="flex flex-wrap gap-3 mt-1">
+              {visibilityTarget.options.map((option) => (
+                <label key={option.key} className="flex items-center gap-1.5 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={visibleIfValues.includes(option.key)}
+                    onChange={() => toggleVisibleIfValue(option.key)}
+                  />
+                  {option.label}
+                </label>
+              ))}
+            </div>
+          )}
+          <span className="text-xs text-ink-muted">
+            Si no marcas ningún valor, la pregunta queda siempre visible.
+          </span>
         </div>
       )}
 

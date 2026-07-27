@@ -13,12 +13,15 @@ import {
 
 type Question = {
   id: string;
+  key: string;
   label: string;
   helpText: string | null;
   type: "NUMBER" | "SELECT" | "TEXT";
   unit: string | null;
   options: { id: string; key: string; label: string }[];
   stepGroup: string | null;
+  visibleIfQuestionKey: string | null;
+  visibleIfValues: string[];
 };
 
 const TYPE_LABELS: Record<Question["type"], string> = {
@@ -73,6 +76,7 @@ export function QuestionsManager({ moduleId, questions }: { moduleId: string; qu
           <QuestionForm
             submitLabel="Crear pregunta"
             numberQuestions={questions.filter((q) => q.type === "NUMBER").map((q) => ({ id: q.id, label: q.label }))}
+            otherQuestions={questions}
             onCancel={() => setMode("list")}
             onSubmit={async (input: QuestionInput) => {
               const result = await createQuestionAction(moduleId, input);
@@ -98,6 +102,7 @@ export function QuestionsManager({ moduleId, questions }: { moduleId: string; qu
                 numberQuestions={questions
                   .filter((q) => q.type === "NUMBER" && q.id !== question.id)
                   .map((q) => ({ id: q.id, label: q.label }))}
+                otherQuestions={questions.filter((q) => q.id !== question.id)}
                 onCancel={() => setMode("list")}
                 initial={{
                   label: question.label,
@@ -108,6 +113,10 @@ export function QuestionsManager({ moduleId, questions }: { moduleId: string; qu
                   groupWithQuestionId: question.stepGroup
                     ? questions.find((q) => q.id !== question.id && q.stepGroup === question.stepGroup)?.id ?? null
                     : null,
+                  visibleIfQuestionId: question.visibleIfQuestionKey
+                    ? questions.find((q) => q.key === question.visibleIfQuestionKey)?.id ?? null
+                    : null,
+                  visibleIfValues: question.visibleIfValues,
                 }}
                 onSubmit={async (input: QuestionInput) => {
                   const result = await updateQuestionAction(question.id, input);
@@ -154,6 +163,20 @@ export function QuestionsManager({ moduleId, questions }: { moduleId: string; qu
                         .filter((q) => q.id !== question.id && q.stepGroup === question.stepGroup)
                         .map((q) => q.label)
                         .join(", ") || "—"}
+                    </span>
+                  )}
+                  {question.visibleIfQuestionKey && (
+                    <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-safety/[0.08] text-safety">
+                      Solo si {questions.find((q) => q.key === question.visibleIfQuestionKey)?.label ?? question.visibleIfQuestionKey}
+                      {" = "}
+                      {question.visibleIfValues
+                        .map(
+                          (val) =>
+                            questions
+                              .find((q) => q.key === question.visibleIfQuestionKey)
+                              ?.options.find((o) => o.key === val)?.label ?? val
+                        )
+                        .join(" o ")}
                     </span>
                   )}
                 </div>

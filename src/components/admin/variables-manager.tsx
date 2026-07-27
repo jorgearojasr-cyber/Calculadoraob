@@ -3,8 +3,9 @@
 import { useState, useTransition } from "react";
 import { Plus, Trash2 } from "lucide-react";
 import { LookupGrid } from "./lookup-grid";
+import { Lookup2Grid } from "./lookup2-grid";
 import { createDirectVariableAction, deleteVariableAction } from "@/app/admin/modulos/[id]/variables/actions";
-import type { LookupColumnInput } from "@/app/admin/modulos/[id]/variables/actions";
+import type { LookupColumnInput, Lookup2ColumnInput } from "@/app/admin/modulos/[id]/variables/actions";
 
 type Question = {
   id: string;
@@ -32,6 +33,12 @@ function isLookup(
   return (v.source as { type?: string })?.type === "LOOKUP";
 }
 
+function isLookup2(v: Variable): v is Variable & {
+  source: { type: "LOOKUP2"; questionKey: string; secondaryQuestionKey: string; table: Record<string, unknown> };
+} {
+  return (v.source as { type?: string })?.type === "LOOKUP2";
+}
+
 export function VariablesManager({
   moduleId,
   questions,
@@ -47,10 +54,13 @@ export function VariablesManager({
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const [startingGridFor, setStartingGridFor] = useState<string | null>(null);
+  const [startingGrid2Primary, setStartingGrid2Primary] = useState<string>("");
+  const [startingGrid2Secondary, setStartingGrid2Secondary] = useState<string>("");
 
   const questionsByKey = Object.fromEntries(questions.map((q) => [q.key, q]));
   const directVariables = variables.filter(isDirect);
   const lookupVariables = variables.filter(isLookup);
+  const lookup2Variables = variables.filter(isLookup2);
 
   const lookupByQuestionKey = new Map<string, typeof lookupVariables>();
   for (const v of lookupVariables) {
@@ -59,10 +69,20 @@ export function VariablesManager({
     lookupByQuestionKey.set(v.source.questionKey, list);
   }
 
+  const lookup2ByPairKey = new Map<string, typeof lookup2Variables>();
+  for (const v of lookup2Variables) {
+    const pairKey = `${v.source.questionKey}|${v.source.secondaryQuestionKey}`;
+    const list = lookup2ByPairKey.get(pairKey) ?? [];
+    list.push(v);
+    lookup2ByPairKey.set(pairKey, list);
+  }
+
   const selectQuestions = questions.filter((q) => q.type === "SELECT");
   const questionsWithoutGrid = selectQuestions.filter(
     (q) => !lookupByQuestionKey.has(q.key) && q.key !== startingGridFor
   );
+  const startingGrid2PairKey =
+    startingGrid2Primary && startingGrid2Secondary ? `${startingGrid2Primary}|${startingGrid2Secondary}` : null;
 
   const handleCreateDirect = () => {
     setError(null);
@@ -243,6 +263,89 @@ export function VariablesManager({
                   {q.label}
                 </option>
               ))}
+            </select>
+          </div>
+        )}
+      </section>
+
+      <section>
+        <h2 className="font-display text-xl font-semibold tracking-tight mb-1">Tablas cruzadas (2 preguntas)</h2>
+        <p className="text-xs text-ink-muted mb-4">
+          Define un valor distinto según la combinación de respuestas de dos preguntas de selección (ej:
+          uso × método de colocación → grado de hormigón).
+        </p>
+
+        <div className="grid gap-4">
+          {Array.from(lookup2ByPairKey.entries()).map(([pairKey, vars]) => {
+            const [primaryKey, secondaryKey] = pairKey.split("|");
+            const primaryQuestion = questionsByKey[primaryKey];
+            const secondaryQuestion = questionsByKey[secondaryKey];
+            if (!primaryQuestion || !secondaryQuestion) return null;
+            const initialColumns: Lookup2ColumnInput[] = vars.map((v) => ({
+              id: v.id,
+              label: v.label || v.key,
+              valueType: v.valueType,
+              cells: Object.fromEntries(
+                Object.entries(v.source.table).map(([k, val]) => [k, String(val)])
+              ),
+            }));
+            return (
+              <Lookup2Grid
+                key={pairKey}
+                moduleId={moduleId}
+                primaryQuestion={primaryQuestion}
+                secondaryQuestion={secondaryQuestion}
+                initialColumns={initialColumns}
+              />
+            );
+          })}
+
+          {startingGrid2PairKey &&
+            !lookup2ByPairKey.has(startingGrid2PairKey) &&
+            questionsByKey[startingGrid2Primary] &&
+            questionsByKey[startingGrid2Secondary] && (
+              <Lookup2Grid
+                moduleId={moduleId}
+                primaryQuestion={questionsByKey[startingGrid2Primary]}
+                secondaryQuestion={questionsByKey[startingGrid2Secondary]}
+                initialColumns={[]}
+              />
+            )}
+        </div>
+
+        {selectQuestions.length >= 2 && (
+          <div className="mt-4 flex flex-wrap items-center gap-2">
+            <label className="text-xs font-medium text-ink-muted">Nueva tabla cruzada:</label>
+            <select
+              value={startingGrid2Primary}
+              onChange={(e) => setStartingGrid2Primary(e.target.value)}
+              className="rounded-lg px-3 py-1.5 text-sm bg-white border border-border outline-none"
+            >
+              <option value="" disabled>
+                Primera pregunta
+              </option>
+              {selectQuestions.map((q) => (
+                <option key={q.id} value={q.key}>
+                  {q.label}
+                </option>
+              ))}
+            </select>
+            <span className="text-xs text-ink-muted">×</span>
+            <select
+              value={startingGrid2Secondary}
+              onChange={(e) => setStartingGrid2Secondary(e.target.value)}
+              className="rounded-lg px-3 py-1.5 text-sm bg-white border border-border outline-none"
+            >
+              <option value="" disabled>
+                Segunda pregunta
+              </option>
+              {selectQuestions
+                .filter((q) => q.key !== startingGrid2Primary)
+                .map((q) => (
+                  <option key={q.id} value={q.key}>
+                    {q.label}
+                  </option>
+                ))}
             </select>
           </div>
         )}
