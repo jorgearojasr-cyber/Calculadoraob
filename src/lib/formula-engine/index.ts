@@ -48,15 +48,46 @@ export type InfoResult = {
   value: DslValue;
 };
 
-// Reemplaza placeholders {variableKey} en una plantilla con los valores de
-// variable ya resueltos. Si una variable referenciada no está resuelta
-// (pregunta condicional no respondida en esta rama), deja el placeholder
-// intacto en vez de lanzar — no debería ocurrir si la plantilla solo
-// referencia variables garantizadas por la condición de la fórmula.
-function interpolateMaterialLabel(template: string, variables: Record<string, DslValue>): string {
-  return template.replace(/\{([a-zA-Z0-9_-]+)\}/g, (match, key: string) => {
-    const value = variables[key];
-    return value !== undefined ? String(value) : match;
+const numberFormatter = new Intl.NumberFormat("es-CL", { maximumFractionDigits: 2 });
+const formatInterpolatedNumber = (value: DslValue): string =>
+  typeof value === "number" ? numberFormatter.format(value) : String(value);
+
+type InterpolationContext = {
+  variables: Record<string, DslValue>;
+  formulaResults: Record<string, number>;
+  lossFactors: Record<string, { percentage: number }>;
+  // Valor propio de la fórmula que se está armando (recién calculado, aún
+  // no necesariamente en formulaResults al momento de interpolar su note).
+  ownValue?: number;
+};
+
+// Reemplaza placeholders en una plantilla (materialLabelTemplate o note) con
+// valores ya resueltos en este cálculo — usado para mostrar texto explicativo
+// dinámico sin hardcodear números en el componente (ej. "Cada caja cubre
+// {cobertura-por-caja-m} m² → para {ref:area-m2} m² + {lossFactor:perdida-x}%
+// de pérdida necesitas {value} cajas"). Formas soportadas:
+//   {variableKey}     -> variables[variableKey]
+//   {ref:formulaKey}  -> formulaResults[formulaKey]
+//   {lossFactor:key}  -> lossFactors[key].percentage, como % entero/decimal
+//   {value}           -> valor recién calculado de esta misma fórmula
+// Si el placeholder no resuelve a nada (rama condicional no calculada), se
+// deja el texto intacto en vez de lanzar — no debería ocurrir si la
+// plantilla solo referencia valores garantizados por la condición.
+function interpolateTemplate(template: string, ctx: InterpolationContext): string {
+  return template.replace(/\{([a-zA-Z0-9_.-]+(?::[a-zA-Z0-9_.-]+)?)\}/g, (match, token: string) => {
+    if (token === "value") {
+      return ctx.ownValue !== undefined ? formatInterpolatedNumber(ctx.ownValue) : match;
+    }
+    if (token.startsWith("ref:")) {
+      const value = ctx.formulaResults[token.slice(4)];
+      return value !== undefined ? formatInterpolatedNumber(value) : match;
+    }
+    if (token.startsWith("lossFactor:")) {
+      const factor = ctx.lossFactors[token.slice(11)];
+      return factor !== undefined ? formatInterpolatedNumber(factor.percentage * 100) : match;
+    }
+    const value = ctx.variables[token];
+    return value !== undefined ? formatInterpolatedNumber(value) : match;
   });
 }
 
@@ -109,9 +140,11 @@ export function calculateModule(input: {
     formulaResults[formula.key] = value;
 
     if (formula.isResult) {
+      const interpolationCtx: InterpolationContext = { variables, formulaResults, lossFactors, ownValue: value };
       const materialName = formula.materialLabelTemplate
-        ? interpolateMaterialLabel(formula.materialLabelTemplate, variables)
+        ? interpolateTemplate(formula.materialLabelTemplate, interpolationCtx)
         : formula.material?.name ?? null;
+      const note = formula.note ? interpolateTemplate(formula.note, interpolationCtx) : null;
 
       // El precio de referencia solo aplica si la unidad de esta línea de
       // resultado coincide con la unidad del material (ej. Pintura interior
@@ -125,7 +158,7 @@ export function calculateModule(input: {
         label: formula.label,
         unit: formula.unit,
         value,
-        note: formula.note,
+        note,
         materialName,
         isSecondary: formula.isSecondary ?? false,
         referencePrice: hasReferencePrice ? formula.material!.referencePrice : null,
