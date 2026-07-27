@@ -65,6 +65,7 @@ export function ModuleWizard({
   questions,
   initialAnswers,
   guide,
+  approvedPhotos,
 }: {
   moduleId: string;
   moduleName: string;
@@ -73,6 +74,7 @@ export function ModuleWizard({
   questions: WizardQuestion[];
   initialAnswers?: WizardAnswers;
   guide?: ModuleGuideData | null;
+  approvedPhotos?: { id: string; url: string }[];
 }) {
   const [stepIndex, setStepIndex] = useState(0);
   const [answers, setAnswers] = useState<WizardAnswers>(initialAnswers ?? {});
@@ -229,6 +231,7 @@ export function ModuleWizard({
           variables={calculation.variables}
           onRestart={handleRestart}
           guide={guide}
+          approvedPhotos={approvedPhotos ?? []}
         />
       )}
     </div>

@@ -25,6 +25,12 @@ export default async function ModulePage({
 
   if (!mod) notFound();
 
+  const approvedPhotos = await prisma.projectPhoto.findMany({
+    where: { moduleId: mod.id, status: "APPROVED" },
+    orderBy: { createdAt: "desc" },
+    select: { id: true, url: true },
+  });
+
   // Preselección opcional (?tipo=<option-key>) de la primera pregunta si es
   // de selección — usada por links "Calcular cantidad de X" desde otros
   // módulos que ya conocen la respuesta recomendada, sin saltarse el paso.
@@ -76,6 +82,7 @@ export default async function ModulePage({
       questions={questions}
       initialAnswers={initialAnswers}
       guide={guide}
+      approvedPhotos={approvedPhotos}
     />
   );
 }

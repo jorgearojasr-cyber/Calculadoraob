@@ -28,6 +28,7 @@ model User {
   savedProjects       SavedProject[]
   shoppingListChecks  ShoppingListCheck[]
   planPhaseCompletions ProjectPlanPhaseCompletion[]
+  projectPhotos       ProjectPhoto[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -50,6 +51,8 @@ model SavedProject {
   progressPercent Int    @default(0)
   // Incluido en /lista-compras (consolidación de materiales entre proyectos).
   inShoppingList  Boolean @default(false)
+
+  photos ProjectPhoto[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -114,6 +117,7 @@ model Module {
   savedProjects SavedProject[]
   projectTaskLinks ProjectTaskModule[]
   planPhaseLinks   ProjectPlanPhaseModule[]
+  photos           ProjectPhoto[]
   // Contenido "resultado enriquecido" opcional (piloto, ver ModuleGuide) —
   // hoy solo existe para Radier, no se genera en vivo por IA.
   guide         ModuleGuide?
@@ -522,4 +526,36 @@ model ProjectPlanPhaseCompletion {
   @@unique([userId, phaseId])
   @@index([userId])
   @@map("project_plan_phase_completions")
+}
+
+enum ProjectPhotoStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+// Foto de obra real subida por un usuario tras guardar un proyecto —
+// contenido de terceros no revisado, nunca visible públicamente hasta
+// que un admin la aprueba desde /admin/fotos. Con el tiempo arma una
+// galería real por módulo que reemplaza fotos de stock.
+model ProjectPhoto {
+  id     String @id @default(cuid())
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String
+  // Proyecto desde el que se subió (para trazabilidad); si se borra el
+  // proyecto la foto se conserva igual, solo pierde ese vínculo.
+  savedProject   SavedProject? @relation(fields: [savedProjectId], references: [id], onDelete: SetNull)
+  savedProjectId String?
+  module   Module @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  moduleId String
+
+  url    String
+  status ProjectPhotoStatus @default(PENDING)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([moduleId, status])
+  @@index([userId])
+  @@map("project_photos")
 }

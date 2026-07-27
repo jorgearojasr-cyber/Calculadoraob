@@ -28,6 +28,9 @@ export default async function AdminLayout({ children }: { children: React.ReactN
             <Link href="/admin/planes" className="hover:text-ink transition-colors">
               Planes
             </Link>
+            <Link href="/admin/fotos" className="hover:text-ink transition-colors">
+              Fotos
+            </Link>
           </nav>
           <Link href="/" className="ml-auto text-sm text-ink-muted hover:text-ink transition-colors">
             Ver sitio →

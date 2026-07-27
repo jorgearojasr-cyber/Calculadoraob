@@ -7,6 +7,7 @@ import { prisma } from "@/lib/prisma";
 import { NormsDisclaimer } from "@/components/module/norms-disclaimer";
 import { PricedResults } from "@/components/module/priced-results";
 import { RenameProject } from "@/components/proyectos/rename-project";
+import { PhotoUpload } from "@/components/proyectos/photo-upload";
 import type { CalculateModuleResult } from "@/app/(app)/categorias/[slug]/[moduleSlug]/actions";
 import type { AnswerSummaryItem } from "../actions";
 
@@ -16,7 +17,10 @@ export default async function SavedProjectPage({ params }: { params: { id: strin
 
   const project = await prisma.savedProject.findUnique({
     where: { id: params.id },
-    include: { module: { include: { category: true } } },
+    include: {
+      module: { include: { category: true } },
+      photos: { select: { id: true, status: true }, orderBy: { createdAt: "asc" } },
+    },
   });
 
   if (!project || project.userId !== session.user.id) notFound();
@@ -57,6 +61,8 @@ export default async function SavedProjectPage({ params }: { params: { id: strin
       </div>
 
       <NormsDisclaimer norms={result.norms} />
+
+      <PhotoUpload savedProjectId={project.id} initialPhotos={project.photos} />
 
       <div className="mt-8 rounded-2xl p-5 bg-white border border-border">
         <p className="text-xs font-mono uppercase tracking-wider text-ink-muted mb-3">

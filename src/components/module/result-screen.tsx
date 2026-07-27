@@ -11,6 +11,7 @@ import { PENDING_PROJECT_KEY } from "@/lib/pending-project";
 import { NormsDisclaimer } from "./norms-disclaimer";
 import { PricedResults } from "./priced-results";
 import { GuideSection, type ModuleGuideData } from "./guide-section";
+import { PhotoGallery } from "./photo-gallery";
 
 export function ResultScreen({
   moduleId,
@@ -23,6 +24,7 @@ export function ResultScreen({
   variables,
   onRestart,
   guide,
+  approvedPhotos,
 }: {
   moduleId: string;
   moduleName: string;
@@ -34,6 +36,7 @@ export function ResultScreen({
   variables: CalculateModuleResult["variables"];
   onRestart: () => void;
   guide?: ModuleGuideData | null;
+  approvedPhotos?: { id: string; url: string }[];
 }) {
   const router = useRouter();
   const [promptOpen, setPromptOpen] = useState(false);
@@ -113,6 +116,8 @@ export function ResultScreen({
       <NormsDisclaimer norms={norms} />
 
       {guide && <GuideSection guide={guide} />}
+
+      <PhotoGallery photos={approvedPhotos ?? []} />
 
       <div className="mt-8 rounded-2xl p-5 bg-white border border-border">
         <p className="text-xs font-mono uppercase tracking-wider text-ink-muted mb-3">
