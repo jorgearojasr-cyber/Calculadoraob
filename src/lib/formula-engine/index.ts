@@ -56,7 +56,16 @@ export function calculateModule(input: {
   formulas: FormulaInput[];
   lossFactors: LossFactorInput[];
   answers: Answers;
-}): { results: CalculationResult[]; infoResults: InfoResult[]; variables: Record<string, DslValue> } {
+}): {
+  results: CalculationResult[];
+  infoResults: InfoResult[];
+  variables: Record<string, DslValue>;
+  // Claves de las fórmulas/pérdidas que realmente se evaluaron en esta
+  // corrida (condición verdadera) — permite mostrar solo las normas de la
+  // rama ejecutada, no las de todas las ramas del módulo.
+  evaluatedFormulaKeys: string[];
+  appliedLossFactorKeys: string[];
+} {
   const variables = resolveVariables(input.variables, input.answers);
 
   const infoResults: InfoResult[] = input.variables
@@ -107,5 +116,11 @@ export function calculateModule(input: {
     }
   }
 
-  return { results, infoResults, variables };
+  return {
+    results,
+    infoResults,
+    variables,
+    evaluatedFormulaKeys: Object.keys(formulaResults),
+    appliedLossFactorKeys: Object.keys(lossFactors),
+  };
 }

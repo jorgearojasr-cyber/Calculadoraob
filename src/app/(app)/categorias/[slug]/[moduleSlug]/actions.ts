@@ -70,15 +70,28 @@ export async function calculateModuleAction(
     cleanAnswers[question.key] = String(raw);
   }
 
-  const { results, infoResults, variables } = calculateModule({
-    variables: mod.variables,
-    formulas: mod.formulas,
-    lossFactors: mod.lossFactors,
-    answers: cleanAnswers,
-  });
+  const { results, infoResults, variables, evaluatedFormulaKeys, appliedLossFactorKeys } =
+    calculateModule({
+      variables: mod.variables,
+      formulas: mod.formulas,
+      lossFactors: mod.lossFactors,
+      answers: cleanAnswers,
+    });
+
+  // Solo las normas de la rama realmente ejecutada: fórmulas evaluadas
+  // (condición verdadera), variables resueltas y pérdidas aplicadas — no
+  // las de todas las ramas del módulo (ej. la cita del fiscal industrial
+  // no debe aparecer si el usuario eligió el artesanal).
+  const evaluatedFormulas = new Set(evaluatedFormulaKeys);
+  const appliedLossFactors = new Set(appliedLossFactorKeys);
+  const normSources = [
+    ...mod.variables.filter((v) => variables[v.key] !== undefined && variables[v.key] !== null),
+    ...mod.formulas.filter((f) => evaluatedFormulas.has(f.key)),
+    ...mod.lossFactors.filter((lf) => appliedLossFactors.has(lf.key)),
+  ];
 
   const normsById = new Map<string, NormSummary>();
-  for (const source of [...mod.variables, ...mod.formulas, ...mod.lossFactors]) {
+  for (const source of normSources) {
     if (source.norm) {
       normsById.set(source.norm.id, {
         id: source.norm.id,
