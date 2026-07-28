@@ -29,6 +29,7 @@ model User {
   shoppingListChecks  ShoppingListCheck[]
   planPhaseCompletions ProjectPlanPhaseCompletion[]
   projectPhotos       ProjectPhoto[]
+  projectShowcases    ProjectShowcase[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -63,6 +64,7 @@ model SavedProject {
   inShoppingList  Boolean @default(false)
 
   photos ProjectPhoto[]
+  showcases ProjectShowcase[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -571,4 +573,40 @@ model ProjectPhoto {
   @@index([moduleId, status])
   @@index([userId])
   @@map("project_photos")
+}
+
+enum ProjectShowcaseStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+// Publicación en la galería pública de proyectos terminados (/galeria) —
+// título + relato + fotos antes/después subidos por un usuario logueado.
+// No visible públicamente hasta que un admin la aprueba desde
+// /admin/proyectos-galeria. Distinto de ProjectPhoto: eso es una foto
+// suelta ligada a un módulo; esto es una publicación completa, opcionalmente
+// ligada al SavedProject desde el que se generó.
+model ProjectShowcase {
+  id     String @id @default(cuid())
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String
+
+  savedProject   SavedProject? @relation(fields: [savedProjectId], references: [id], onDelete: SetNull)
+  savedProjectId String?
+
+  title  String
+  story  String
+
+  photosBefore String[]
+  photosAfter  String[]
+
+  status ProjectShowcaseStatus @default(PENDING)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status])
+  @@index([userId])
+  @@map("project_showcases")
 }

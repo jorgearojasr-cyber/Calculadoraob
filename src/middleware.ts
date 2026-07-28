@@ -8,7 +8,10 @@ export async function middleware(req: NextRequest) {
 
   const isAdminRoute = pathname.startsWith("/admin");
   const requiresSession =
-    isAdminRoute || pathname.startsWith("/proyectos") || pathname.startsWith("/lista-compras");
+    isAdminRoute ||
+    pathname.startsWith("/proyectos") ||
+    pathname.startsWith("/lista-compras") ||
+    pathname.startsWith("/galeria/nueva");
 
   if (!requiresSession) return NextResponse.next();
 
@@ -22,5 +25,5 @@ export async function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/admin/:path*", "/proyectos/:path*", "/lista-compras/:path*"],
+  matcher: ["/admin/:path*", "/proyectos/:path*", "/lista-compras/:path*", "/galeria/nueva/:path*"],
 };
