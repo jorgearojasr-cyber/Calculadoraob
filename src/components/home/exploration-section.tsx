@@ -25,7 +25,7 @@ export async function ExplorationSection() {
     prisma.category.findMany({ orderBy: { order: "asc" } }),
     prisma.projectTask.findMany({
       where: { slug: { in: CURATED_TASK_SLUGS } },
-      include: { group: { select: { name: true } } },
+      include: { group: { select: { name: true, slug: true } } },
     }),
   ]);
 

@@ -3,7 +3,7 @@ import { ChevronRight } from "lucide-react";
 import type { ProjectGroup, ProjectTask } from "@/generated/prisma/client";
 import { getCategoryIcon } from "@/lib/category-icons";
 import { pluralizeUnit } from "@/lib/pluralize";
-import { GROUP_ICON_CHIP_CLASS } from "@/lib/group-colors";
+import { getGroupIconClasses } from "@/lib/group-colors";
 
 type Group = ProjectGroup & { tasks: ProjectTask[] };
 
@@ -44,7 +44,7 @@ export function GroupCard({ group }: { group: Group }) {
     return (
       <div className="rounded-2xl p-5 bg-navy/[0.04] border border-navy/20">
         <div className="flex items-center gap-2.5 mb-4">
-          <Icon className="w-4 h-4 text-navy" />
+          <Icon className="w-4 h-4 text-safety-hover" />
           <h3 className="text-sm font-semibold text-navy">{group.name}</h3>
           <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-white text-ink-faint">
             Para maestros y contratistas
@@ -76,7 +76,7 @@ export function GroupCard({ group }: { group: Group }) {
   return (
     <div className="rounded-2xl p-5 bg-white border border-border">
       <div className="flex items-center gap-2.5 mb-4">
-        <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 ${GROUP_ICON_CHIP_CLASS}`}>
+        <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 ${getGroupIconClasses(group.slug)}`}>
           <Icon className="w-4.5 h-4.5" />
         </div>
         <h3 className="font-display text-lg font-semibold tracking-tight flex-1">{group.name}</h3>

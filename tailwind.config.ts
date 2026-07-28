@@ -5,6 +5,11 @@ const config: Config = {
     "./src/pages/**/*.{js,ts,jsx,tsx,mdx}",
     "./src/components/**/*.{js,ts,jsx,tsx,mdx}",
     "./src/app/**/*.{js,ts,jsx,tsx,mdx}",
+    // group-colors.ts arma nombres de clase (bg-clay/[0.1], text-clay, etc.)
+    // fuera de components/app — sin este glob, Tailwind nunca las escanea
+    // y no genera esas utilidades (bug real detectado: los colores nuevos
+    // de la paleta por grupo no se pintaban en el navegador).
+    "./src/lib/**/*.{js,ts,jsx,tsx,mdx}",
   ],
   theme: {
     extend: {
@@ -47,6 +52,18 @@ const config: Config = {
         "navy-light": "#00112E",
         "navy-lighter": "#00112E",
         "navy-border": "#0A2A5E",
+        // Paleta de íconos por grupo (2026-07-28) — 6 tonos nuevos, derivados
+        // y desaturados, para diferenciar los 11 grupos de "Todas las
+        // categorías" sin invadir naranjo/ámbar/carmín (reservados para
+        // CTA/normas/avisos). Nombres elegidos para no chocar con la paleta
+        // por defecto de Tailwind (evita "slate"/"cyan"/"teal"/etc., que ya
+        // existen como escalas propias). Ver src/lib/group-colors.ts.
+        clay: "#9C5A3C", // Pisos y Revestimientos
+        plum: "#5B3A70", // Pintar
+        lagoon: "#0E7C7B", // Agua y Gas
+        graphite: "#4A5568", // Baño
+        ochre: "#8A6238", // Techumbre
+        poolblue: "#0891B2", // Piscinas
       },
       fontFamily: {
         display: ["var(--font-display)"],

@@ -8,6 +8,7 @@ import type { Category, ProjectGroup, ProjectTask } from "@/generated/prisma/cli
 import { GroupCard } from "./group-card";
 import { GroupChip } from "./group-chip";
 import { CategoryGrid } from "./category-grid";
+import { getGroupIconClasses } from "@/lib/group-colors";
 
 // Foto real por tarea destacada — mismo set de 5 que CURATED_TASK_SLUGS en
 // exploration-section.tsx. Si una tarea no tiene foto en el mapa, la tarjeta
@@ -21,7 +22,7 @@ const TASK_IMAGES: Record<string, string> = {
   "instalar-ceramica": "/images/categorias/piso-ceramica.png",
 };
 
-type PopularTask = ProjectTask & { group: { name: string } };
+type PopularTask = ProjectTask & { group: { name: string; slug: string } };
 type Group = ProjectGroup & { tasks: ProjectTask[] };
 
 // Fusiona lo que antes eran 3 secciones separadas de la Home
@@ -82,7 +83,7 @@ export function ExplorationToggle({
 
           {popularTasks.length > 0 && (
             <div>
-              <p className="text-xs text-ink-muted mb-3">Proyectos destacados</p>
+              <p className="text-xs text-ink-muted mb-3">Proyectos más buscados</p>
               <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
                 {popularTasks.map((task) => {
                   const image = TASK_IMAGES[task.slug];
@@ -104,7 +105,9 @@ export function ExplorationToggle({
                         </div>
                       )}
                       <div className="p-4">
-                        <span className="inline-block text-[10px] font-mono px-2 py-0.5 rounded-full bg-safety-tint text-safety mb-2">
+                        <span
+                          className={`inline-block text-[10px] font-mono px-2 py-0.5 rounded-full mb-2 ${getGroupIconClasses(task.group.slug)}`}
+                        >
                           {task.group.name}
                         </span>
                         <p className="font-semibold text-sm">{task.name}</p>

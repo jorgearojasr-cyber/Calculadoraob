@@ -71,15 +71,29 @@ export function Hero() {
           </div>
 
           <div className="mt-10 grid grid-cols-2 gap-x-6 gap-y-5">
-            {BENEFITS.map((b) => (
-              <div key={b.title} className="flex items-start gap-2.5">
-                <b.icon className="w-4 h-4 text-safety flex-shrink-0 mt-0.5" />
-                <div>
-                  <p className="text-sm font-semibold">{b.title}</p>
-                  <p className="text-xs text-ink-muted">{b.description}</p>
+            {BENEFITS.map((b, i) => {
+              // Fondo del círculo alterna celeste/durazno/blanco (blanco lleva
+              // borde para no perderse contra el fondo de la sección) — el
+              // ícono se mantiene siempre en marino, sin variar por beneficio:
+              // estos 4 representan garantías unificadas de la app, no rubros
+              // distintos, así que la variedad vive en el fondo, no en el ícono.
+              const bg = ["bg-safety-tint", "bg-peach", "bg-white", "bg-safety-tint"][i % 4];
+              return (
+                <div key={b.title} className="flex items-start gap-3">
+                  <div
+                    className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${bg} ${
+                      bg === "bg-white" ? "border border-border" : ""
+                    }`}
+                  >
+                    <b.icon className="w-5 h-5 text-safety" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold">{b.title}</p>
+                    <p className="text-xs text-ink-muted">{b.description}</p>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
 
