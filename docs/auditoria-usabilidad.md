@@ -2464,10 +2464,22 @@ De los 23 módulos con veredicto MEJORAR, 8 quedaron completamente resueltos por
 E1-E4 (Ducha, Techo inclinado, Tabique en Metalcon, Piso SPC, Piso flotante, Tabiques y
 cielos, Preparar y estucar un muro, Jardinera de albañilería — su único hallazgo pendiente
 era pluralización, ya resuelta de forma centralizada). De los 15 restantes, 10 se
-implementaron como Grupo A (ver commits/DB de esta fase). Los 6 casos siguientes requieren
-una decisión de producto — no se implementaron, solo se documenta la propuesta.
+implementaron como Grupo A (ver commits/DB de esta fase).
 
-### Lavamanos (Baño) — investigación a fondo (3 alternativas)
+**Actualización — los 6 casos de Grupo B ya NO están pendientes.** Se documentan abajo tal
+como se investigaron originalmente (para que la propuesta y las alternativas descartadas
+queden como referencia), pero las 3 decisiones ya se tomaron y se implementaron en sesiones
+posteriores:
+
+- **Lavamanos** — ✅ Implementado (Opción A mínima: pregunta "¿Cuántos lavamanos vas a
+  instalar?", ver sección abajo para el detalle).
+- **Muro de hormigón armado, Losa, Escalera, Refuerzo superior del muro** — ✅
+  Implementado (convención "obtención de hormigón", replicada además en Fundación, Viga y
+  Pilar/columna aunque esos 3 no eran parte del Grupo B — ver sección abajo).
+- **Pasto sintético** — ✅ Cerrado, decisión final: dejar como está sin toggle m² (ver
+  sección abajo, ya marcada con su propio ✅).
+
+### Lavamanos (Baño) — investigación a fondo (3 alternativas) — ✅ IMPLEMENTADO
 
 **Estado actual del módulo (verificado en el schema, no solo en el hallazgo original):**
 Una sola `Question` (`que-tipo-de-instalacion`, SELECT: `sobre-mueble` / `pedestal`), una
@@ -2598,7 +2610,13 @@ mismo y decidir el resto después. Opción B solo tiene sentido si el criterio d
 es "no fingir que hay cálculo donde no lo hay" como principio, aceptando el costo de
 descubribilidad — no como solución de "menor esfuerzo".
 
-### Convención "obtención de hormigón" — investigación completa y propuesta de generalización
+### Convención "obtención de hormigón" — investigación completa y propuesta de generalización — ✅ IMPLEMENTADO
+
+**Estado: implementado en los 7 módulos** (Muro de hormigón armado, Losa, Escalera,
+Refuerzo superior del muro, Fundación, Viga, Pilar/columna) siguiendo exactamente el
+patrón descrito abajo. Verificado en navegador en 4 de los 7 (Viga en ambas ramas,
+Pilar/columna, Fundación, Escalera), confirmando resultado correcto en premezclado y
+manual. Sin commit de código posible (contenido de BD).
 
 **Alcance real (más amplio de lo que se había señalado):** revisando las 8 fórmulas de
 dosificación de TODA la categoría Hormigón (no solo los 4 módulos con veredicto MEJORAR),
@@ -2716,7 +2734,7 @@ una pregunta y un copy de advertencia distintos, específicos de ese módulo. No
 en esta convención; si se decide implementar, es trabajo independiente sobre Muro de
 hormigón armado únicamente.
 
-### Pasto sintético (Paisajismo) — hallazgo nuevo durante la implementación de Grupo A
+### Pasto sintético (Paisajismo) — hallazgo nuevo durante la implementación de Grupo A — ✅ CERRADO
 
 **Qué pasa:** al investigar la recomendación original del audit ("unificar el input con
 `AreaInputToggle`, como sus 2 módulos hermanos"), se descubrió que **ya existe** el
