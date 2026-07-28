@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { formatQuantity } from "@/lib/format-number";
+import { pluralizeUnit } from "@/lib/pluralize";
 import type { CalculationResult } from "@/lib/formula-engine";
 
 const currencyFormatter = new Intl.NumberFormat("es-CL", { maximumFractionDigits: 0 });
@@ -74,7 +75,9 @@ export function PricedResults({
             <span className="font-medium text-[15px]">{result.label}</span>
             <span className="font-display text-xl font-semibold text-right">
               {formatQuantity(result.value)}{" "}
-              <span className="text-sm font-body text-ink-muted">{result.unit}</span>
+              <span className="text-sm font-body text-ink-muted">
+                {pluralizeUnit(result.value, result.unit)}
+              </span>
             </span>
           </div>
           {result.materialName && (
@@ -115,7 +118,8 @@ export function PricedResults({
                   <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5">
                     <span className="text-xs text-ink-muted">{sec.label}</span>
                     <span className="text-sm font-medium text-ink-muted text-right">
-                      {formatQuantity(sec.value)} <span className="text-xs">{sec.unit}</span>
+                      {formatQuantity(sec.value)}{" "}
+                    <span className="text-xs">{pluralizeUnit(sec.value, sec.unit)}</span>
                     </span>
                   </div>
                   {sec.note && <p className="mt-1 text-xs text-ink-muted/80">{sec.note}</p>}

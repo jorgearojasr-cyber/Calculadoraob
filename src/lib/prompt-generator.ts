@@ -1,4 +1,5 @@
 import { formatQuantity } from "./format-number";
+import { pluralizeUnit } from "./pluralize";
 import type { CalculationResult, InfoResult } from "./formula-engine";
 import type { NormSummary } from "@/app/(app)/categorias/[slug]/[moduleSlug]/actions";
 
@@ -17,7 +18,9 @@ function buildCharacteristics(answersSummary: { label: string; value: string }[]
 }
 
 function buildMaterialsList(results: CalculationResult[]): string {
-  return results.map((r) => `${formatQuantity(r.value)} ${r.unit} de ${r.label.toLowerCase()}`).join(", ");
+  return results
+    .map((r) => `${formatQuantity(r.value)} ${pluralizeUnit(r.value, r.unit)} de ${r.label.toLowerCase()}`)
+    .join(", ");
 }
 
 // Heurística de género gramatical español a partir de la primera palabra

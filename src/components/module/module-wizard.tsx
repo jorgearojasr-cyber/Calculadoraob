@@ -7,6 +7,7 @@ import { QuestionStep } from "./question-step";
 import { QuestionGroupStep, hasAreaToggle } from "./question-group-step";
 import { ConditionalRevealStep } from "./conditional-reveal-step";
 import { ResultScreen } from "./result-screen";
+import { pluralizeUnit } from "@/lib/pluralize";
 import type { WizardAnswers, WizardQuestion } from "./types";
 import type { ModuleGuideData } from "./guide-section";
 import { calculateModuleAction, type CalculateModuleResult } from "@/app/(app)/categorias/[slug]/[moduleSlug]/actions";
@@ -145,7 +146,9 @@ export function ModuleWizard({
           const option = question.options.find((o) => o.key === raw);
           return { label: question.label, value: option?.label ?? "—" };
         }
-        return { label: question.label, value: raw ? `${raw} ${question.unit ?? ""}`.trim() : "—" };
+        if (!raw) return { label: question.label, value: "—" };
+        const unit = question.unit ? pluralizeUnit(Number(raw), question.unit) : "";
+        return { label: question.label, value: `${raw} ${unit}`.trim() };
       });
   }, [questions, answers]);
 

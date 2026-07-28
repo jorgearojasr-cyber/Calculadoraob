@@ -5,6 +5,7 @@ import { useState, useTransition } from "react";
 import { ShoppingCart, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { formatQuantity } from "@/lib/format-number";
+import { pluralizeUnit } from "@/lib/pluralize";
 import { clearShoppingListAction, toggleShoppingCheckAction } from "@/app/(app)/lista-compras/actions";
 import { STALE_SESSION_ERROR, STALE_SESSION_MESSAGE } from "@/lib/stale-session";
 import type { ShoppingListData, ShoppingListLine } from "@/lib/shopping-list";
@@ -125,7 +126,9 @@ export function ShoppingListView({ data }: { data: ShoppingListData }) {
                   </span>
                   <span className="font-display text-xl font-semibold whitespace-nowrap">
                     {formatQuantity(line.quantity)}{" "}
-                    <span className="text-sm font-body text-ink-muted">{line.unit}</span>
+                    <span className="text-sm font-body text-ink-muted">
+                      {pluralizeUnit(line.quantity, line.unit)}
+                    </span>
                   </span>
                 </div>
                 <p className="text-xs text-ink-muted mt-1">de: {line.sourceProjectNames.join(", ")}</p>
