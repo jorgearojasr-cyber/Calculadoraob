@@ -181,6 +181,13 @@ export function QuestionGroupStep({
   // sin diagrama en su momento). En compacto: labels más chicos, menos
   // espaciado, 2 columnas en desktop, y helpText detrás de un ícono (i).
   const compact = questions.length >= 3;
+  // Pares de 2 campos con diagrama (largo/ancho, etc.) van lado a lado
+  // aunque no tengan allowAreaToggle — es puramente el layout de las
+  // mismas 2 preguntas ya agrupadas en este paso, no cambia cómo se
+  // guardan ni se usan sus valores en las fórmulas. Los grupos que sí
+  // tienen allowAreaToggle ni pasan por acá (los renderiza AreaInputToggle
+  // más abajo); esto es para los que se quedaron con el grid fijo.
+  const sideBySide = questions.length === 2 && Boolean(diagram);
   // El helpText también se colapsa fuera del modo compacto cuando es
   // largo (caso Escalera: 2 campos que repiten un helpText de ~95
   // caracteres cada uno) — regla por largo, no por módulo puntual.
@@ -313,7 +320,11 @@ export function QuestionGroupStep({
           />
         </div>
       )}
-      <div className={compact ? "grid gap-3 sm:grid-cols-2" : "grid gap-5"}>
+      <div
+        className={
+          compact ? "grid gap-3 sm:grid-cols-2" : sideBySide ? "grid gap-5 sm:grid-cols-2" : "grid gap-5"
+        }
+      >
         {questions.map((question, i) => {
           const collapsedHelp = isHelpCollapsed(question);
           return (
