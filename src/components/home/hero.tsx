@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { FileCheck2, Zap, ShoppingCart, ShieldCheck } from "lucide-react";
 import { SearchBar } from "./search-bar";
@@ -68,6 +69,21 @@ export function Hero() {
                 {s.label}
               </Link>
             ))}
+          </div>
+
+          {/* Aspect-ratio calzado exacto con la foto original (2094x751) —
+              object-cover nunca recorta, solo escala, así que la huincha
+              (borde izquierdo) y el nivel (borde derecho) quedan siempre
+              completos sin importar el ancho del contenedor. */}
+          <div className="mt-8 relative w-full aspect-[2094/751] rounded-2xl overflow-hidden">
+            <Image
+              src="/images/hero/hero-herramientas.png"
+              alt="Huincha de medir, nivel, lápiz y plano arquitectónico enrollado sobre una mesa"
+              fill
+              className="object-cover"
+              sizes="(max-width: 1024px) 100vw, 50vw"
+              priority
+            />
           </div>
 
           <div className="mt-10 grid grid-cols-2 gap-x-6 gap-y-5">
