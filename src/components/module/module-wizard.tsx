@@ -42,6 +42,22 @@ function buildSteps(questions: WizardQuestion[], answers: WizardAnswers): Wizard
   return steps;
 }
 
+// Antes de calcular: cualquier pregunta que haya quedado OCULTA por
+// visibleIf (nunca se le mostró al usuario) pero tenga hiddenDefaultValue
+// configurado, se rellena con ese valor — para que las fórmulas/lookups
+// que dependen de su respuesta sigan resolviendo igual que antes, en vez
+// de quedar sin valor. Ej.: "colocacion" oculta cuando metodo_hormigon
+// es "manual" asume "manual_carretilla".
+function withHiddenDefaults(questions: WizardQuestion[], answers: WizardAnswers): WizardAnswers {
+  const result = { ...answers };
+  for (const question of questions) {
+    if (!question.hiddenDefaultValue) continue;
+    if (isQuestionVisible(question, answers)) continue;
+    result[question.key] = question.hiddenDefaultValue;
+  }
+  return result;
+}
+
 // Precarga (editable) el valor sugerido de una pregunta NUMBER aún sin
 // responder, vía defaultSource.table, si la pregunta de la que depende ya
 // fue contestada. No pisa una respuesta que el usuario ya dio.
@@ -114,7 +130,7 @@ export function ModuleWizard({
 
     startTransition(async () => {
       try {
-        const result = await calculateModuleAction(moduleId, nextAnswers);
+        const result = await calculateModuleAction(moduleId, withHiddenDefaults(questions, nextAnswers));
         setCalculation(result);
       } catch {
         setError("No pudimos calcular con esos datos. Revisa las respuestas e inténtalo de nuevo.");

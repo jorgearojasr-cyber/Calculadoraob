@@ -71,6 +71,7 @@ export default async function ModulePage({
     stepGroup: question.stepGroup,
     visibleIfQuestionKey: question.visibleIfQuestionKey,
     visibleIfValues: question.visibleIfValues,
+    hiddenDefaultValue: question.hiddenDefaultValue,
     defaultSource: question.defaultSource as WizardQuestion["defaultSource"],
   }));
 

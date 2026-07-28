@@ -17,6 +17,7 @@ export type WizardQuestion = {
   stepGroup: string | null;
   visibleIfQuestionKey: string | null;
   visibleIfValues: string[];
+  hiddenDefaultValue: string | null;
   defaultSource: QuestionDefaultSource | null;
 };
 

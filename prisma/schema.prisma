@@ -195,6 +195,12 @@ model Question {
   // todavía — se configura por script (ver docs/formula-dsl.md).
   visibleIfQuestionKey String?
   visibleIfValues      String[] @default([])
+  // Valor que se asigna automáticamente a esta pregunta cuando queda
+  // oculta por visibleIf (no se le pregunta al usuario) — para que las
+  // fórmulas/lookups que dependen de su respuesta sigan funcionando con
+  // un valor por defecto en vez de quedar sin resolver. Ej.: "colocacion"
+  // oculta cuando metodo_hormigon=manual asume "manual_carretilla".
+  hiddenDefaultValue String?
 
   // Valor sugerido (editable) para precargar el campo NUMBER, calculado por
   // LOOKUP contra la respuesta de otra pregunta ya contestada — ej. sugerir

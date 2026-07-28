@@ -33,6 +33,7 @@ export default async function ModulePreviewPage({ params }: { params: { id: stri
     stepGroup: question.stepGroup,
     visibleIfQuestionKey: question.visibleIfQuestionKey,
     visibleIfValues: question.visibleIfValues,
+    hiddenDefaultValue: question.hiddenDefaultValue,
     defaultSource: question.defaultSource as WizardQuestion["defaultSource"],
   }));
 
