@@ -5,6 +5,7 @@ import { ArrowRight, Check } from "lucide-react";
 import type { WizardQuestion } from "./types";
 import { checkRangeWarning, parseTypicalRange } from "@/lib/range-hint";
 import { EquipmentChecklistStep } from "./equipment-checklist-step";
+import { GasConfirmationGate } from "./gas-confirmation-gate";
 
 // Caso especial: en vez de pedir el Watt total como número directo, se
 // reemplaza por una lista de equipos comunes preseleccionables (ver
@@ -12,14 +13,22 @@ import { EquipmentChecklistStep } from "./equipment-checklist-step";
 // siendo NUMBER, solo cambia cómo se ingresa el valor.
 const EQUIPMENT_CHECKLIST_KEY = "suma-la-potencia-total-de-los-equipos-que-iran-conectados-watts";
 
+// Nivel 4 de disclaimer (dirección visual 2026-07-28): SOLO estos 2
+// módulos de Gas, que ya tenían checkbox de confirmación SEC obligatorio
+// antes de ver el resultado — no generalizar a otros módulos con
+// reinforcedWarning:true.
+const GAS_LEVEL4_MODULE_SLUGS = new Set(["caneria-de-gas-visible", "instalar-un-calefon-a-gas"]);
+
 export function QuestionStep({
   question,
   initialValue,
   onAnswer,
+  moduleSlug,
 }: {
   question: WizardQuestion;
   initialValue: string | number | undefined;
   onAnswer: (value: string | number) => void;
+  moduleSlug?: string;
 }) {
   const [textValue, setTextValue] = useState(
     initialValue !== undefined ? String(initialValue) : ""
@@ -46,9 +55,11 @@ export function QuestionStep({
   if (question.type === "SELECT" && question.options.length === 1) {
     const option = question.options[0];
     const checked = initialValue === option.key;
+    const isGasLevel4 = !!moduleSlug && GAS_LEVEL4_MODULE_SLUGS.has(moduleSlug);
     return (
       <div>
-        <h2 className="font-display text-2xl md:text-3xl font-semibold tracking-tight mb-2">
+        {isGasLevel4 && <GasConfirmationGate />}
+        <h2 className="font-display text-[19px] font-semibold tracking-tight mb-2">
           {question.label}
         </h2>
         {question.helpText && <p className="text-sm text-ink-muted mb-6">{question.helpText}</p>}
@@ -76,7 +87,7 @@ export function QuestionStep({
   if (question.type === "SELECT") {
     return (
       <div>
-        <h2 className="font-display text-2xl md:text-3xl font-semibold tracking-tight mb-2">
+        <h2 className="font-display text-[19px] font-semibold tracking-tight mb-2">
           {question.label}
         </h2>
         {question.helpText && <p className="text-sm text-ink-muted mb-6">{question.helpText}</p>}
@@ -129,7 +140,7 @@ export function QuestionStep({
 
   return (
     <div>
-      <h2 className="font-display text-2xl md:text-3xl font-semibold tracking-tight mb-2">
+      <h2 className="font-display text-[19px] font-semibold tracking-tight mb-2">
         {question.label}
       </h2>
       {question.helpText && <p className="text-sm text-ink-muted mb-6">{question.helpText}</p>}

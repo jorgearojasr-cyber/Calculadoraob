@@ -102,6 +102,7 @@ export default async function ModulePage({
   return (
     <ModuleWizard
       moduleId={mod.id}
+      moduleSlug={mod.slug}
       moduleName={mod.name}
       categorySlug={mod.category.slug}
       categoryName={mod.category.name}

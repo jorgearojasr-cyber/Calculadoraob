@@ -60,6 +60,7 @@ function withSuggestedDefaults(questions: WizardQuestion[], answers: WizardAnswe
 
 export function ModuleWizard({
   moduleId,
+  moduleSlug,
   moduleName,
   categorySlug,
   categoryName,
@@ -70,6 +71,10 @@ export function ModuleWizard({
   planContext,
 }: {
   moduleId: string;
+  // Usado solo para gatillar el nivel 4 de disclaimer de Gas (ver
+  // gas-confirmation-gate.tsx) — no se generaliza a ningún otro tratamiento.
+  // Opcional: la vista previa de /admin no lo pasa (no aplica ahí).
+  moduleSlug?: string;
   moduleName: string;
   categorySlug: string;
   categoryName: string;
@@ -209,6 +214,7 @@ export function ModuleWizard({
               question={currentGroup[0]}
               initialValue={stepInitialValues[currentGroup[0].key]}
               onAnswer={handleAnswer}
+              moduleSlug={moduleSlug}
             />
           )}
 

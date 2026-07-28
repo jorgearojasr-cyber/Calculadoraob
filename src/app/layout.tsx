@@ -1,14 +1,19 @@
 import type { Metadata } from "next";
-import { Space_Grotesk, IBM_Plex_Sans, IBM_Plex_Mono } from "next/font/google";
+import { Archivo, IBM_Plex_Mono } from "next/font/google";
 import "./globals.css";
 
-const spaceGrotesk = Space_Grotesk({
+// Dirección visual 2026-07-28: Archivo es la única familia para todo el
+// texto de UI (antes Space Grotesk para títulos + IBM Plex Sans para
+// cuerpo) — se mantienen las 2 variables CSS (--font-display/--font-body)
+// para no tocar cada uso de font-display/font-body en los componentes,
+// pero ambas apuntan a Archivo ahora.
+const archivo = Archivo({
   subsets: ["latin"],
-  weight: ["500", "600", "700"],
+  weight: ["400", "500", "600", "700"],
   variable: "--font-display",
 });
 
-const ibmPlexSans = IBM_Plex_Sans({
+const archivoBody = Archivo({
   subsets: ["latin"],
   weight: ["400", "500", "600"],
   variable: "--font-body",
@@ -34,7 +39,7 @@ export default function RootLayout({
   return (
     <html lang="es">
       <body
-        className={`${spaceGrotesk.variable} ${ibmPlexSans.variable} ${ibmPlexMono.variable} font-body antialiased`}
+        className={`${archivo.variable} ${archivoBody.variable} ${ibmPlexMono.variable} font-body antialiased`}
       >
         {children}
       </body>

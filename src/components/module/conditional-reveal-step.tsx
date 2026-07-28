@@ -62,7 +62,7 @@ export function ConditionalRevealStep({
 
   return (
     <div>
-      <h2 className="font-display text-2xl md:text-3xl font-semibold tracking-tight mb-2">
+      <h2 className="font-display text-[19px] font-semibold tracking-tight mb-2">
         {selectQuestion.label}
       </h2>
       {selectQuestion.helpText && <p className="text-sm text-ink-muted mb-6">{selectQuestion.helpText}</p>}

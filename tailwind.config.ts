@@ -9,25 +9,43 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        concrete: "#F5F4F1",
-        ink: "#1C1B19",
+        // Dirección visual "ObraBien Calcula" (paleta 2026-07-28). `safety`
+        // es ahora el color de marca (antes naranjo, usado para disclaimers
+        // Y para acentos de marca a la vez) — se separó: `caution` es el
+        // naranjo original, dedicado exclusivamente al estado "no
+        // verificado contra norma" del NormsDisclaimer, para no chocar con
+        // el nuevo azul de marca que ahora vive en `safety`.
+        concrete: "#F7F4EF", // fondo app
+        ink: "#1A1917", // texto principal
         blueprint: "#2451B0",
-        safety: "#E8622C",
-        "safety-tint": "#FDEDE6",
-        "safety-border": "#F3C7B1",
-        danger: "#C81E3B",
-        "danger-tint": "#FBE7EA",
-        "danger-border": "#EBA9B4",
-        success: "#1E7A34",
-        "success-tint": "#E6F4EA",
-        "success-border": "#B7DFC1",
-        "ink-muted": "#6B6862",
-        "ink-faint": "#9A968C",
-        border: "#E4E1D8",
-        navy: "#0F1E3D",
-        "navy-light": "#1B2D54",
-        "navy-lighter": "#2C4370",
-        "navy-border": "#24365E",
+        safety: "#0E4C5A", // azul obra (marca, primario)
+        "safety-hover": "#093A45", // azul profundo (presionado/hover)
+        "safety-tint": "#E2EFF1", // azul claro (fondo de dato/resultado destacado)
+        // Sin valor exacto en el brief — borde derivado a partir del azul
+        // claro para que la tarjeta con `safety-tint` tenga un borde sutil
+        // pero visible (mismo criterio ya usado para safety-border/danger-border).
+        "safety-border": "#BFD9DC",
+        caution: "#E8622C", // "no verificado contra norma" (naranjo original)
+        "caution-tint": "#FDEDE6",
+        "caution-border": "#F3C7B1",
+        danger: "#B33C1C", // aviso reforzado (reinforcedWarning)
+        "danger-tint": "#FBE9E4",
+        // Derivado del mismo modo que safety-border — el brief no da un
+        // tono de borde explícito para este estado.
+        "danger-border": "#E8B6A6",
+        success: "#2F7A55", // verde listo (confirmaciones)
+        "success-tint": "#E7F3EC",
+        "success-border": "#B9DCC6",
+        "ink-muted": "#5E5850", // texto de ayuda
+        "ink-faint": "#8C8579",
+        "info-tint": "#F1EEE8", // información general (disclaimer "norma citada")
+        border: "#E4DED4", // borde de tarjeta
+        // Chrome oscuro del sidebar/bottom-nav: reutiliza el azul de marca
+        // en vez de un tercer color — el brief solo define 2 azules.
+        navy: "#0E4C5A",
+        "navy-light": "#093A45",
+        "navy-lighter": "#093A45",
+        "navy-border": "#1C5F70",
       },
       fontFamily: {
         display: ["var(--font-display)"],

@@ -30,7 +30,7 @@ export function NormsDisclaimer({ norms }: { norms: NormSummary[] }) {
       {reforzadas.length > 0 && (
         <div className="rounded-2xl p-4 bg-danger-tint border-2 border-danger">
           <div className="flex items-start gap-2.5">
-            <TriangleAlert className="w-5 h-5 flex-shrink-0 mt-0.5 text-danger" strokeWidth={2.5} />
+            <TriangleAlert className="w-6 h-6 flex-shrink-0 mt-0.5 text-danger" strokeWidth={2.75} />
             <CollapsibleHelp
               label="Riesgo estructural o de seguridad — no determina la especificación final"
               ariaLabel="Más detalle sobre este riesgo de seguridad"
@@ -53,9 +53,9 @@ export function NormsDisclaimer({ norms }: { norms: NormSummary[] }) {
       )}
 
       {citadas.length > 0 && (
-        <div className="rounded-2xl p-4 bg-white border border-border">
+        <div className="rounded-2xl p-4 bg-info-tint border border-border">
           <div className="flex items-start gap-2.5">
-            <BookCheck className="w-4 h-4 flex-shrink-0 mt-0.5 text-navy" />
+            <BookCheck className="w-4 h-4 flex-shrink-0 mt-0.5 text-ink-muted" />
             <CollapsibleHelp
               label={`Basado en norma técnica: ${citadas.map((n) => n.code).join(", ")}`}
               ariaLabel="Más detalle sobre las normas técnicas citadas"
@@ -74,13 +74,13 @@ export function NormsDisclaimer({ norms }: { norms: NormSummary[] }) {
       )}
 
       {noVerificadas.length > 0 && (
-        <div className="rounded-2xl p-4 bg-safety-tint border border-safety-border">
+        <div className="rounded-2xl p-4 bg-caution-tint border border-caution-border">
           <div className="flex items-start gap-2.5">
-            <TriangleAlert className="w-4 h-4 flex-shrink-0 mt-0.5 text-safety" />
+            <TriangleAlert className="w-4 h-4 flex-shrink-0 mt-0.5 text-caution" />
             <CollapsibleHelp
               label="Valores no verificados contra una norma específica"
               ariaLabel="Más detalle sobre estos valores no verificados"
-              labelClassName="text-safety"
+              labelClassName="text-caution"
             >
               <div className="text-xs text-ink-muted grid gap-1.5">
                 {noVerificadasNotes.length === 0 ? (

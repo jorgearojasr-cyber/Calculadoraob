@@ -69,17 +69,41 @@ export function PricedResults({
 
   return (
     <div className="grid gap-3">
-      {groups.map(({ primary: { result, priceStr, subtotal }, secondaries }) => (
-        <div key={result.key} className="rounded-2xl p-5 bg-white border border-border">
-          <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-            <span className="font-medium text-[15px]">{result.label}</span>
-            <span className="font-display text-xl font-semibold text-right">
-              {formatQuantity(result.value)}{" "}
-              <span className="text-sm font-body text-ink-muted">
-                {pluralizeUnit(result.value, result.unit)}
+      {groups.map(({ primary: { result, priceStr, subtotal }, secondaries }, groupIndex) => {
+        // Dirección visual 2026-07-28: el primer resultado no-secundario de
+        // cada módulo se destaca a escala 40-44px en color de marca — único
+        // elemento de esa escala en toda la pantalla. El resto de los
+        // resultados (y todos los secundarios) mantienen el tratamiento
+        // previo. Ver discusión: módulos multi-material (ej. Hormigón) no
+        // tienen "un" resultado obvio, así que se usa el primero de la lista
+        // como criterio simple y consistente entre los 57 módulos.
+        const featured = groupIndex === 0;
+        return (
+        <div
+          key={result.key}
+          className={`rounded-2xl p-5 border ${featured ? "bg-safety-tint border-safety-border" : "bg-white border-border"}`}
+        >
+          {featured ? (
+            <div className="flex flex-wrap items-end justify-between gap-x-4 gap-y-1">
+              <span className="font-medium text-[15px]">{result.label}</span>
+              <span className="font-mono text-[40px] sm:text-[44px] font-bold leading-none text-safety text-right">
+                {formatQuantity(result.value)}{" "}
+                <span className="text-base font-body font-medium text-safety/80">
+                  {pluralizeUnit(result.value, result.unit)}
+                </span>
               </span>
-            </span>
-          </div>
+            </div>
+          ) : (
+            <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+              <span className="font-medium text-[15px]">{result.label}</span>
+              <span className="font-display text-xl font-semibold text-right">
+                {formatQuantity(result.value)}{" "}
+                <span className="text-sm font-body text-ink-muted">
+                  {pluralizeUnit(result.value, result.unit)}
+                </span>
+              </span>
+            </div>
+          )}
           {result.materialName && (
             <p className="mt-1 text-xs font-medium text-ink-muted">{result.materialName}</p>
           )}
@@ -128,7 +152,8 @@ export function PricedResults({
             </div>
           )}
         </div>
-      ))}
+        );
+      })}
 
       {anyPriced && (
         <div className="rounded-2xl p-5 bg-navy/[0.04] border border-navy/20">

@@ -106,7 +106,7 @@ export function ResultScreen({
   return (
     <div>
       <p className="font-mono text-xs uppercase tracking-wider mb-2 text-safety">Resultado</p>
-      <h2 className="font-display text-2xl md:text-3xl font-semibold tracking-tight mb-6">
+      <h2 className="font-display text-[22px] font-semibold tracking-tight mb-6">
         Esto es lo que necesitas
       </h2>
 
