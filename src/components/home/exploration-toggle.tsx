@@ -5,7 +5,8 @@ import Image from "next/image";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import type { Category, ProjectGroup, ProjectTask } from "@/generated/prisma/client";
-import { ProjectGroupBlock } from "./project-group-block";
+import { GroupCard } from "./group-card";
+import { GroupChip } from "./group-chip";
 import { CategoryGrid } from "./category-grid";
 
 // Foto real por tarea destacada — mismo set de 5 que CURATED_TASK_SLUGS en
@@ -73,6 +74,12 @@ export function ExplorationToggle({
 
       {view === "proyecto" ? (
         <div className="grid gap-10">
+          <div className="flex gap-2 overflow-x-auto pb-1 -mx-6 px-6 md:mx-0 md:px-0 md:flex-wrap">
+            {groups.map((group) => (
+              <GroupChip key={group.id} slug={group.slug} name={group.name} icon={group.icon} />
+            ))}
+          </div>
+
           {popularTasks.length > 0 && (
             <div>
               <p className="text-xs text-ink-muted mb-3">Proyectos destacados</p>
@@ -109,9 +116,14 @@ export function ExplorationToggle({
             </div>
           )}
 
-          {groups.map((group) => (
-            <ProjectGroupBlock key={group.id} group={group} />
-          ))}
+          <div>
+            <p className="text-xs text-ink-muted mb-3">Todas las categorías</p>
+            <div className="grid gap-4 sm:grid-cols-2">
+              {groups.map((group) => (
+                <GroupCard key={group.id} group={group} />
+              ))}
+            </div>
+          </div>
         </div>
       ) : (
         <div>
