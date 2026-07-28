@@ -75,7 +75,7 @@ export function QuestionStep({
         <button
           onClick={() => onAnswer(option.key)}
           disabled={!checked}
-          className="mt-6 rounded-full px-6 py-3 text-sm font-semibold text-white flex items-center gap-2 bg-ink disabled:opacity-40 disabled:cursor-not-allowed"
+          className="mt-6 rounded-full px-6 py-3 text-sm font-semibold text-white flex items-center gap-2 bg-action disabled:opacity-40 disabled:cursor-not-allowed"
         >
           Ver resultado
           <ArrowRight className="w-4 h-4" />
@@ -161,7 +161,7 @@ export function QuestionStep({
       {!error && rangeWarning && <p className="mt-2 text-sm text-amber-600">{rangeWarning}</p>}
       <button
         onClick={handleSubmit}
-        className="mt-6 rounded-full px-6 py-3 text-sm font-semibold text-white flex items-center gap-2 bg-ink"
+        className="mt-6 rounded-full px-6 py-3 text-sm font-semibold text-white flex items-center gap-2 bg-action"
       >
         Siguiente
         <ArrowRight className="w-4 h-4" />

@@ -86,7 +86,7 @@ export function PricedResults({
           {featured ? (
             <div className="flex flex-wrap items-end justify-between gap-x-4 gap-y-1">
               <span className="font-medium text-[15px]">{result.label}</span>
-              <span className="font-mono text-[40px] sm:text-[44px] font-bold leading-none text-safety text-right">
+              <span className="font-display text-[40px] sm:text-[44px] font-extrabold leading-none text-safety text-right">
                 {formatQuantity(result.value)}{" "}
                 <span className="text-base font-body font-medium text-safety/80">
                   {pluralizeUnit(result.value, result.unit)}

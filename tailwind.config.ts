@@ -9,43 +9,44 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        // Dirección visual "ObraBien Calcula" (paleta 2026-07-28). `safety`
-        // es ahora el color de marca (antes naranjo, usado para disclaimers
-        // Y para acentos de marca a la vez) — se separó: `caution` es el
-        // naranjo original, dedicado exclusivamente al estado "no
-        // verificado contra norma" del NormsDisclaimer, para no chocar con
-        // el nuevo azul de marca que ahora vive en `safety`.
-        concrete: "#F7F4EF", // fondo app
+        // Sistema de marca definitivo "ObraBien Calcula" (2026-07-28,
+        // reemplaza la paleta azul-obra/Huincha de la sesión anterior,
+        // que quedó descartada). Regla que ordena el sistema: `action`
+        // (naranjo) = únicamente CTAs/botones/elementos interactivos;
+        // `safety` (marino) = marca/chrome/acentos no accionables; los
+        // estados de advertencia (`caution`/`danger`) usan ámbar/carmín
+        // para no confundirse nunca con el naranjo de acción.
+        concrete: "#F9F9F9", // fondo app
+        peach: "#FDF2E9", // fondo secundario cálido (durazno)
         ink: "#1A1917", // texto principal
         blueprint: "#2451B0",
-        safety: "#0E4C5A", // azul obra (marca, primario)
-        "safety-hover": "#093A45", // azul profundo (presionado/hover)
-        "safety-tint": "#E2EFF1", // azul claro (fondo de dato/resultado destacado)
-        // Sin valor exacto en el brief — borde derivado a partir del azul
-        // claro para que la tarjeta con `safety-tint` tenga un borde sutil
-        // pero visible (mismo criterio ya usado para safety-border/danger-border).
-        "safety-border": "#BFD9DC",
-        caution: "#E8622C", // "no verificado contra norma" (naranjo original)
-        "caution-tint": "#FDEDE6",
-        "caution-border": "#F3C7B1",
-        danger: "#B33C1C", // aviso reforzado (reinforcedWarning)
-        "danger-tint": "#FBE9E4",
-        // Derivado del mismo modo que safety-border — el brief no da un
-        // tono de borde explícito para este estado.
-        "danger-border": "#E8B6A6",
-        success: "#2F7A55", // verde listo (confirmaciones)
-        "success-tint": "#E7F3EC",
-        "success-border": "#B9DCC6",
+        safety: "#002152", // marino (marca, primario — chrome, acentos, resultado numérico)
+        // Sin valor exacto en el brief — hover/pressed derivado oscureciendo el marino.
+        "safety-hover": "#00112E",
+        // Tint claro derivado del marino (sin valor exacto en el brief),
+        // mismo rol que antes: fondo de dato/resultado destacado.
+        "safety-tint": "#E7E9EF",
+        "safety-border": "#C6CBD6",
+        action: "#FF4E00", // naranjo de marca — SOLO CTAs/botones primarios/elementos interactivos
+        "action-hover": "#E04500", // derivado, oscurecido para pressed/hover
+        caution: "#D9A21B", // "no verificado contra norma" (ámbar)
+        "caution-tint": "#FBF1DC", // derivado
+        "caution-border": "#EFD9A0", // derivado
+        danger: "#C4122F", // aviso reforzado (reinforcedWarning) — carmín
+        "danger-tint": "#FBE4E8", // derivado
+        "danger-border": "#EFB3BE", // derivado
+        success: "#185C3D", // chip de estado positivo — texto
+        "success-tint": "#B9D4C7", // chip de estado positivo — fondo
+        "success-border": "#9CC0AE", // derivado
         "ink-muted": "#5E5850", // texto de ayuda
         "ink-faint": "#8C8579",
-        "info-tint": "#F1EEE8", // información general (disclaimer "norma citada")
+        "info-tint": "#F1EEE8", // información general (se mantiene neutro, sin cambios)
         border: "#E4DED4", // borde de tarjeta
-        // Chrome oscuro del sidebar/bottom-nav: reutiliza el azul de marca
-        // en vez de un tercer color — el brief solo define 2 azules.
-        navy: "#0E4C5A",
-        "navy-light": "#093A45",
-        "navy-lighter": "#093A45",
-        "navy-border": "#1C5F70",
+        // Chrome oscuro del sidebar/bottom-nav: reutiliza el marino de marca.
+        navy: "#002152",
+        "navy-light": "#00112E",
+        "navy-lighter": "#00112E",
+        "navy-border": "#0A2A5E",
       },
       fontFamily: {
         display: ["var(--font-display)"],

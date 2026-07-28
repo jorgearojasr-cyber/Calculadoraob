@@ -41,7 +41,7 @@ export default async function GuiaDetailPage({ params }: { params: { moduleSlug:
 
       <Link
         href={`/categorias/${mod.category.slug}/${mod.slug}`}
-        className="mt-8 inline-flex items-center gap-2 rounded-full px-6 py-3 text-sm font-semibold text-white bg-safety"
+        className="mt-8 inline-flex items-center gap-2 rounded-full px-6 py-3 text-sm font-semibold text-white bg-action"
       >
         Ir a la calculadora
       </Link>

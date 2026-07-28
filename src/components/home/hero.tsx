@@ -40,8 +40,9 @@ export async function Hero() {
             construir hoy?
           </h1>
           <p className="mt-5 text-lg text-ink-muted">
-            Calcula materiales, cantidades y costos de cualquier proyecto de construcción,
-            sin necesitar experiencia técnica. Solo responde y nosotros calculamos.
+            Calcula, aprende y construye gratis. Solo responde y nosotros calculamos
+            materiales, cantidades y costos de cualquier proyecto de construcción, sin
+            necesitar experiencia técnica.
           </p>
 
           <SearchBar />

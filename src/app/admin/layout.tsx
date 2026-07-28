@@ -11,7 +11,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     <div className="min-h-screen w-full bg-concrete text-ink font-body">
       <header className="border-b border-border bg-white">
         <div className="max-w-6xl mx-auto px-6 py-4 flex items-center gap-8">
-          <Logo href="/admin" textClassName="text-ink" />
+          <Logo href="/admin" />
           <span className="text-xs font-mono uppercase tracking-wider text-navy bg-navy/[0.08] px-2 py-0.5 rounded-full">
             Admin
           </span>
@@ -30,6 +30,9 @@ export default async function AdminLayout({ children }: { children: React.ReactN
             </Link>
             <Link href="/admin/fotos" className="hover:text-ink transition-colors">
               Fotos
+            </Link>
+            <Link href="/admin/proyectos-galeria" className="hover:text-ink transition-colors">
+              Galería
             </Link>
           </nav>
           <Link href="/" className="ml-auto text-sm text-ink-muted hover:text-ink transition-colors">

@@ -84,11 +84,11 @@ function LoginForm() {
             onChange={(e) => setPassword(e.target.value)}
             className="rounded-xl px-4 py-3 text-sm bg-white border border-border outline-none focus:border-ink"
           />
-          {error && <p className="text-sm text-safety">{error}</p>}
+          {error && <p className="text-sm text-danger">{error}</p>}
           <button
             type="submit"
             disabled={isLoading}
-            className="rounded-full px-6 py-3 text-sm font-semibold text-white bg-safety disabled:opacity-50"
+            className="rounded-full px-6 py-3 text-sm font-semibold text-white bg-action disabled:opacity-50"
           >
             {isLoading ? "Ingresando…" : "Ingresar"}
           </button>

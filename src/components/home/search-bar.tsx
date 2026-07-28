@@ -101,7 +101,7 @@ export function SearchBar() {
         />
         <button
           onClick={submitSearch}
-          className="flex-shrink-0 rounded-xl px-4 py-2 text-sm font-medium text-white flex items-center gap-1.5 bg-safety"
+          className="flex-shrink-0 rounded-xl px-4 py-2 text-sm font-medium text-white flex items-center gap-1.5 bg-action"
         >
           Calcular
           <ArrowRight className="w-3.5 h-3.5" />

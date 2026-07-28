@@ -151,7 +151,7 @@ export function ResultScreen({
         <button
           onClick={handleSaveProject}
           disabled={saveState === "saving"}
-          className="rounded-full px-6 py-3 text-sm font-semibold text-white flex items-center gap-2 bg-safety disabled:opacity-50"
+          className="rounded-full px-6 py-3 text-sm font-semibold text-white flex items-center gap-2 bg-action disabled:opacity-50"
         >
           <FolderPlus className="w-4 h-4" />
           {saveState === "saving" ? "Guardando…" : "Guardar como proyecto"}

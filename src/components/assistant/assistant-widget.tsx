@@ -48,11 +48,11 @@ export function AssistantWidget({ groups, variant }: { groups: AssistantGroup[];
           className="w-full text-left rounded-2xl p-3.5 bg-navy-light border border-navy-border hover:border-white/30 transition-colors mb-3"
         >
           <div className="flex items-center gap-2 mb-1">
-            <HelpCircle className="w-4 h-4 text-safety" />
+            <HelpCircle className="w-4 h-4 text-white/70" />
             <p className="text-xs font-semibold text-white">¿Necesitas ayuda?</p>
           </div>
           <p className="text-[11px] text-white/60 mb-2">Te ayudamos a encontrar el proyecto correcto.</p>
-          <span className="inline-block text-xs font-semibold px-3 py-1.5 rounded-full bg-safety text-white">
+          <span className="inline-block text-xs font-semibold px-3 py-1.5 rounded-full bg-action text-white">
             Preguntar ahora
           </span>
         </button>
@@ -60,7 +60,7 @@ export function AssistantWidget({ groups, variant }: { groups: AssistantGroup[];
         <button
           onClick={() => setOpen(true)}
           aria-label="Preguntar ahora"
-          className="w-12 h-12 -mt-6 rounded-full bg-safety text-white flex items-center justify-center shadow-lg border-4 border-concrete"
+          className="w-12 h-12 -mt-6 rounded-full bg-action text-white flex items-center justify-center shadow-lg border-4 border-concrete"
         >
           <Plus className="w-6 h-6" />
         </button>

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Compass, FolderKanban, ShoppingCart, BookOpen, Wrench, ShieldCheck, LogIn } from "lucide-react";
+import { Home, Compass, FolderKanban, ShoppingCart, BookOpen, Images, Wrench, ShieldCheck, LogIn } from "lucide-react";
 import { Logo } from "@/components/brand/logo";
 import { SignOutButton } from "@/components/auth/sign-out-button";
 import { AssistantWidget, type AssistantGroup } from "@/components/assistant/assistant-widget";
@@ -28,7 +28,7 @@ export function Sidebar({
   return (
     <aside className="hidden md:flex fixed inset-y-0 left-0 w-60 flex-col bg-navy px-4 py-6 z-30">
       <div className="px-2 mb-8">
-        <Logo />
+        <Logo variant="dark" />
       </div>
 
       <nav className="flex flex-col gap-1">
@@ -55,6 +55,10 @@ export function Sidebar({
         <Link href="/guias" className={linkClass(pathname.startsWith("/guias"))}>
           <BookOpen className="w-4 h-4" />
           Guías y consejos
+        </Link>
+        <Link href="/galeria" className={linkClass(pathname.startsWith("/galeria"))}>
+          <Images className="w-4 h-4" />
+          Galería de proyectos
         </Link>
         <Link href="/#modo-profesional" className={linkClass(false)}>
           <Wrench className="w-4 h-4" />

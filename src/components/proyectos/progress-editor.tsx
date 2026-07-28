@@ -27,7 +27,7 @@ export function ProgressEditor({ id, initialValue }: { id: string; initialValue:
         disabled={isPending}
         className="h-1.5 flex-1 rounded-full appearance-none cursor-pointer accent-safety"
         style={{
-          background: `linear-gradient(to right, #E8622C ${value}%, #E4E1D8 ${value}%)`,
+          background: `linear-gradient(to right, #002152 ${value}%, #E4E1D8 ${value}%)`,
         }}
       />
       <span className="font-mono text-xs text-ink-muted w-9 text-right flex-shrink-0">{value}%</span>

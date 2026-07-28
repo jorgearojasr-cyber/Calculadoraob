@@ -286,7 +286,7 @@ export function QuestionGroupStep({
 
         <button
           onClick={handleSubmit}
-          className="mt-6 rounded-full px-6 py-3 text-sm font-semibold text-white flex items-center gap-2 bg-ink"
+          className="mt-6 rounded-full px-6 py-3 text-sm font-semibold text-white flex items-center gap-2 bg-action"
         >
           Siguiente
           <ArrowRight className="w-4 h-4" />
@@ -372,7 +372,7 @@ export function QuestionGroupStep({
 
       <button
         onClick={handleSubmit}
-        className="mt-6 rounded-full px-6 py-3 text-sm font-semibold text-white flex items-center gap-2 bg-ink"
+        className="mt-6 rounded-full px-6 py-3 text-sm font-semibold text-white flex items-center gap-2 bg-action"
       >
         Siguiente
         <ArrowRight className="w-4 h-4" />

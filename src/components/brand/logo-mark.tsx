@@ -1,18 +1,25 @@
-// Marca "Huincha" (dirección visual 2026-07-28): una cinta de medir
-// reducida a una barra con marcas + un gancho naranjo en el extremo — el
-// gancho es un acento de marca fijo (no sigue `currentColor`, siempre es
-// el mismo naranjo) mientras que la barra/marcas heredan el color que le
-// pase el contenedor (ver Logo, que la usa sobre un chip azul obra).
+// Marca real "ObraBien" (sistema de marca definitivo 2026-07-28): casa +
+// check. La casa hereda el color que le pase el contenedor (marino sobre
+// fondo claro, blanco sobre el chrome oscuro del sidebar — ver Logo), el
+// check es un acento de marca fijo, siempre naranjo #FF4E00, sin importar
+// el contexto. Icono/wordmark no se modifican — solo el color de la casa
+// se adapta para mantener contraste en fondos oscuros.
 export function LogoMark({ className = "" }: { className?: string }) {
   return (
-    <svg viewBox="0 0 24 24" className={className} fill="none">
-      <rect x="5" y="10" width="15" height="4" rx="2" stroke="currentColor" strokeWidth="1.6" />
-      <path d="M9 10V14M13 10V14M17 10V14" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+    <svg viewBox="0 0 100 60" className={className} fill="none">
       <path
-        d="M5 8.5C3.6 8.5 2.5 9.6 2.5 11C2.5 12.2 3.3 13.2 4.4 13.4"
-        stroke="#E8622C"
-        strokeWidth="1.8"
+        d="M10,55 L10,25 L28,8 L34,13 L34,8 L40,8 L40,15 L48,25 L48,55 Z"
+        stroke="currentColor"
+        strokeWidth="6"
+        strokeLinejoin="round"
         strokeLinecap="round"
+      />
+      <path
+        d="M18,34 L29,45 L58,2"
+        stroke="#FF4E00"
+        strokeWidth="7"
+        strokeLinecap="round"
+        strokeLinejoin="round"
       />
     </svg>
   );
