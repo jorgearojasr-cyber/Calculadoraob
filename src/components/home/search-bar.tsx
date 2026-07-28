@@ -95,7 +95,7 @@ export function SearchBar() {
           onFocus={() => {
             if (results.length > 0) setIsOpen(true);
           }}
-          placeholder="Ej: radier, pintura, piscina..."
+          placeholder="¿Qué proyecto quieres hacer?"
           className="w-full bg-transparent outline-none text-base placeholder:text-ink-faint"
           autoComplete="off"
         />
@@ -103,7 +103,7 @@ export function SearchBar() {
           onClick={submitSearch}
           className="flex-shrink-0 rounded-xl px-4 py-2 text-sm font-medium text-white flex items-center gap-1.5 bg-action"
         >
-          Calcular
+          Buscar
           <ArrowRight className="w-3.5 h-3.5" />
         </button>
       </div>
