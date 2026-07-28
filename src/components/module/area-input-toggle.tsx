@@ -1,42 +1,60 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Plus, X } from "lucide-react";
 import { MeasureDiagram } from "./measure-diagram";
+import { formatQuantity } from "@/lib/format-number";
 
 export type AreaInputMode = "dims" | "area";
+
+type DeductionRow = { ancho: string; alto: string };
 
 // Componente compartido: permite elegir entre ingresar largo×ancho (calcula
 // m² automáticamente, con el diagrama de medida y su resumen en vivo) o
 // ingresar la superficie en m² directamente (sin diagrama, un solo campo).
-// Todavía no está conectado al wizard dinámico (Question/stepGroup) — es un
-// bloque de UI autocontenido, pensado para reemplazar in situ los grupos de
-// preguntas largo×ancho módulo por módulo en una migración posterior.
+//
+// Descuento de vanos (puertas/ventanas): con `enableDeduction`, en modo
+// largo×ancho aparece una lista de "vanos" (ancho×alto cada uno, agregar/
+// quitar libremente) que se resta del área bruta — generaliza el patrón
+// que Pintura resolvía con preguntas fijas (cuántas puertas 0-3-"más de 3"
+// + un campo de área personalizada de respaldo): acá no hay tope de 3 ni
+// caso especial, se puede agregar cualquier cantidad de vanos y cada uno
+// se ve reflejado al toque. El modo "m² directo" nunca pide vanos — el
+// usuario ya está dando el área neta final. onAreaChange siempre entrega
+// el área NETA (bruta − vanos en modo dims; el valor tal cual en modo
+// área directa) — igual que el "area-final" que antes calculaba Pintura
+// en el DSL con coalesce(area-directa, area-neta).
 export function AreaInputToggle({
   primaryLabel = "largo",
   secondaryLabel = "ancho",
   unit = "m",
   initialMode = "dims",
+  enableDeduction = false,
+  deductionLabel = "Puertas y ventanas a descontar",
   onAreaChange,
 }: {
   primaryLabel?: string;
   secondaryLabel?: string;
   unit?: string;
   initialMode?: AreaInputMode;
-  // Se llama cada vez que cambia el área resultante — null mientras los
-  // campos relevantes del modo activo no formen un número válido (>0).
+  enableDeduction?: boolean;
+  deductionLabel?: string;
+  // Se llama cada vez que cambia el área NETA resultante — null mientras
+  // los campos relevantes del modo activo no formen un número válido (>0).
   onAreaChange: (areaM2: number | null) => void;
 }) {
   const [mode, setMode] = useState<AreaInputMode>(initialMode);
   const [primary, setPrimary] = useState("");
   const [secondary, setSecondary] = useState("");
   const [area, setArea] = useState("");
+  const [deductions, setDeductions] = useState<DeductionRow[]>([]);
 
   const toNumber = (raw: string) => {
     const num = Number(raw.replace(",", "."));
     return Number.isFinite(num) && num > 0 ? num : null;
   };
 
-  const computedArea =
+  const grossArea =
     mode === "dims"
       ? (() => {
           const p = toNumber(primary);
@@ -45,10 +63,25 @@ export function AreaInputToggle({
         })()
       : toNumber(area);
 
+  const deductionTotal = deductions.reduce((sum, row) => {
+    const a = toNumber(row.ancho);
+    const h = toNumber(row.alto);
+    return sum + (a !== null && h !== null ? a * h : 0);
+  }, 0);
+
+  const computedArea =
+    mode === "dims" && grossArea !== null
+      ? Math.max(0, grossArea - deductionTotal)
+      : grossArea;
+
   useEffect(() => {
     onAreaChange(computedArea);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [computedArea]);
+
+  const updateDeduction = (index: number, patch: Partial<DeductionRow>) => {
+    setDeductions((prev) => prev.map((row, i) => (i === index ? { ...row, ...patch } : row)));
+  };
 
   return (
     <div>
@@ -116,6 +149,57 @@ export function AreaInputToggle({
               </div>
             </label>
           </div>
+
+          {enableDeduction && (
+            <div className="mt-5">
+              <p className="text-sm font-medium mb-2">{deductionLabel} (opcional)</p>
+              <div className="grid gap-2">
+                {deductions.map((row, i) => (
+                  <div key={i} className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      inputMode="decimal"
+                      value={row.ancho}
+                      onChange={(e) => updateDeduction(i, { ancho: e.target.value })}
+                      placeholder="Ancho"
+                      className="w-24 rounded-lg px-3 py-1.5 text-sm bg-white border border-border outline-none focus:border-ink"
+                    />
+                    <span className="text-ink-faint text-sm">×</span>
+                    <input
+                      type="text"
+                      inputMode="decimal"
+                      value={row.alto}
+                      onChange={(e) => updateDeduction(i, { alto: e.target.value })}
+                      placeholder="Alto"
+                      className="w-24 rounded-lg px-3 py-1.5 text-sm bg-white border border-border outline-none focus:border-ink"
+                    />
+                    <span className="font-mono text-xs text-ink-muted">{unit}</span>
+                    <button
+                      type="button"
+                      onClick={() => setDeductions((prev) => prev.filter((_, idx) => idx !== i))}
+                      className="text-ink-muted hover:text-safety"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+              <button
+                type="button"
+                onClick={() => setDeductions((prev) => [...prev, { ancho: "", alto: "" }])}
+                className="mt-2 text-xs font-medium text-navy inline-flex items-center gap-1"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                Agregar puerta o ventana
+              </button>
+              {deductionTotal > 0 && grossArea !== null && (
+                <p className="mt-2 text-xs text-ink-muted">
+                  {formatQuantity(grossArea)} m² brutos − {formatQuantity(deductionTotal)} m² de vanos ={" "}
+                  {formatQuantity(Math.max(0, grossArea - deductionTotal))} m² netos
+                </p>
+              )}
+            </div>
+          )}
         </>
       ) : (
         <label className="grid gap-1.5">

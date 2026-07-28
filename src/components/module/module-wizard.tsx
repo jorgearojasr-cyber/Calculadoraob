@@ -4,7 +4,7 @@ import { useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { QuestionStep } from "./question-step";
-import { QuestionGroupStep } from "./question-group-step";
+import { QuestionGroupStep, hasAreaToggle } from "./question-group-step";
 import { ConditionalRevealStep } from "./conditional-reveal-step";
 import { ResultScreen } from "./result-screen";
 import type { WizardAnswers, WizardQuestion } from "./types";
@@ -189,7 +189,7 @@ export function ModuleWizard({
               initialValues={stepInitialValues}
               onAnswer={handleGroupAnswer}
             />
-          ) : currentGroup.length > 1 ? (
+          ) : currentGroup.length > 1 || hasAreaToggle(currentGroup[0].stepGroup) ? (
             <QuestionGroupStep
               key={currentGroup.map((q) => q.id).join("-")}
               questions={currentGroup}
