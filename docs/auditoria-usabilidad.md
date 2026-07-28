@@ -2791,12 +2791,15 @@ entre numérico directo y "derivado de área" (`largo`). Es un cambio de código
 (extender `AreaInputToggle` con un tercer modo, o construir un input a medida solo para
 este módulo), no una bandera de configuración — esfuerzo MEDIO, acotado a un componente.
 
-**Decisión final: dejar el módulo como está (Alternativa A), sin agregar ningún modo m²
-directo por ahora.** Razón técnica breve: el modo simétrico actual (Alternativa B) es
-matemáticamente incorrecto para este módulo y no se debe activar; el modo asimétrico
-exacto (Alternativa C) sí sería seguro, pero implica escribir un componente de input nuevo
-para un beneficio marginal — quien mide una superficie rectangular para pasto sintético
-casi siempre puede dar largo y ancho por separado (es una medición directa con huincha,
-no un cálculo de área ya hecho de antemano como sí ocurre más seguido en un muro con
-vanos irregulares). Si en el futuro llegan pedidos reales de usuarios pidiendo esta opción,
-la Alternativa C queda documentada y lista para retomar sin tener que re-investigar nada.
+**✅ Decisión final (cerrado — no requiere más acción): dejar como está, sin toggle m².**
+Razón técnica breve: el toggle m² directo simétrico (Alternativa B) es matemáticamente
+incorrecto para este módulo — corrompería `franjas-necesarias`, `costuras-metros`,
+`metros-lineales-pasto` y `grapas-fijacion` para cualquier rectángulo no cuadrado — y no se
+debe activar. Existe un modo asimétrico exacto (Alternativa C) que sí sería seguro, pero el
+esfuerzo de escribir un componente de input nuevo no se justifica frente al beneficio
+marginal para un caso de uso poco común: quien mide una superficie rectangular para pasto
+sintético casi siempre puede dar largo y ancho por separado (medición directa con huincha),
+a diferencia de un muro con vanos irregulares donde "ya tengo el área calculada" es más
+común. Si en el futuro llegan pedidos reales de usuarios pidiendo esta opción, la
+Alternativa C queda documentada y lista para retomar sin tener que re-investigar nada.
+No se implementó nada — este tema queda cerrado tal cual está.
