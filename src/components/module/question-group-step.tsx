@@ -255,6 +255,9 @@ export function QuestionGroupStep({
           unit={questions.length === 2 ? questions[0].unit ?? "m" : "m"}
           enableDeduction={diagram!.enableDeduction}
           deductionLabel={diagram!.deductionLabel}
+          initialPrimary={questions.length === 2 ? values[questions[0].key] || undefined : undefined}
+          initialSecondary={questions.length === 2 ? values[questions[1].key] || undefined : undefined}
+          initialArea={questions.length === 1 ? values[questions[0].key] || undefined : undefined}
           onAreaChange={handleAreaChange}
         />
 

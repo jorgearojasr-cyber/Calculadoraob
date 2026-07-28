@@ -9,7 +9,7 @@ export default async function ModulePage({
   searchParams,
 }: {
   params: { slug: string; moduleSlug: string };
-  searchParams: { tipo?: string; plan?: string; phase?: string };
+  searchParams: { tipo?: string; plan?: string; phase?: string; [key: string]: string | string[] | undefined };
 }) {
   const mod = await prisma.module.findFirst({
     where: { slug: params.moduleSlug, published: true, category: { slug: params.slug } },
@@ -35,12 +35,30 @@ export default async function ModulePage({
   // de selección — usada por links "Calcular cantidad de X" desde otros
   // módulos que ya conocen la respuesta recomendada, sin saltarse el paso.
   const firstQuestion = mod.questions[0];
-  const initialAnswers =
+  const initialAnswers: Record<string, string | number> = {};
+  if (
     firstQuestion?.type === "SELECT" &&
     searchParams.tipo &&
     firstQuestion.options.some((o) => o.key === searchParams.tipo)
-      ? { [firstQuestion.key]: searchParams.tipo }
-      : undefined;
+  ) {
+    initialAnswers[firstQuestion.key] = searchParams.tipo;
+  }
+
+  // Prellenado adicional por key exacto de pregunta (ej. el perímetro de la
+  // piscina calculado en /plan/[slug]/page.tsx para la fase de Sendero) —
+  // el usuario puede editarlo o ignorarlo; si no viene, el módulo funciona
+  // exactamente igual que hoy (uso suelto, sin plan).
+  for (const question of mod.questions) {
+    if (initialAnswers[question.key] !== undefined) continue;
+    const raw = searchParams[question.key];
+    if (typeof raw !== "string") continue;
+    if (question.type === "NUMBER") {
+      const num = Number(raw);
+      if (!Number.isNaN(num)) initialAnswers[question.key] = num;
+    } else if (question.type === "SELECT" && question.options.some((o) => o.key === raw)) {
+      initialAnswers[question.key] = raw;
+    }
+  }
 
   const questions = mod.questions.map((question) => ({
     id: question.id,

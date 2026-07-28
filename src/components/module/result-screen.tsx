@@ -75,6 +75,7 @@ export function ResultScreen({
         moduleName,
         answersSummary,
         result,
+        planContext: planContext ? { planSlug: planContext.slug, phaseId: planContext.phaseId } : undefined,
       });
 
       if (response.error) {

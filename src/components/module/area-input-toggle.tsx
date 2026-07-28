@@ -31,6 +31,9 @@ export function AreaInputToggle({
   initialMode = "dims",
   enableDeduction = false,
   deductionLabel = "Puertas y ventanas a descontar",
+  initialPrimary,
+  initialSecondary,
+  initialArea,
   onAreaChange,
 }: {
   primaryLabel?: string;
@@ -39,14 +42,20 @@ export function AreaInputToggle({
   initialMode?: AreaInputMode;
   enableDeduction?: boolean;
   deductionLabel?: string;
+  // Prellenado opcional (editable) del modo "dims" — ej. el perímetro de la
+  // piscina derivado en /plan/[slug]/page.tsx para el largo del Sendero.
+  initialPrimary?: string;
+  initialSecondary?: string;
+  // Prellenado opcional (editable) del modo "m² directo".
+  initialArea?: string;
   // Se llama cada vez que cambia el área NETA resultante — null mientras
   // los campos relevantes del modo activo no formen un número válido (>0).
   onAreaChange: (areaM2: number | null) => void;
 }) {
   const [mode, setMode] = useState<AreaInputMode>(initialMode);
-  const [primary, setPrimary] = useState("");
-  const [secondary, setSecondary] = useState("");
-  const [area, setArea] = useState("");
+  const [primary, setPrimary] = useState(initialPrimary ?? "");
+  const [secondary, setSecondary] = useState(initialSecondary ?? "");
+  const [area, setArea] = useState(initialArea ?? "");
   const [deductions, setDeductions] = useState<DeductionRow[]>([]);
 
   const toNumber = (raw: string) => {

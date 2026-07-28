@@ -15,6 +15,11 @@ export async function createSavedProjectAction(input: {
   answersSummary: AnswerSummaryItem[];
   result: CalculateModuleResult;
   name?: string;
+  // Presente cuando el módulo se abrió desde una fase de /plan/[slug] — ver
+  // ResultScreen.handleSaveProject. Permite a una fase posterior del mismo
+  // plan ubicar este SavedProject y prellenar un valor derivado (ver
+  // plan/[slug]/page.tsx).
+  planContext?: { planSlug: string; phaseId: string };
 }): Promise<{ id: string; error?: undefined } | { error: string; id?: undefined }> {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) return { error: "No hay sesión activa." };
@@ -23,6 +28,10 @@ export async function createSavedProjectAction(input: {
     day: "2-digit",
     month: "short",
   })}`;
+
+  const plan = input.planContext
+    ? await prisma.projectPlan.findUnique({ where: { slug: input.planContext.planSlug }, select: { id: true } })
+    : null;
 
   let project;
   try {
@@ -34,6 +43,8 @@ export async function createSavedProjectAction(input: {
         answers: input.answersSummary,
         result: input.result,
         progressPercent: 0,
+        planId: plan?.id,
+        phaseId: input.planContext?.phaseId,
       },
     });
   } catch (error) {

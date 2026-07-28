@@ -42,6 +42,16 @@ model SavedProject {
   userId   String
   module   Module @relation(fields: [moduleId], references: [id], onDelete: Restrict)
   moduleId String
+  // Presentes solo si el proyecto se guardó desde una fase de /plan/[slug]
+  // (ver ResultScreen.handleSaveProject) — permiten a una fase posterior del
+  // mismo plan (ej. Sendero en "Terminar el entorno") ubicar los datos
+  // guardados de una fase anterior (ej. Piscina rectangular) para prellenar
+  // un valor derivado, sin necesitar una feature genérica de memoria entre
+  // fases.
+  plan     ProjectPlan?      @relation(fields: [planId], references: [id], onDelete: SetNull)
+  planId   String?
+  phase    ProjectPlanPhase? @relation(fields: [phaseId], references: [id], onDelete: SetNull)
+  phaseId  String?
 
   name            String
   // Respuestas del wizard y resultado calculado, guardados como snapshot —
@@ -59,6 +69,7 @@ model SavedProject {
 
   @@index([userId])
   @@index([moduleId])
+  @@index([planId, moduleId])
   @@map("saved_projects")
 }
 
@@ -460,8 +471,9 @@ model ProjectPlan {
   title       String
   description String
 
-  phases ProjectPlanPhase[]
-  tasks  ProjectTask[]
+  phases        ProjectPlanPhase[]
+  tasks         ProjectTask[]
+  savedProjects SavedProject[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -477,8 +489,9 @@ model ProjectPlanPhase {
   // Nombre en lenguaje cotidiano, ej. "1. Hacer la base".
   name   String
 
-  moduleLinks ProjectPlanPhaseModule[]
-  completions ProjectPlanPhaseCompletion[]
+  moduleLinks   ProjectPlanPhaseModule[]
+  completions   ProjectPlanPhaseCompletion[]
+  savedProjects SavedProject[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
