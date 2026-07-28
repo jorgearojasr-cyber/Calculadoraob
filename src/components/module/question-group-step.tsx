@@ -45,7 +45,6 @@ const DIMENSION_DIAGRAMS: Record<
   "pintura-ventana-2": { shape: "rectangle", primaryLabel: "ancho", secondaryLabel: "alto" },
   "pintura-ventana-3": { shape: "rectangle", primaryLabel: "ancho", secondaryLabel: "alto" },
   cmru6tntl00000kseunldpq7g: { shape: "rectangle", primaryLabel: "largo", secondaryLabel: "ancho", allowAreaToggle: true }, // Cerámica (pisos)
-  cmrtvl0y20005mcsen21m2t8l: { shape: "rectangle", primaryLabel: "largo", secondaryLabel: "alto" }, // Muro de bloques o ladrillos — descuenta vanos, no habilita toggle
   cmrtvl3aw000fmcsezs6inad3: { shape: "rectangle", primaryLabel: "largo", secondaryLabel: "ancho", allowAreaToggle: true }, // Tabiques y cielos
   cmrtvl24q000amcse8s2dj1ex: { shape: "rectangle", primaryLabel: "largo", secondaryLabel: "ancho", allowAreaToggle: true }, // Pasto en rollos
   "rollo-personalizado": { shape: "rectangle", primaryLabel: "ancho", secondaryLabel: "largo" }, // Pasto en rollos (personalizado) — medida del rollo, no área a cubrir
@@ -71,10 +70,6 @@ const DIMENSION_DIAGRAMS: Record<
   cmrv640ny00013oseqrvvxb50: { shape: "rectangle", primaryLabel: "largo", secondaryLabel: "ancho", allowAreaToggle: true }, // Techo inclinado (bajo teja/zinc)
   "area-pasto-sintetico": { shape: "rectangle", primaryLabel: "largo", secondaryLabel: "ancho" }, // Pasto sintético — largo/ancho también calculan costuras, franjas y grapas
   "jardinera-muro-dims": { shape: "rectangle", primaryLabel: "largo", secondaryLabel: "alto" }, // Jardinera de albañilería — largo/alto también calculan el volumen de tierra
-  "fachada-dims": { shape: "rectangle", primaryLabel: "largo", secondaryLabel: "alto" }, // Pintar una fachada exterior — descuenta vanos, no habilita toggle
-  "fachada-vano-1": { shape: "rectangle", primaryLabel: "ancho", secondaryLabel: "alto" }, // Fachada exterior — vano 1
-  "fachada-vano-2": { shape: "rectangle", primaryLabel: "ancho", secondaryLabel: "alto" }, // Fachada exterior — vano 2
-  "fachada-vano-3": { shape: "rectangle", primaryLabel: "ancho", secondaryLabel: "alto" }, // Fachada exterior — vano 3
   "cielo-metalcon-dims": { shape: "rectangle", primaryLabel: "largo", secondaryLabel: "ancho" }, // Cielo raso en Metalcon
   cmrsdqraw0005dkseiur36yb7: { shape: "rectangle", primaryLabel: "largo", secondaryLabel: "ancho", allowAreaToggle: true }, // Techo (cubierta) — antes 2 pasos sin agrupar ni diagrama
 
@@ -91,6 +86,26 @@ const DIMENSION_DIAGRAMS: Record<
   // Pintura: reemplaza modo-calculo + cantidad-puertas/ventanas + vanos 1-3
   // + "más de 3" personalizada — ver resumen del commit que unifica esto.
   "pintura-superficie-final": {
+    shape: "rectangle",
+    primaryLabel: "largo",
+    secondaryLabel: "alto",
+    allowAreaToggle: true,
+    enableDeduction: true,
+    deductionLabel: "Puertas y ventanas a descontar",
+  },
+  // Muro de bloques o ladrillos: reemplaza el campo único "m² a descontar"
+  // por el mismo descuento de vanos ancho×alto del componente.
+  "muro-bloques-superficie-final": {
+    shape: "rectangle",
+    primaryLabel: "largo",
+    secondaryLabel: "alto",
+    allowAreaToggle: true,
+    enableDeduction: true,
+    deductionLabel: "Puertas y ventanas a descontar",
+  },
+  // Pintar una fachada exterior: reemplaza cuantos-vanos-quieres-descontar
+  // + vano 1-3 + "más de 3" personalizada, mismo patrón que Pintura.
+  "fachada-superficie-final": {
     shape: "rectangle",
     primaryLabel: "largo",
     secondaryLabel: "alto",
