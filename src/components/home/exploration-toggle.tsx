@@ -1,11 +1,24 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import type { Category, ProjectGroup, ProjectTask } from "@/generated/prisma/client";
 import { ProjectGroupBlock } from "./project-group-block";
 import { CategoryGrid } from "./category-grid";
+
+// Foto real por tarea destacada — mismo set de 5 que CURATED_TASK_SLUGS en
+// exploration-section.tsx. Si una tarea no tiene foto en el mapa, la tarjeta
+// cae de vuelta al layout de solo texto (sin romper si se agrega una tarea
+// curada nueva sin foto todavía).
+const TASK_IMAGES: Record<string, string> = {
+  "cambiar-o-instalar-un-wc": "/images/categorias/cambiar-wc.png",
+  "instalar-un-enchufe-reemplazo": "/images/categorias/cambiar-enchufe.png",
+  "construir-un-radier": "/images/categorias/hacer-radier.png",
+  "pintar-una-habitacion": "/images/categorias/pintar-muro.png",
+  "instalar-ceramica": "/images/categorias/piso-ceramica.png",
+};
 
 type PopularTask = ProjectTask & { group: { name: string } };
 type Group = ProjectGroup & { tasks: ProjectTask[] };
@@ -64,18 +77,34 @@ export function ExplorationToggle({
             <div>
               <p className="text-xs text-ink-muted mb-3">Proyectos destacados</p>
               <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-                {popularTasks.map((task) => (
-                  <Link
-                    key={task.id}
-                    href={`/empezar/${task.slug}`}
-                    className="rounded-2xl p-4 bg-white border border-border hover:border-safety/40 hover:-translate-y-0.5 transition-all"
-                  >
-                    <span className="inline-block text-[10px] font-mono px-2 py-0.5 rounded-full bg-safety-tint text-safety mb-2">
-                      {task.group.name}
-                    </span>
-                    <p className="font-semibold text-sm">{task.name}</p>
-                  </Link>
-                ))}
+                {popularTasks.map((task) => {
+                  const image = TASK_IMAGES[task.slug];
+                  return (
+                    <Link
+                      key={task.id}
+                      href={`/empezar/${task.slug}`}
+                      className="group rounded-2xl overflow-hidden bg-white border border-border hover:border-safety/40 hover:-translate-y-0.5 transition-all"
+                    >
+                      {image && (
+                        <div className="relative w-full aspect-[4/3] bg-concrete">
+                          <Image
+                            src={image}
+                            alt={task.name}
+                            fill
+                            className="object-cover"
+                            sizes="(max-width: 768px) 50vw, 20vw"
+                          />
+                        </div>
+                      )}
+                      <div className="p-4">
+                        <span className="inline-block text-[10px] font-mono px-2 py-0.5 rounded-full bg-safety-tint text-safety mb-2">
+                          {task.group.name}
+                        </span>
+                        <p className="font-semibold text-sm">{task.name}</p>
+                      </div>
+                    </Link>
+                  );
+                })}
               </div>
             </div>
           )}

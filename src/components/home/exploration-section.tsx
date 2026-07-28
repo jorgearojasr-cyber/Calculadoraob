@@ -4,13 +4,15 @@ import { ExplorationToggle } from "./exploration-toggle";
 
 // Selección curada a mano (no hay datos reales de popularidad todavía) —
 // deliberadamente son las tareas cuyo módulo ya tiene ModuleGuide completo,
-// para que "Popular" también signifique "con guía práctica lista".
+// para que "Popular" también signifique "con guía práctica lista". Estas 5
+// coinciden con las 5 fotos reales disponibles en
+// public/images/categorias/ (ver TASK_IMAGES en exploration-toggle.tsx).
 const CURATED_TASK_SLUGS = [
   "construir-un-radier",
   "pintar-una-habitacion",
-  "construir-una-piscina",
+  "instalar-ceramica",
   "cambiar-o-instalar-un-wc",
-  "hacer-un-sendero",
+  "instalar-un-enchufe-reemplazo",
 ];
 
 export async function ExplorationSection() {
