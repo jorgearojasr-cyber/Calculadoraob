@@ -1,8 +1,10 @@
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { Sidebar } from "./sidebar";
+import { TopNav } from "./top-nav";
+import { MobileTopBar } from "./mobile-top-bar";
 import { BottomNav } from "./bottom-nav";
+import { AssistantWidget } from "@/components/assistant/assistant-widget";
 
 export async function AppShell({ children }: { children: React.ReactNode }) {
   const session = await getServerSession(authOptions);
@@ -26,9 +28,15 @@ export async function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="min-h-screen w-full bg-concrete text-ink font-body">
-      <Sidebar isAdmin={isAdmin} user={user} assistantGroups={assistantGroups} />
+      <TopNav isAdmin={isAdmin} user={user} />
+      <MobileTopBar user={user} />
       <BottomNav user={user} assistantGroups={assistantGroups} />
-      <main className="md:pl-60 pb-20 md:pb-0">{children}</main>
+      {/* Sin sidebar que anclar, el widget de ayuda flota fijo en desktop —
+          mismo componente que el FAB mobile, solo reposicionado. */}
+      <div className="hidden md:block fixed bottom-6 right-6 z-30">
+        <AssistantWidget groups={assistantGroups} variant="fab-desktop" />
+      </div>
+      <main className="pt-14 md:pt-16 pb-20 md:pb-0">{children}</main>
     </div>
   );
 }
