@@ -69,7 +69,11 @@ const DIMENSION_DIAGRAMS: Record<
   cmrv63db30001t8seqpqqyfrk: { shape: "rectangle", primaryLabel: "largo", secondaryLabel: "ancho" }, // Techo de tejas o policarbonato — perímetro (suma-largo-y-ancho)
   cmrv640ny00013oseqrvvxb50: { shape: "rectangle", primaryLabel: "largo", secondaryLabel: "ancho", allowAreaToggle: true }, // Techo inclinado (bajo teja/zinc)
   "area-pasto-sintetico": { shape: "rectangle", primaryLabel: "largo", secondaryLabel: "ancho" }, // Pasto sintético — largo/ancho también calculan costuras, franjas y grapas
-  "jardinera-muro-dims": { shape: "rectangle", primaryLabel: "largo", secondaryLabel: "alto" }, // Jardinera de albañilería — largo/alto también calculan el volumen de tierra
+  // Jardinera de albañilería: las 3 medidas (largo/alto/ancho) ahora
+  // comparten un solo paso — antes el ancho quedaba en un paso aparte, sin
+  // relación visual con largo/alto. depthLabel="ancho" es la profundidad
+  // de la jardinera (front-to-back), mismo patrón que Piscina rectangular.
+  "jardinera-muro-dims": { shape: "rectangle-with-depth", primaryLabel: "largo", secondaryLabel: "alto", depthLabel: "ancho" }, // Jardinera de albañilería — largo/alto/ancho también calculan el volumen de tierra
   "cielo-metalcon-dims": { shape: "rectangle", primaryLabel: "largo", secondaryLabel: "ancho" }, // Cielo raso en Metalcon
   cmrsdqraw0005dkseiur36yb7: { shape: "rectangle", primaryLabel: "largo", secondaryLabel: "ancho", allowAreaToggle: true }, // Techo (cubierta) — antes 2 pasos sin agrupar ni diagrama
 
