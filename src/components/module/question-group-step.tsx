@@ -75,7 +75,12 @@ const DIMENSION_DIAGRAMS: Record<
   // de la jardinera (front-to-back), mismo patrón que Piscina rectangular.
   "jardinera-muro-dims": { shape: "rectangle-with-depth", primaryLabel: "largo", secondaryLabel: "alto", depthLabel: "ancho" }, // Jardinera de albañilería — largo/alto/ancho también calculan el volumen de tierra
   "cielo-metalcon-dims": { shape: "rectangle", primaryLabel: "largo", secondaryLabel: "ancho" }, // Cielo raso en Metalcon
-  cmrsdqraw0005dkseiur36yb7: { shape: "rectangle", primaryLabel: "largo", secondaryLabel: "ancho", allowAreaToggle: true }, // Techo (cubierta) — antes 2 pasos sin agrupar ni diagrama
+  // Techo (cubierta): antes 2 pasos sin agrupar ni diagrama. allowAreaToggle
+  // desactivado a propósito — desde que zinc/acero usa cálculo por grilla
+  // (filas × planchas por fila), el modo "m² directo" reconstruiría un
+  // cuadrado ficticio y rompería ese cálculo para cualquier rectángulo real
+  // (mismo riesgo ya identificado y evitado en Pasto sintético).
+  cmrsdqraw0005dkseiur36yb7: { shape: "rectangle", primaryLabel: "largo", secondaryLabel: "ancho" },
 
   // Grupos de 1 pregunta (antes single-question steps, sin diagrama): el
   // toggle también aplica cuando el módulo solo pedía m² directo — ver
