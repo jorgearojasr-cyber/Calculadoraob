@@ -2455,3 +2455,127 @@ Quinchos, y el `helpText` desactualizado de la pregunta de superficie en Pintura
 fachada exterior (describe descuento manual de vanos cuando ya es automático).
 
 **Pendiente: tu revisión para decidir el orden de la fase de arreglos.**
+
+---
+
+## Grupo B: pendientes de decisión de producto
+
+De los 23 módulos con veredicto MEJORAR, 8 quedaron completamente resueltos por las fases
+E1-E4 (Ducha, Techo inclinado, Tabique en Metalcon, Piso SPC, Piso flotante, Tabiques y
+cielos, Preparar y estucar un muro, Jardinera de albañilería — su único hallazgo pendiente
+era pluralización, ya resuelta de forma centralizada). De los 15 restantes, 10 se
+implementaron como Grupo A (ver commits/DB de esta fase). Los 6 casos siguientes requieren
+una decisión de producto — no se implementaron, solo se documenta la propuesta.
+
+### Lavamanos (Baño)
+
+**Qué pasa:** el módulo es, en la práctica, una sola pregunta (mueble vs. pedestal)
+seguida de una lista fija de 5 materiales que nunca varía con un dato real del usuario
+("1 lavamanos, 1 grifería, 1 sifón, 2 llaves de conexión, 1-2 tubos de silicona" siempre).
+No hay ningún cálculo detrás — se siente más como un checklist con un paso de wizard
+innecesario que como una calculadora.
+
+**Alternativa A — agregar una variable real:** permitir elegir cantidad de lavamanos (ej.
+"¿Vas a instalar 1 o 2 lavamanos?" para el caso de doble lavamanos en baños grandes/
+principales), que sí multiplicaría los materiales. Pro: convierte el módulo en un cálculo
+genuino sin cambiar su naturaleza. Contra: doble lavamanos es un caso relativamente poco
+común: el beneficio real para la mayoría de los usuarios sería marginal.
+
+**Alternativa B — replantear como guía sin wizard de cálculo:** quitar el paso de
+pregunta/resultado y dejarlo como una guía de instalación con checklist fijo de materiales,
+sin la fricción de "calcular" algo que no varía. Pro: más honesto sobre lo que el módulo
+realmente ofrece. Contra: rompe la consistencia de UX con el resto de la app (todos los
+demás módulos son wizard → resultado).
+
+**Recomendación tentativa:** Alternativa A si doble lavamanos es un caso de uso real y
+frecuente en Chile; si no, dejar el módulo como está — no es un defecto grave, solo una
+oportunidad de mejora menor.
+
+### Muro de hormigón armado (Hormigón)
+
+**Qué pasa:** dos huecos de flujo, no de contenido:
+
+1. El wizard nunca pregunta si el muro es de contención de terreno/agua o un muro simple —
+   ambos casos se calculan y advierten igual, aunque un muro de contención tiene requisitos
+   estructurales reales distintos (empuje de tierra, drenaje).
+2. Como el resto de la categoría Hormigón (excepto Radier), nunca pregunta cómo se va a
+   obtener el hormigón (premezclado vs. manual en obra) — siempre entrega dosificación
+   manual, incluso cuando premezclado es la opción más común y recomendada para elementos
+   estructurales críticos.
+
+**Alternativa A — agregar ambas preguntas:** "¿Es un muro de contención de terreno?"
+(sí/no, condiciona el tono de la advertencia de ingeniería) y "¿Cómo vas a obtener el
+hormigón?" (como Radier, ramifica el resultado a m³ directos si es premezclado). Pro:
+cierra el hueco completo. Contra: dos preguntas nuevas cambian el flujo del módulo más
+establecido de la categoría; requiere decidir el copy exacto de la advertencia condicionada.
+
+**Alternativa B — solo agregar la pregunta de obtención del hormigón** (aplicar el mismo
+patrón a los 4 módulos de Hormigón de este grupo — ver abajo), dejando la distinción
+contención/simple para una fase posterior. Pro: cambio más acotado y consistente entre
+módulos. Contra: dado el llamado de la propia guía ("si es un muro de contención...
+debe determinarlo un ingeniero") queda sin resolver la falta de pregunta que detectaría
+cuándo aplica esa advertencia.
+
+**Recomendación tentativa:** Alternativa B primero (consistencia con Losa/Escalera/Cadena),
+evaluar la pregunta de contención como una iteración separada.
+
+### Losa, Escalera, Refuerzo superior del muro / Cadena (Hormigón)
+
+**Qué pasa:** los 3 comparten el mismo hueco (Hallazgo A de la Tanda 12): nunca preguntan
+"¿Cómo vas a obtener el hormigón?" (premezclado vs. manual), a diferencia de Radier, que sí
+lo hace y ramifica correctamente el resultado (m³ si premezclado; bolsas/arena/gravilla/
+agua si manual).
+
+**Alternativa A — replicar el patrón de Radier en los 3:** misma pregunta, misma
+ramificación de fórmulas. Pro: consistencia total dentro de la categoría, cierra el hueco
+más señalado de toda la Tanda 12. Contra: implica auditar y duplicar la lógica de
+ramificación de Radier en cada módulo (no es un simple `note` o `helpText`, cambia el árbol
+de preguntas y las fórmulas condicionadas).
+
+**Alternativa B — implementar el patrón una sola vez de forma compartida** (ej. un
+sub-componente o convención de Formula/Question reutilizable para "obtención de hormigón"),
+y aplicarlo no solo a estos 3 sino a los 4 módulos de Hormigón que lo necesitan (incluyendo
+Muro de hormigón armado arriba) en una sola pasada. Pro: evita repetir el mismo trabajo 4
+veces con lógica ligeramente distinta cada vez; más mantenible a futuro. Contra: mayor
+esfuerzo de diseño inicial antes de empezar a implementar.
+
+**Recomendación tentativa:** Alternativa B — dado que el mismo hueco se repite en 4 módulos
+de la misma categoría con el mismo patrón de solución ya probado (Radier), vale la pena
+diseñar una convención reutilizable antes de tocar los 4 uno por uno. Prioridad sugerida:
+Viga y Losa primero (elementos más críticos), luego Muro y Cadena, Escalera al final (menor
+volumen típico, ya señalado como menor prioridad en la Tanda 12).
+
+### Pasto sintético (Paisajismo) — hallazgo nuevo durante la implementación de Grupo A
+
+**Qué pasa:** al investigar la recomendación original del audit ("unificar el input con
+`AreaInputToggle`, como sus 2 módulos hermanos"), se descubrió que **ya existe** el
+diagrama largo×ancho (`DIMENSION_DIAGRAMS["area-pasto-sintetico"]`, sin `allowAreaToggle`)
+— el hallazgo original de "sin diagrama" ya no aplica, quedó resuelto en algún punto previo
+de la sesión sin que la auditoría lo reflejara. Lo que SÍ falta, y es la razón real por la
+que `allowAreaToggle` no está activado, es que 4 fórmulas del módulo (`costuras-metros`,
+`franjas-necesarias`, `metros-lineales-pasto`, `grapas-fijacion`) usan `largo` y `ancho`
+por separado, no solo el área — a diferencia de Pasto en rollos y Siembra por semilla,
+donde el área es el único dato que importa. Activar el modo "m² directo" reconstruiría un
+cuadrado ficticio (lado = √área) para alimentar esas fórmulas, lo que daría un número de
+franjas, costuras y grapas incorrecto para cualquier rectángulo que no sea un cuadrado real
+— un error silencioso de material, no solo estético.
+
+**Alternativa A — dejarlo como está** (solo largo×ancho, sin toggle a m² directo),
+documentando explícitamente en el código (ya hecho, ver comentario en
+`question-group-step.tsx`) por qué este módulo es una excepción deliberada al patrón de sus
+hermanos. Pro: cero riesgo de cálculo incorrecto. Contra: el usuario que ya sabe el área
+total pero no tiene largo/ancho a mano (ej. una superficie irregular que ya midió de otra
+forma) no tiene esa opción, a diferencia de en Pasto en rollos.
+
+**Alternativa B — agregar el modo m² directo con una advertencia explícita** de que en ese
+modo las franjas/costuras/grapas se estiman de forma aproximada (asumiendo un área
+cuadrada), y que el modo largo×ancho da un cálculo más preciso de esos materiales. Pro: da
+la opción sin ocultar la limitación. Contra: añade una superficie de confusión — dos modos
+con distinto nivel de precisión en el mismo campo es más difícil de explicar bien que
+simplemente no ofrecer el modo menos preciso.
+
+**Recomendación tentativa:** Alternativa A — el rectángulo de pasto sintético casi siempre
+es medible directamente (es un área de jardín/patio delimitada), a diferencia de un muro
+irregular donde "ya tengo el área calculada" es más común; el riesgo de un cálculo de
+material silenciosamente incorrecto no vale la conveniencia marginal del modo m² directo
+acá.
