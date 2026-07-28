@@ -166,7 +166,7 @@ export function ModuleWizard({
   );
 
   return (
-    <div className="max-w-xl mx-auto px-6 pt-8 pb-20">
+    <div className="max-w-2xl mx-auto px-6 pt-8 pb-20">
       <Link
         href={`/categorias/${categorySlug}`}
         className="inline-flex items-center gap-1.5 text-sm text-ink-muted hover:text-ink"

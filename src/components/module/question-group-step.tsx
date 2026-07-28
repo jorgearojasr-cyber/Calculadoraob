@@ -4,6 +4,7 @@ import { useState } from "react";
 import { ArrowRight, Info } from "lucide-react";
 import type { WizardQuestion } from "./types";
 import { checkRangeWarning, parseTypicalRange } from "@/lib/range-hint";
+import { formatQuantity } from "@/lib/format-number";
 import { MeasureDiagram } from "./measure-diagram";
 import { AreaInputToggle } from "./area-input-toggle";
 
@@ -143,6 +144,63 @@ const DIMENSION_DIAGRAMS: Record<
   //   espacial representable en este diagrama.
 };
 
+// Los 9 módulos migrados al layout combinado (ver commit que agrega
+// sideBySide): unifica largo+ancho (o largo+alto en Jardinera) en UNA sola
+// pregunta con una sola descripción, en vez de 2 preguntas/títulos
+// separados — y agrega una caja de superficie en vivo debajo de los
+// campos. Solo cubre estos 9 stepGroups a propósito: son los únicos
+// auditados contra el mockup; el resto de los pares de 2 campos (Losa,
+// Viga, Fundación, etc.) siguen con el patrón anterior (ya lado a lado
+// desde sideBySide, pero sin unificar la pregunta ni el cálculo de
+// superficie, que no aplica igual de bien a esos casos).
+const COMBINED_AREA_QUESTION: Record<string, { label: string; helpText: string; areaLabel: string }> = {
+  cmrs94tlf000n2kseduz98jwf: {
+    label: "¿Cuánto mide de largo y ancho?",
+    helpText: "Mide de pared a pared, por el suelo. Si el patio no es un rectángulo perfecto, usa la medida más larga.",
+    areaLabel: "Superficie del radier",
+  }, // Radier
+  cmrsikxe00001wssef5v6idtl: {
+    label: "¿Cuánto mide de largo y ancho la piscina?",
+    helpText: "Medida interior del espejo de agua, de borde a borde.",
+    areaLabel: "Superficie de la piscina",
+  }, // Piscina rectangular — la profundidad queda como pregunta aparte, debajo
+  cmru51j2t000128se69qh7xm7: {
+    label: "¿Cuánto mide de largo y ancho el espacio?",
+    helpText: "Mide de pared a pared, por el suelo. Si el espacio no es un rectángulo perfecto, usa la medida más larga por lado.",
+    areaLabel: "Superficie del piso",
+  }, // Piso SPC
+  cmru4zt0j0001yssecv7ercx3: {
+    label: "¿Cuánto mide de largo y ancho el espacio?",
+    helpText: "Mide de pared a pared, por el suelo. Si el espacio no es un rectángulo perfecto, usa la medida más larga por lado.",
+    areaLabel: "Superficie del piso",
+  }, // Piso flotante
+  cmru3eoou00010oseh4l9ac15: {
+    label: "¿Cuánto mide de largo y ancho?",
+    helpText: "Mide el piso o terraza de borde a borde, por el suelo.",
+    areaLabel: "Superficie del piso/terraza",
+  }, // Piso y Terraza en madera
+  cmrsjnt8q000pwsseqrzjcd3p: {
+    label: "¿Cuánto mide de largo y ancho el quincho?",
+    helpText: "Medida de la estructura completa, de borde a borde.",
+    areaLabel: "Superficie del quincho",
+  }, // Estructura y techo
+  cmrv63db30001t8seqpqqyfrk: {
+    label: "¿Cuánto mide de largo y ancho el quincho?",
+    helpText: "Medida de la estructura completa, de borde a borde.",
+    areaLabel: "Superficie del techo",
+  }, // Techo de tejas o policarbonato
+  "jardinera-muro-dims": {
+    label: "¿Cuánto mide de largo y alto la jardinera?",
+    helpText: "Largo total del muro y su altura. Lo típico es entre 0,3 y 0,5 metros de alto.",
+    areaLabel: "Superficie del muro",
+  }, // Jardinera — el ancho (profundidad) queda como pregunta aparte, debajo
+  "area-pasto-sintetico": {
+    label: "¿Cuánto mide de largo y ancho el área?",
+    helpText: "Mide el área a cubrir con pasto sintético, de borde a borde.",
+    areaLabel: "Superficie de pasto sintético",
+  }, // Pasto sintético
+};
+
 // Usado por ModuleWizard para decidir si un paso de UNA sola pregunta
 // (sin pareja) también debe rutearse por QuestionGroupStep en vez de
 // QuestionStep — caso de los módulos que antes solo pedían m² directo y
@@ -188,6 +246,26 @@ export function QuestionGroupStep({
   // tienen allowAreaToggle ni pasan por acá (los renderiza AreaInputToggle
   // más abajo); esto es para los que se quedaron con el grid fijo.
   const sideBySide = questions.length === 2 && Boolean(diagram);
+  // Los 9 módulos auditados contra el mockup (ver COMBINED_AREA_QUESTION):
+  // largo+ancho (siempre questions[0]/[1], mismo orden posicional que usa
+  // el diagrama) se combinan en una sola pregunta con superficie en vivo;
+  // un 3er campo (profundidad/alto), si existe, se queda como pregunta
+  // aparte de todos modos.
+  const combined = stepGroup ? COMBINED_AREA_QUESTION[stepGroup] : undefined;
+  const pairedQuestions = combined ? questions.slice(0, 2) : [];
+  const extraQuestions = combined ? questions.slice(2) : questions;
+  const toNum = (raw: string | undefined) => {
+    const n = Number((raw ?? "").replace(",", "."));
+    return Number.isFinite(n) && n > 0 ? n : null;
+  };
+  const areaValue = combined
+    ? (() => {
+        const a = toNum(values[pairedQuestions[0]?.key]);
+        const b = toNum(values[pairedQuestions[1]?.key]);
+        return a !== null && b !== null ? a * b : null;
+      })()
+    : null;
+  const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
   // El helpText también se colapsa fuera del modo compacto cuando es
   // largo (caso Escalera: 2 campos que repiten un helpText de ~95
   // caracteres cada uno) — regla por largo, no por módulo puntual.
@@ -320,12 +398,50 @@ export function QuestionGroupStep({
           />
         </div>
       )}
+      {combined && (
+        <div className="mb-5">
+          <h2 className="font-display text-xl md:text-2xl font-semibold tracking-tight">{combined.label}</h2>
+          <p className="text-sm text-ink-muted mt-2 mb-4">{combined.helpText}</p>
+          <div className="grid gap-3 sm:grid-cols-2">
+            {pairedQuestions.map((question, i) => (
+              <div key={question.id}>
+                <span className="block text-sm font-medium text-ink-muted mb-1.5">
+                  {capitalize(i === 0 ? diagram?.primaryLabel ?? question.label : diagram?.secondaryLabel ?? question.label)}
+                </span>
+                <div className="flex items-center gap-3 rounded-2xl bg-white border-[1.5px] border-ink px-5 py-4">
+                  <input
+                    type="text"
+                    inputMode="decimal"
+                    autoFocus={i === 0}
+                    value={values[question.key]}
+                    onChange={(e) => setValue(question.key, e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
+                    placeholder="0"
+                    className="w-full bg-transparent outline-none font-display placeholder:text-ink-faint text-2xl"
+                  />
+                  {question.unit && <span className="font-mono text-sm text-ink-muted">{question.unit}</span>}
+                </div>
+                {rangeWarnings[question.key] && (
+                  <p className="mt-2 text-sm text-amber-600">{rangeWarnings[question.key]}</p>
+                )}
+              </div>
+            ))}
+          </div>
+          <div className="mt-4 rounded-2xl bg-concrete px-5 py-4 text-center">
+            <p className="text-sm text-ink-muted">{combined.areaLabel}</p>
+            <p className="font-display text-2xl font-semibold text-ink">
+              {areaValue !== null ? `${formatQuantity(areaValue)} m²` : "—"}
+            </p>
+          </div>
+        </div>
+      )}
+      {extraQuestions.length > 0 && (
       <div
         className={
           compact ? "grid gap-3 sm:grid-cols-2" : sideBySide ? "grid gap-5 sm:grid-cols-2" : "grid gap-5"
         }
       >
-        {questions.map((question, i) => {
+        {extraQuestions.map((question, i) => {
           const collapsedHelp = isHelpCollapsed(question);
           return (
             <div key={question.id}>
@@ -360,7 +476,7 @@ export function QuestionGroupStep({
                 <input
                   type="text"
                   inputMode="decimal"
-                  autoFocus={i === 0}
+                  autoFocus={!combined && i === 0}
                   value={values[question.key]}
                   onChange={(e) => setValue(question.key, e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
@@ -378,6 +494,7 @@ export function QuestionGroupStep({
           );
         })}
       </div>
+      )}
 
       {error && <p className="mt-4 text-sm text-safety">{error}</p>}
 
