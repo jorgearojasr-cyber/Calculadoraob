@@ -2467,83 +2467,254 @@ era pluralización, ya resuelta de forma centralizada). De los 15 restantes, 10 
 implementaron como Grupo A (ver commits/DB de esta fase). Los 6 casos siguientes requieren
 una decisión de producto — no se implementaron, solo se documenta la propuesta.
 
-### Lavamanos (Baño)
+### Lavamanos (Baño) — investigación a fondo (3 alternativas)
 
-**Qué pasa:** el módulo es, en la práctica, una sola pregunta (mueble vs. pedestal)
-seguida de una lista fija de 5 materiales que nunca varía con un dato real del usuario
-("1 lavamanos, 1 grifería, 1 sifón, 2 llaves de conexión, 1-2 tubos de silicona" siempre).
-No hay ningún cálculo detrás — se siente más como un checklist con un paso de wizard
-innecesario que como una calculadora.
+**Estado actual del módulo (verificado en el schema, no solo en el hallazgo original):**
+Una sola `Question` (`que-tipo-de-instalacion`, SELECT: `sobre-mueble` / `pedestal`), una
+sola `Variable` (`tipo-instalacion`, TEXT, `source: {type: "QUESTION"}`), y 6 `Formula`:
 
-**Alternativa A — agregar una variable real:** permitir elegir cantidad de lavamanos (ej.
-"¿Vas a instalar 1 o 2 lavamanos?" para el caso de doble lavamanos en baños grandes/
-principales), que sí multiplicaría los materiales. Pro: convierte el módulo en un cálculo
-genuino sin cambiar su naturaleza. Contra: doble lavamanos es un caso relativamente poco
-común: el beneficio real para la mayoría de los usuarios sería marginal.
+| Formula | Material | Unidad | Expresión actual | Condición |
+|---|---|---|---|---|
+| `lavamanos` | Lavamanos | unidad | `1` | ninguna |
+| `griferia` | Grifería/llave mezcladora | unidad | `1` | ninguna |
+| `sifon` | Sifón | unidad | `1` | ninguna |
+| `llaves-conexion` | Llaves de conexión flexible | unidad | `2` | ninguna |
+| `silicona-sobre-mueble` | Silicona sanitaria | tubo | `2` | `tipo-instalacion == "sobre-mueble"` |
+| `silicona-pedestal` | Silicona sanitaria | tubo | `1` | `tipo-instalacion == "pedestal"` |
 
-**Alternativa B — replantear como guía sin wizard de cálculo:** quitar el paso de
-pregunta/resultado y dejarlo como una guía de instalación con checklist fijo de materiales,
-sin la fricción de "calcular" algo que no varía. Pro: más honesto sobre lo que el módulo
-realmente ofrece. Contra: rompe la consistencia de UX con el resto de la app (todos los
-demás módulos son wizard → resultado).
+Ninguna fórmula tiene un literal que dependa de una cantidad real ingresada por el
+usuario — todas son constantes fijas (1 o 2), solo la silicona varía según el tipo de
+instalación elegido. La guía (`ModuleGuide`) ya tiene una FAQ ("¿Qué diferencia hay entre
+un sifón visible y uno oculto?") que **no tiene pregunta correspondiente** en el wizard —
+confirma que hay contenido real sin explotar.
 
-**Recomendación tentativa:** Alternativa A si doble lavamanos es un caso de uso real y
-frecuente en Chile; si no, dejar el módulo como está — no es un defecto grave, solo una
-oportunidad de mejora menor.
+**Precio de referencia:** ninguno de los 6 materiales tiene `referencePrice` cargado hoy —
+el campo de precio unitario/subtotal en el resultado funciona (el usuario puede tipear su
+propio precio), pero no hay nada pre-cargado que perder si se elimina el módulo.
 
-### Muro de hormigón armado (Hormigón)
+---
 
-**Qué pasa:** dos huecos de flujo, no de contenido:
+#### Opción A — Agregar variable(s) real(es) (recomendada)
 
-1. El wizard nunca pregunta si el muro es de contención de terreno/agua o un muro simple —
-   ambos casos se calculan y advierten igual, aunque un muro de contención tiene requisitos
-   estructurales reales distintos (empuje de tierra, drenaje).
-2. Como el resto de la categoría Hormigón (excepto Radier), nunca pregunta cómo se va a
-   obtener el hormigón (premezclado vs. manual en obra) — siempre entrega dosificación
-   manual, incluso cuando premezclado es la opción más común y recomendada para elementos
-   estructurales críticos.
+**Pregunta nueva:** `cuantos-lavamanos-vas-a-instalar` (SELECT), reemplaza nada, se agrega
+como primera pregunta del wizard:
+- Opción `uno`: "1 lavamanos"
+- Opción `dos`: "2 lavamanos (doble, mueble con dos cubetas)"
 
-**Alternativa A — agregar ambas preguntas:** "¿Es un muro de contención de terreno?"
-(sí/no, condiciona el tono de la advertencia de ingeniería) y "¿Cómo vas a obtener el
-hormigón?" (como Radier, ramifica el resultado a m³ directos si es premezclado). Pro:
-cierra el hueco completo. Contra: dos preguntas nuevas cambian el flujo del módulo más
-establecido de la categoría; requiere decidir el copy exacto de la advertencia condicionada.
+**Variable nueva:** `cantidad-lavamanos` (NUMBER), `source: {type: "LOOKUP", questionKey:
+"cuantos-lavamanos-vas-a-instalar", table: {uno: 1, dos: 2}}` — este patrón LOOKUP
+(SELECT → número vía tabla) ya existe y está probado en producción (ej. `cobertura-m2` en
+Pastelones, grado de hormigón en Pilar/columna), no es un mecanismo nuevo.
 
-**Alternativa B — solo agregar la pregunta de obtención del hormigón** (aplicar el mismo
-patrón a los 4 módulos de Hormigón de este grupo — ver abajo), dejando la distinción
-contención/simple para una fase posterior. Pro: cambio más acotado y consistente entre
-módulos. Contra: dado el llamado de la propia guía ("si es un muro de contención...
-debe determinarlo un ingeniero") queda sin resolver la falta de pregunta que detectaría
-cuándo aplica esa advertencia.
+**Cómo cambia cada fórmula** (multiplicar el literal actual por la variable, en vez de
+reemplazarlo):
+- `lavamanos`: `1` → `{"var": "cantidad-lavamanos"}`
+- `griferia`: `1` → `{"var": "cantidad-lavamanos"}`
+- `sifon`: `1` → `{"var": "cantidad-lavamanos"}`
+- `llaves-conexion`: `2` → `{"op": "*", "args": [{"var": "cantidad-lavamanos"}, 2]}`
+- `silicona-sobre-mueble`: `2` → `{"op": "*", "args": [{"var": "cantidad-lavamanos"}, 2]}`
+  (condición sin cambios)
+- `silicona-pedestal`: `1` → `{"var": "cantidad-lavamanos"}` (condición sin cambios)
 
-**Recomendación tentativa:** Alternativa B primero (consistencia con Losa/Escalera/Cadena),
-evaluar la pregunta de contención como una iteración separada.
+**Mejoras opcionales adicionales** (mismo esfuerzo por pregunta, se pueden sumar o dejar
+para después sin bloquear lo anterior):
+- `que-tipo-de-sifon` (SELECT: visible / oculto) — no cambia la cantidad, pero resuelve la
+  pregunta que la FAQ ya contesta sin que el wizard la haga: usar
+  `materialLabelTemplate` en la Formula `sifon` para mostrar "Sifón visible" o "Sifón
+  oculto (bajo mueble)" según la respuesta.
+- `necesitas-fijar-el-mueble` (SELECT: sí / ya viene instalado) — si "sí", agrega una
+  Formula nueva `tacos-tornillos-fijacion` (Material nuevo, cantidad fija ~4-6 unidades,
+  condicionada a `tipo-instalacion == "sobre-mueble" AND necesita-fijacion == "si"`) — esta
+  sí es una línea de material genuinamente nueva, no solo relabeling.
 
-### Losa, Escalera, Refuerzo superior del muro / Cadena (Hormigón)
+**Esfuerzo:** BAJO-MEDIO. La versión mínima (solo cantidad de lavamanos) es 1 Question + 1
+Variable + editar 6 expresiones existentes — ningún componente de UI nuevo, ningún cambio
+de schema, ningún nuevo tipo de pregunta. Con las 2 mejoras opcionales sumadas, sigue
+siendo MEDIO (2 preguntas más, 1 Material y 1 Formula nuevos, sin tocar código).
 
-**Qué pasa:** los 3 comparten el mismo hueco (Hallazgo A de la Tanda 12): nunca preguntan
-"¿Cómo vas a obtener el hormigón?" (premezclado vs. manual), a diferencia de Radier, que sí
-lo hace y ramifica correctamente el resultado (m³ si premezclado; bolsas/arena/gravilla/
-agua si manual).
+**Gana en honestidad:** total — el resultado pasa a reflejar exactamente lo que el usuario
+respondió, dejando de ser una lista fija disfrazada de cálculo.
 
-**Alternativa A — replicar el patrón de Radier en los 3:** misma pregunta, misma
-ramificación de fórmulas. Pro: consistencia total dentro de la categoría, cierra el hueco
-más señalado de toda la Tanda 12. Contra: implica auditar y duplicar la lógica de
-ramificación de Radier en cada módulo (no es un simple `note` o `helpText`, cambia el árbol
-de preguntas y las fórmulas condicionadas).
+---
 
-**Alternativa B — implementar el patrón una sola vez de forma compartida** (ej. un
-sub-componente o convención de Formula/Question reutilizable para "obtención de hormigón"),
-y aplicarlo no solo a estos 3 sino a los 4 módulos de Hormigón que lo necesitan (incluyendo
-Muro de hormigón armado arriba) en una sola pasada. Pro: evita repetir el mismo trabajo 4
-veces con lógica ligeramente distinta cada vez; más mantenible a futuro. Contra: mayor
-esfuerzo de diseño inicial antes de empezar a implementar.
+#### Opción B — Replantear como QuickGuide
 
-**Recomendación tentativa:** Alternativa B — dado que el mismo hueco se repite en 4 módulos
-de la misma categoría con el mismo patrón de solución ya probado (Radier), vale la pena
-diseñar una convención reutilizable antes de tocar los 4 uno por uno. Prioridad sugerida:
-Viga y Losa primero (elementos más críticos), luego Muro y Cadena, Escalera al final (menor
-volumen típico, ya señalado como menor prioridad en la Tanda 12).
+**Investigación del modelo:** `QuickGuide` (usado hoy por los 5 reemplazos simples de
+Electricidad/Agua) no tiene NINGÚN campo de material/cantidad — solo `tools`, `steps`,
+`tips`, `commonMistakes`, `masterTip`, `faqs`, `reinforcedWarning`. El contenido actual del
+`ModuleGuide` de Lavamanos migraría casi literal: `tools`→`tools`,
+`stepByStepSummary`→`steps`, `tipsBeforeStart`→`tips`, `commonMistakes`→`commonMistakes`,
+`bestPractice`/`masterTip`→`masterTip`, `faqs`→`faqs`. El wiring de entrada también está
+resuelto: `ProjectTask.quickGuideId` ya existe exactamente para este caso (una tarea usa
+`moduleLinks` O `quickGuide`, nunca ambos) — cambiar el link de "Instalar un lavamanos" de
+Module a QuickGuide es una operación de una línea.
+
+**Costos reales encontrados al leer el código (no obvios sin investigar):**
+1. `QuickGuide` no tiene relación con `Category` — `/categorias/[slug]/page.tsx` solo lista
+   `category.modules`. Lavamanos **desaparecería por completo** de la página de categoría
+   Baño; solo sería alcanzable vía `/empezar/instalar-un-lavamanos` o un link directo.
+2. `src/lib/search.ts` no indexa `QuickGuide` en absoluto — Lavamanos desaparecería de la
+   barra de búsqueda y de `/buscar`, a menos que se extienda la búsqueda para incluir
+   QuickGuides (trabajo adicional no incluido en una conversión "simple").
+3. La página `/guias-rapidas/[slug]` no tiene "Guardar como proyecto", ni integración con
+   lista de compras, ni "Generar prompt para IA", ni campo de precio unitario/subtotal —
+   se pierden 4 funcionalidades que hoy funcionan (aunque sea sobre una lista fija).
+
+**Esfuerzo:** MEDIO. No por el contenido (es casi una copia), sino por decidir qué hacer
+con el Module/Formula/Material/Norm existentes (¿se borran? ¿quedan sin publicar?) y,
+si se quiere mantener paridad real de descubribilidad, por el trabajo no trivial de sumar
+QuickGuide a la página de categoría y a la búsqueda — que hoy no existe.
+
+**Gana en honestidad:** total sobre el frente de "no hay cálculo" — pero pierde
+descubribilidad (categoría, búsqueda) y utilidad (precio/lista de compras) salvo que esos
+huecos se cierren aparte.
+
+---
+
+#### Opción C — Híbrido mínimo (más barato)
+
+El cambio más chico que agrega UNA variable real sin tocar la estructura del módulo:
+pregunta `necesitas-sifon-nuevo` (SELECT: "Sí, necesito uno nuevo" / "No, voy a reutilizar
+el que tengo") — caso real y común cuando se cambia solo el lavamanos sobre un mueble que
+ya tenía sifón. Variable `necesita-sifon` (TEXT, `source: {type: "QUESTION"}`, igual patrón
+que `tipo-instalacion`). Se le agrega `condition: {"op": "==", "args": [{"var":
+"necesita-sifon"}, {"str": "si"}]}` a la Formula `sifon` existente (hoy `condition: null`,
+incondicional) — cuando la respuesta es "no", esa línea deja de aparecer en el resultado.
+
+**Esfuerzo:** BAJO — la más barata de las 3. 1 Question + 1 Variable + editar 1 condición
+en una Formula que ya existe. Ningún Material ni Formula nuevos, ningún cambio de UI.
+
+**Gana en honestidad:** modesto — el módulo sigue sin escalar con una cantidad medida,
+pero al menos una línea del resultado deja de estar garantizada siempre, lo que ya es un
+paso por encima de "exactamente los mismos 5 ítems sin importar la respuesta".
+
+---
+
+**Recomendación para decidir rápido:** Opción A (versión mínima: solo cantidad de
+lavamanos) da el mejor balance esfuerzo/honestidad — convierte el módulo en una
+calculadora real por un costo bajo-medio, sin perder nada de lo que ya funciona (precio,
+lista de compras, búsqueda, categoría). Opción C es la más barata si se quiere algo hoy
+mismo y decidir el resto después. Opción B solo tiene sentido si el criterio de producto
+es "no fingir que hay cálculo donde no lo hay" como principio, aceptando el costo de
+descubribilidad — no como solución de "menor esfuerzo".
+
+### Convención "obtención de hormigón" — investigación completa y propuesta de generalización
+
+**Alcance real (más amplio de lo que se había señalado):** revisando las 8 fórmulas de
+dosificación de TODA la categoría Hormigón (no solo los 4 módulos con veredicto MEJORAR),
+**7 de los 8 módulos carecen de la pregunta "¿Cómo vas a obtener el hormigón?"** — no solo
+Muro, Losa, Escalera y Cadena, también **Fundación, Viga y Pilar/columna**, que se habían
+quedado en MANTENER en la auditoría original porque sus otros criterios compensaban este
+hueco, pero el hueco es igual de real en los 3. Solo Radier lo resuelve.
+
+#### Cómo lo resuelve Radier (patrón ya validado en producción)
+
+Componentes exactos, leídos directo del schema:
+
+1. **Question** `metodo_hormigon` (SELECT), label `"¿Cómo vas a obtener el hormigón?"`,
+   opciones `premezclado` = `"Comprarlo premezclado (camión mixer)"` y `manual` =
+   `"Prepararlo tú mismo en obra"`.
+2. **Variable** `metodo_hormigon` (TEXT), `source: {type: "QUESTION", questionKey:
+   "metodo_hormigon"}` — passthrough directo, sin lookup.
+3. Los 4 materiales de dosificación manual (`cemento`, `arena`, `gravilla`, `agua`), que en
+   Radier se llaman `cemento_manual`/`arena_manual`/`gravilla_manual`/`agua_manual`, llevan
+   `condition: {"op": "==", "args": [{"var": "metodo_hormigon"}, {"str": "manual"}]}` — la
+   expresión matemática de cada uno NO cambia, solo se le agrega la condición.
+4. Una fórmula nueva, `volumen_premezclado` (unit `m³`, `isResult: true`, `condition:
+   metodo_hormigon == "premezclado"`), con expresión `{"op": "ceilTo", "step": 0.5,
+   "value": {"ref": "volumen_con_perdida"}}` — redondea el volumen neto (el mismo
+   `volumen_con_perdida` que ya calcula la dosificación manual) al medio m³ más cercano
+   hacia arriba, y trae una `note` con valor real: *"Despacho mínimo habitual de camiones
+   mixer: 3 m³. Si tu cálculo da menos, probablemente igual te cobren el mínimo — consulta
+   con tu proveedor."*
+5. El `Norm` de `volumen_premezclado` es el mismo que ya tenía `volumen_con_perdida` en ese
+   módulo (`OBRA-RADIER-ESPESOR-DOSIF`) — no se crea una norma nueva.
+
+Es decir: **el patrón no inventa ningún mecanismo nuevo** — reutiliza `condition` (ya usado
+en todas las fórmulas de silicona de Lavamanos, en los grados de hormigón de Pilar, etc.) y
+`ceilTo` (ya usado en Radier mismo). Cualquier ingeniero que ya haya tocado una Formula
+condicionada en esta app puede replicarlo sin aprender nada nuevo.
+
+#### Estado de los 7 módulos afectados — todos comparten la misma estructura base
+
+Los 7 (Escalera, Fundación, Losa, Muro, Pilar/columna, Cadena, Viga) tienen exactamente el
+mismo esqueleto: un `volumen_bruto` (o `volumen_total_bruto` en Pilar, que multiplica por
+`cantidad` de pilares primero), luego `volumen_con_perdida` (aplica `lossFactor`), y desde
+ahí 4 fórmulas incondicionales `cemento`/`arena`/`gravilla`/`agua` referenciando siempre
+`{"ref": "volumen_con_perdida"}`. Esto es clave: **sin importar cómo se calculó el volumen
+geométrico río arriba** (rectángulo simple, escalera con número de peldaños, fundación con
+base+cuello, o pilares × cantidad), todos convergen al mismo punto de enganche
+(`volumen_con_perdida`) antes de dosificar — que es exactamente lo que
+`volumen_premezclado` necesita referenciar. La geometría de cada módulo no complica nada.
+
+| Módulo | Dosificación manual (bolsa/m³/m³/litro por m³) | Norm en volumen_con_perdida |
+|---|---|---|
+| Escalera | 7 / 0.5 / 0.75 / 180 | `OBRA-ESCALERA-APROXIMACION` |
+| Fundación | 7 / 0.5 / 0.75 / 180 | `OBRA-HORMIGON-DOSIFICACION-MANUAL` |
+| Losa | 7 / 0.5 / 0.75 / 180 | `OBRA-LOSA-CONVERSION` |
+| Muro de hormigón armado | 7 / 0.5 / 0.75 / 180 | `OBRA-HORMIGON-DOSIFICACION-MANUAL` |
+| Pilar/columna | 7 / 0.5 / 0.75 / 180 | `OBRA-HORMIGON-DOSIFICACION-MANUAL` |
+| Cadena | 7 / 0.5 / 0.75 / 180 | `OBRA-HORMIGON-DOSIFICACION-MANUAL` |
+| Viga | 7 / 0.5 / 0.75 / 180 | `OBRA-VIGA-CONVERSION` |
+| *(Radier, ya resuelto)* | *10 / 0.7 / 0.6 / 100* | `OBRA-RADIER-ESPESOR-DOSIF` |
+
+**Dato no obvio:** los 7 módulos comparten exactamente la misma receta de dosificación
+manual entre sí (7 bolsas/m³, etc.) — pero es **distinta** de la de Radier (10 bolsas/m³).
+Esto no complica la generalización: cada módulo mantiene su propia aritmética intacta, el
+patrón nuevo solo le agrega la condición y la rama premezclada al lado. Es una diferencia
+de contenido (el radier usa una dosificación más pobre en cemento, típica de un elemento no
+estructural/de menor exigencia), no de mecanismo.
+
+#### ¿Alguna complicación real para generalizar? Ninguna que bloquee
+
+- **Geometría distinta por módulo** (Escalera calcula volumen por peldaños, Fundación por
+  base+cuello, Pilar por cantidad×unidad): irrelevante, como se explicó arriba — todas
+  convergen en `volumen_con_perdida` antes de dosificar.
+- **Los `Norm` de la dosificación varían por módulo** (3 usan uno propio — Escalera, Losa,
+  Viga —, los otros 4 comparten `OBRA-HORMIGON-DOSIFICACION-MANUAL`): no es un obstáculo,
+  solo una regla a seguir consistentemente: la nueva fórmula `volumen_premezclado` de cada
+  módulo debe llevar el mismo `Norm` que ya tiene su propio `volumen_con_perdida` (así lo
+  hizo Radier).
+- **El campo `order`** de las fórmulas varía por módulo (Pilar empieza en 2 por sus 2 pasos
+  previos de volumen, Fundación en 0). Al insertar `volumen_premezclado` justo después de
+  `volumen_con_perdida`, hay que recalcular el `order` de las 4 fórmulas de dosificación
+  manual existentes (+1 cada una) para que el resultado se vea en el orden correcto — un
+  detalle mecánico de implementación, no una decisión de diseño.
+- **Radier tiene además fórmulas de malla de refuerzo** (`peso-total-malla-radier`,
+  `planchas-malla-radier-*`) que no tienen nada que ver con la dosificación de hormigón —
+  se excluyen explícitamente del patrón a replicar, para que quede claro que no hay que
+  copiarlas también.
+
+**Conclusión: no existe ninguna diferencia estructural real entre Radier y los 7 módulos
+que complique la generalización.** Es el mismo trabajo mecánico repetido 7 veces: 1
+`Question` + 1 `Variable` + condicionar 4 `Formula` existentes + agregar 1 `Formula` nueva
+— usando literalmente el mismo texto de pregunta/opciones que ya está escrito y probado en
+Radier, solo cambiando el `Norm` referenciado y el `order`.
+
+#### ¿Una sola vuelta de implementación, o dividir?
+
+**Recomendación: una sola vuelta para los 7.** La razón no es optimismo — es que el patrón
+es tan uniforme (misma pregunta, mismas 2 opciones, mismo mecanismo de condición, mismo
+punto de enganche en cada módulo) que dividirlo en varias vueltas no reduce riesgo real,
+solo agrega overhead de retomar contexto entre sesiones. Es contenido de base de datos puro
+(igual que E2c, que aplicó la misma advertencia a 10 módulos de Hormigón+Piscinas en una
+sola pasada sin problemas), no requiere tocar componentes de UI ni el motor de fórmulas.
+
+Sugerencia de ejecución para la próxima vuelta (pura ejecución, sin decisiones pendientes):
+un solo script que itere sobre los 7 slugs de módulo, y para cada uno: (1) cree la Question
++ options con el copy exacto de Radier, (2) cree la Variable, (3) actualice el `condition`
+de las 4 Formula existentes vía `moduleId_key`, (4) inserte la Formula `volumen_premezclado`
+con el `Norm` de `volumen_con_perdida` de ese módulo y el `order` correcto, (5) reordene las
+4 fórmulas de dosificación manual. Verificar en navegador al menos 3 módulos completos
+(recomendado: Viga o Losa por ser los más críticos, Pilar/columna por tener la geometría
+más distinta — cantidad × unidad —, y uno de los 4 que comparten `Norm` genérico) más un
+chequeo rápido de que los otros 4 no rompieron nada (tsc limpio + un vistazo al resultado).
+
+**Sobre la pregunta de "muro de contención" en Muro de hormigón armado** (mencionada en la
+fase anterior): es un tema aparte, no relacionado con la obtención de hormigón — requiere
+una pregunta y un copy de advertencia distintos, específicos de ese módulo. No se incluye
+en esta convención; si se decide implementar, es trabajo independiente sobre Muro de
+hormigón armado únicamente.
 
 ### Pasto sintético (Paisajismo) — hallazgo nuevo durante la implementación de Grupo A
 
@@ -2574,8 +2745,58 @@ la opción sin ocultar la limitación. Contra: añade una superficie de confusi�
 con distinto nivel de precisión en el mismo campo es más difícil de explicar bien que
 simplemente no ofrecer el modo menos preciso.
 
-**Recomendación tentativa:** Alternativa A — el rectángulo de pasto sintético casi siempre
-es medible directamente (es un área de jardín/patio delimitada), a diferencia de un muro
-irregular donde "ya tengo el área calculada" es más común; el riesgo de un cálculo de
-material silenciosamente incorrecto no vale la conveniencia marginal del modo m² directo
-acá.
+---
+
+#### Validación final (re-verificado independientemente contra el schema, no reutilizando la conclusión de la fase anterior)
+
+Se releyeron las 11 fórmulas del módulo directamente desde la base de datos para esta
+validación. Confirmado de nuevo, con el detalle exacto de qué usa qué:
+
+- `franjas-necesarias` = `ceil(ancho / ancho-rollo)` — depende SOLO de `ancho`, no de
+  `largo`.
+- `costuras-metros` = `(franjas-necesarias - 1) × largo` — depende de `largo` directo y de
+  `franjas-necesarias` (que a su vez depende de `ancho`).
+- `metros-lineales-pasto` = `franjas-necesarias × largo × 1.1` — mismo caso.
+- `grapas-fijacion` = `ceil(2 × (largo + ancho) × 5)` — perímetro real, necesita `largo` y
+  `ancho` **por separado**, no solo su producto (dos rectángulos con la misma área pero
+  proporciones distintas tienen perímetros distintos, y por lo tanto necesitan una cantidad
+  distinta de grapas).
+
+Confirmado: si se activa el modo "m² directo" genérico de `AreaInputToggle` (que reparte el
+área en un cuadrado ficticio, lado = √área, para ambos campos), las 4 fórmulas de arriba
+reciben valores incorrectos para cualquier rectángulo real que no sea cuadrado — esto no es
+una hipótesis, es la consecuencia matemática directa de cómo están escritas las fórmulas.
+**No hay ninguna forma de activar el modo m² directo simétrico actual sin ese riesgo.**
+
+#### Alternativa C — hallada en esta validación: modo m² directo ASIMÉTRICO (matemáticamente exacto, no aproximado)
+
+Investigando si existe alguna forma seguirla, se encontró una que sí sería exacta (no una
+aproximación): mantener `ancho` siempre como un campo real obligatorio (ya lo es hoy), y
+ofrecer el toggle únicamente sobre `largo` — "conozco el largo" (entrada directa, como hoy)
+vs. "conozco el m² total, no el largo" (se deriva `largo = área ÷ ancho`).
+
+**Por qué es exacto y no una aproximación:** `area-bruta` ya se define como `largo × ancho`
+— es la misma relación que ya asume el módulo. Si el usuario da un `ancho` real (medido) y
+un área real (medida de otra forma, ej. con una cinta métrica de perímetro o un cálculo
+previo), despejar `largo = área ÷ ancho` reproduce el `largo` real exacto — no un cuadrado
+ficticio. Todas las fórmulas que dependen de `largo` y `ancho` por separado
+(`franjas-necesarias`, `costuras-metros`, `metros-lineales-pasto`, `grapas-fijacion`)
+quedarían correctas, sin aproximación, porque siguen recibiendo el `ancho` real y un
+`largo` matemáticamente equivalente al real.
+
+**Costo:** esto NO es un toggle simétrico como el que ya existe en `AreaInputToggle` (que
+reparte el área por igual entre ambos campos) — requiere un modo nuevo, asimétrico, que hoy
+el componente no tiene: un campo siempre numérico directo (`ancho`) y el otro alternando
+entre numérico directo y "derivado de área" (`largo`). Es un cambio de código real
+(extender `AreaInputToggle` con un tercer modo, o construir un input a medida solo para
+este módulo), no una bandera de configuración — esfuerzo MEDIO, acotado a un componente.
+
+**Decisión final: dejar el módulo como está (Alternativa A), sin agregar ningún modo m²
+directo por ahora.** Razón técnica breve: el modo simétrico actual (Alternativa B) es
+matemáticamente incorrecto para este módulo y no se debe activar; el modo asimétrico
+exacto (Alternativa C) sí sería seguro, pero implica escribir un componente de input nuevo
+para un beneficio marginal — quien mide una superficie rectangular para pasto sintético
+casi siempre puede dar largo y ancho por separado (es una medición directa con huincha,
+no un cálculo de área ya hecho de antemano como sí ocurre más seguido en un muro con
+vanos irregulares). Si en el futuro llegan pedidos reales de usuarios pidiendo esta opción,
+la Alternativa C queda documentada y lista para retomar sin tener que re-investigar nada.
