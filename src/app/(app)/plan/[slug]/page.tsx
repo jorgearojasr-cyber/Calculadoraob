@@ -6,7 +6,13 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { PlanView, type PlanPhaseData } from "@/components/plan/plan-view";
 
-export default async function ProjectPlanPage({ params }: { params: { slug: string } }) {
+export default async function ProjectPlanPage({
+  params,
+  searchParams,
+}: {
+  params: { slug: string };
+  searchParams: { justCompleted?: string };
+}) {
   const plan = await prisma.projectPlan.findUnique({
     where: { slug: params.slug },
     include: {
@@ -42,13 +48,20 @@ export default async function ProjectPlanPage({ params }: { params: { slug: stri
     id: phase.id,
     name: phase.name,
     completed: completedPhaseIds.has(phase.id),
-    links: phase.moduleLinks.map((link) => ({
-      label: link.label,
-      moduleName: link.module.name,
-      href: `/categorias/${link.module.category.slug}/${link.module.slug}${
-        link.presetQuery ? `?${link.presetQuery}` : ""
-      }`,
-    })),
+    links: phase.moduleLinks.map((link) => {
+      // plan/phase van como query params propios (no se mezclan con
+      // presetQuery, que es contenido de la fase) — así el wizard sabe
+      // desde qué plan se abrió y, al guardar, puede redirigir de vuelta acá
+      // en vez de dejar al usuario en /proyectos/[id] sin salida.
+      const query = new URLSearchParams(link.presetQuery ?? "");
+      query.set("plan", plan.slug);
+      query.set("phase", phase.id);
+      return {
+        label: link.label,
+        moduleName: link.module.name,
+        href: `/categorias/${link.module.category.slug}/${link.module.slug}?${query.toString()}`,
+      };
+    }),
   }));
 
   return (
@@ -62,7 +75,7 @@ export default async function ProjectPlanPage({ params }: { params: { slug: stri
       <h1 className="font-display text-2xl md:text-3xl font-semibold tracking-tight mb-2">{plan.title}</h1>
       <p className="text-sm text-ink-muted mb-8">{plan.description}</p>
 
-      <PlanView planSlug={plan.slug} phases={phases} />
+      <PlanView planSlug={plan.slug} phases={phases} justCompletedPhaseId={searchParams.justCompleted} />
     </div>
   );
 }

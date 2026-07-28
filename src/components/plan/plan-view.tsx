@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Check, Circle, Calculator } from "lucide-react";
+import { Check, Circle, Calculator, PartyPopper, ArrowRight } from "lucide-react";
 import { togglePhaseCompletionAction } from "@/app/(app)/plan/[slug]/actions";
 import { STALE_SESSION_ERROR, STALE_SESSION_MESSAGE } from "@/lib/stale-session";
 
@@ -18,7 +18,19 @@ export type PlanPhaseData = {
 // Piloto de "Plan de fases": progreso simple sin lógica de dependencia
 // entre fases (se pueden completar en cualquier orden) — deliberadamente
 // simple hasta validar el patrón con un solo caso real.
-export function PlanView({ planSlug, phases }: { planSlug: string; phases: PlanPhaseData[] }) {
+export function PlanView({
+  planSlug,
+  phases,
+  justCompletedPhaseId,
+}: {
+  planSlug: string;
+  phases: PlanPhaseData[];
+  // Viene de ?justCompleted=<phaseId> — seteado por ResultScreen al guardar
+  // un proyecto abierto desde este plan (ver handleSaveProject). Solo sirve
+  // para el banner de bienvenida al volver; el estado real de "completada"
+  // ya se guardó en ProjectPlanPhaseCompletion antes de redirigir.
+  justCompletedPhaseId?: string;
+}) {
   const [completedIds, setCompletedIds] = useState(
     new Set(phases.filter((p) => p.completed).map((p) => p.id))
   );
@@ -27,6 +39,8 @@ export function PlanView({ planSlug, phases }: { planSlug: string; phases: PlanP
   const router = useRouter();
 
   const completedCount = completedIds.size;
+  const justCompletedPhase = phases.find((p) => p.id === justCompletedPhaseId);
+  const nextPhase = phases.find((p) => !completedIds.has(p.id) && p.id !== justCompletedPhaseId);
 
   const handleToggle = (phaseId: string, checked: boolean) => {
     setCompletedIds((prev) => {
@@ -64,6 +78,36 @@ export function PlanView({ planSlug, phases }: { planSlug: string; phases: PlanP
           </Link>
         </div>
       )}
+
+      {justCompletedPhase && (
+        <div className="rounded-2xl p-5 mb-4 bg-safety-tint border border-safety/30">
+          <div className="flex items-start gap-3">
+            <PartyPopper className="w-5 h-5 text-safety shrink-0 mt-0.5" />
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold text-safety">
+                ¡{justCompletedPhase.name} lista!
+              </p>
+              {nextPhase ? (
+                <>
+                  <p className="text-sm text-ink-muted mt-1">Sigue con: {nextPhase.name}</p>
+                  {nextPhase.links.length === 1 && (
+                    <Link
+                      href={nextPhase.links[0].href}
+                      className="mt-3 inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold text-white bg-ink"
+                    >
+                      Ir a {nextPhase.name}
+                      <ArrowRight className="w-3.5 h-3.5" />
+                    </Link>
+                  )}
+                </>
+              ) : (
+                <p className="text-sm text-ink-muted mt-1">¡Completaste todas las fases del plan!</p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="rounded-2xl p-5 bg-white border border-border mb-6">
         <div className="flex items-center justify-between mb-2">
           <p className="text-sm font-semibold">
@@ -84,8 +128,14 @@ export function PlanView({ planSlug, phases }: { planSlug: string; phases: PlanP
       <div className="grid gap-3">
         {phases.map((phase) => {
           const isDone = completedIds.has(phase.id);
+          const isHighlighted = phase.id === nextPhase?.id && justCompletedPhase !== undefined;
           return (
-            <div key={phase.id} className="rounded-2xl p-5 bg-white border border-border">
+            <div
+              key={phase.id}
+              className={`rounded-2xl p-5 bg-white border ${
+                isHighlighted ? "border-safety ring-1 ring-safety/30" : "border-border"
+              }`}
+            >
               <div className="flex items-start gap-3">
                 <label className="flex items-center gap-2 cursor-pointer shrink-0 mt-0.5">
                   <input

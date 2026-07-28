@@ -7,6 +7,7 @@ import { buildCalculationPrompt, buildRestartLabel } from "@/lib/prompt-generato
 import type { CalculationResult, InfoResult } from "@/lib/formula-engine";
 import type { CalculateModuleResult, NormSummary } from "@/app/(app)/categorias/[slug]/[moduleSlug]/actions";
 import { createSavedProjectAction } from "@/app/(app)/proyectos/actions";
+import { togglePhaseCompletionAction } from "@/app/(app)/plan/[slug]/actions";
 import { PENDING_PROJECT_KEY } from "@/lib/pending-project";
 import { NormsDisclaimer } from "./norms-disclaimer";
 import { PricedResults } from "./priced-results";
@@ -25,6 +26,7 @@ export function ResultScreen({
   onRestart,
   guide,
   approvedPhotos,
+  planContext,
 }: {
   moduleId: string;
   moduleName: string;
@@ -37,6 +39,7 @@ export function ResultScreen({
   onRestart: () => void;
   guide?: ModuleGuideData | null;
   approvedPhotos?: { id: string; url: string }[];
+  planContext?: { slug: string; phaseId: string };
 }) {
   const router = useRouter();
   const [promptOpen, setPromptOpen] = useState(false);
@@ -80,6 +83,16 @@ export function ResultScreen({
           JSON.stringify({ moduleId, moduleName, answersSummary, result })
         );
         router.push(`/login?callbackUrl=${encodeURIComponent("/proyectos/guardar-pendiente")}`);
+        return;
+      }
+
+      // Si el módulo se abrió desde una fase de un plan, guardar la
+      // fórmula ES la señal natural de "fase lista" — marca la fase y
+      // vuelve al plan (con la fase siguiente resaltada) en vez de dejar
+      // al usuario en /proyectos/[id] sin un camino de vuelta.
+      if (planContext) {
+        await togglePhaseCompletionAction(planContext.slug, planContext.phaseId, true);
+        router.push(`/plan/${planContext.slug}?justCompleted=${planContext.phaseId}`);
         return;
       }
 

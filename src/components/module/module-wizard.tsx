@@ -66,6 +66,7 @@ export function ModuleWizard({
   initialAnswers,
   guide,
   approvedPhotos,
+  planContext,
 }: {
   moduleId: string;
   moduleName: string;
@@ -75,6 +76,9 @@ export function ModuleWizard({
   initialAnswers?: WizardAnswers;
   guide?: ModuleGuideData | null;
   approvedPhotos?: { id: string; url: string }[];
+  // Presente cuando el módulo se abrió desde una fase de /plan/[slug] — ver
+  // ResultScreen para el redirect de vuelta al plan al guardar.
+  planContext?: { slug: string; phaseId: string };
 }) {
   const [stepIndex, setStepIndex] = useState(0);
   const [answers, setAnswers] = useState<WizardAnswers>(initialAnswers ?? {});
@@ -232,6 +236,7 @@ export function ModuleWizard({
           onRestart={handleRestart}
           guide={guide}
           approvedPhotos={approvedPhotos ?? []}
+          planContext={planContext}
         />
       )}
     </div>

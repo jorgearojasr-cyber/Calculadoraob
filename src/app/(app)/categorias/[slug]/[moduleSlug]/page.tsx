@@ -9,7 +9,7 @@ export default async function ModulePage({
   searchParams,
 }: {
   params: { slug: string; moduleSlug: string };
-  searchParams: { tipo?: string };
+  searchParams: { tipo?: string; plan?: string; phase?: string };
 }) {
   const mod = await prisma.module.findFirst({
     where: { slug: params.moduleSlug, published: true, category: { slug: params.slug } },
@@ -73,6 +73,14 @@ export default async function ModulePage({
       }
     : null;
 
+  // Presente solo cuando se llega desde /plan/[slug] (ver plan-view.tsx) —
+  // permite que ResultScreen redirija de vuelta al plan al guardar, en vez
+  // de dejar al usuario en /proyectos/[id] sin salida hacia la fase siguiente.
+  const planContext =
+    searchParams.plan && searchParams.phase
+      ? { slug: searchParams.plan, phaseId: searchParams.phase }
+      : undefined;
+
   return (
     <ModuleWizard
       moduleId={mod.id}
@@ -83,6 +91,7 @@ export default async function ModulePage({
       initialAnswers={initialAnswers}
       guide={guide}
       approvedPhotos={approvedPhotos}
+      planContext={planContext}
     />
   );
 }
