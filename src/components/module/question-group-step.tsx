@@ -257,6 +257,9 @@ export function QuestionGroupStep({
   if (useAreaToggle) {
     return (
       <div>
+        {questions.length === 1 && questions[0].helpText && (
+          <p className="text-sm text-ink-muted mb-3">{questions[0].helpText}</p>
+        )}
         <AreaInputToggle
           primaryLabel={diagram!.primaryLabel}
           secondaryLabel={diagram!.secondaryLabel}
