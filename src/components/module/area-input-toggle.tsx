@@ -48,9 +48,17 @@ export function AreaInputToggle({
   initialSecondary?: string;
   // Prellenado opcional (editable) del modo "m² directo".
   initialArea?: string;
-  // Se llama cada vez que cambia el área NETA resultante — null mientras
-  // los campos relevantes del modo activo no formen un número válido (>0).
-  onAreaChange: (areaM2: number | null) => void;
+  // Se llama cada vez que cambia el área NETA resultante o los campos del
+  // modo activo. `dims` trae los valores CRUDOS (tal como los tecleó el
+  // usuario, sin redondear) de largo/ancho cuando el modo activo es "dims"
+  // y ambos son números válidos — null en modo "m² directo" (ahí no existen
+  // dims individuales reales que dar, solo el área). El consumidor decide
+  // qué hacer con cada uno; ver question-group-step.tsx para el caso de uso
+  // (preservar el par real en vez de reconstruir un cuadrado ficticio).
+  onAreaChange: (
+    areaM2: number | null,
+    dims: { primary: string; secondary: string } | null
+  ) => void;
 }) {
   const [mode, setMode] = useState<AreaInputMode>(initialMode);
   const [primary, setPrimary] = useState(initialPrimary ?? "");
@@ -84,9 +92,13 @@ export function AreaInputToggle({
       : grossArea;
 
   useEffect(() => {
-    onAreaChange(computedArea);
+    const dims =
+      mode === "dims" && toNumber(primary) !== null && toNumber(secondary) !== null
+        ? { primary, secondary }
+        : null;
+    onAreaChange(computedArea, dims);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [computedArea]);
+  }, [computedArea, mode, primary, secondary]);
 
   const updateDeduction = (index: number, patch: Partial<DeductionRow>) => {
     setDeductions((prev) => prev.map((row, i) => (i === index ? { ...row, ...patch } : row)));

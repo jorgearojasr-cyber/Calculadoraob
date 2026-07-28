@@ -232,11 +232,24 @@ export function QuestionGroupStep({
 
   const round2 = (value: number) => Math.round(value * 100) / 100;
 
-  const handleAreaChange = (area: number | null) => {
+  const handleAreaChange = (
+    area: number | null,
+    dims: { primary: string; secondary: string } | null
+  ) => {
     if (questions.length === 1) {
       setValues({ [questions[0].key]: area !== null ? String(round2(area)) : "" });
       return;
     }
+    if (dims) {
+      // Modo "largo × ancho": preserva el par real que tecleó el usuario en
+      // vez de reconstruir un cuadrado ficticio — bug corregido (antes se
+      // perdía la asimetría real incluso viniendo de este modo).
+      setValues({ [questions[0].key]: dims.primary, [questions[1].key]: dims.secondary });
+      return;
+    }
+    // Modo "m² directo": no hay dims individuales reales que preservar —
+    // reparte el área en un cuadrado equivalente (da el m² correcto para la
+    // fórmula, aunque el par individual mostrado sea ficticio).
     const side = area !== null ? String(round2(Math.sqrt(area))) : "";
     setValues({ [questions[0].key]: side, [questions[1].key]: side });
   };
