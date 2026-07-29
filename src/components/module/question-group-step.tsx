@@ -365,6 +365,13 @@ export function QuestionGroupStep({
           // pregunta original (que para los grupos de 1 sola pregunta es
           // "m²", la unidad del ÁREA, no de una longitud).
           unit={questions.length === 2 ? questions[0].unit ?? "m" : "m"}
+          // Para un grupo de 1 sola pregunta, lo único que existe es el área
+          // combinada (nunca hubo largo/ancho reales guardados por separado
+          // — ver handleAreaChange) — si ya hay una respuesta previa (ej.
+          // "Editar respuestas" en Pintura), abre directo en "m² directo"
+          // con ese valor precargado, en vez del tab "largo × ancho" vacío
+          // por defecto.
+          initialMode={questions.length === 1 && values[questions[0].key] ? "area" : "dims"}
           enableDeduction={diagram!.enableDeduction}
           deductionLabel={diagram!.deductionLabel}
           initialPrimary={questions.length === 2 ? values[questions[0].key] || undefined : undefined}

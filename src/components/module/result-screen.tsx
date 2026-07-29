@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Check, Copy, FolderPlus, RotateCcw, Sparkles } from "lucide-react";
+import { Check, Copy, FolderPlus, Pencil, RotateCcw, Sparkles } from "lucide-react";
 import { buildCalculationPrompt, buildRestartLabel } from "@/lib/prompt-generator";
 import type { CalculationResult, InfoResult } from "@/lib/formula-engine";
 import type { CalculateModuleResult, NormSummary } from "@/app/(app)/categorias/[slug]/[moduleSlug]/actions";
@@ -47,6 +47,7 @@ export function ResultScreen({
   planContext,
   recalculateField,
   onRecalculate,
+  onEditAnswers,
 }: {
   moduleId: string;
   moduleName: string;
@@ -67,6 +68,10 @@ export function ResultScreen({
   // renderiza.
   recalculateField?: { questionKey: string; label: string; unit: string | null; value: number };
   onRecalculate?: (patch: Record<string, string | number>) => Promise<void>;
+  // Vuelve al wizard desde el primer paso, con `answers` intacto (cada
+  // pregunta se prellena sola vía stepInitialValues) — a diferencia de
+  // onRestart, que empieza de cero. Transversal a los 57 módulos.
+  onEditAnswers: () => void;
 }) {
   const router = useRouter();
   const [promptOpen, setPromptOpen] = useState(false);
@@ -206,8 +211,15 @@ export function ResultScreen({
           {saveState === "saving" ? "Guardando…" : "Guardar como proyecto"}
         </button>
         <button
-          onClick={onRestart}
+          onClick={onEditAnswers}
           className="rounded-full px-6 py-3 text-sm font-medium border border-ink flex items-center gap-2"
+        >
+          <Pencil className="w-4 h-4" />
+          Editar respuestas
+        </button>
+        <button
+          onClick={onRestart}
+          className="rounded-full px-6 py-3 text-sm font-medium text-ink-muted flex items-center gap-2"
         >
           <RotateCcw className="w-4 h-4" />
           {buildRestartLabel(moduleName)}

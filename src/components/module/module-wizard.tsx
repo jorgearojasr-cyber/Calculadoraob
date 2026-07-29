@@ -185,6 +185,19 @@ export function ModuleWizard({
     setStepIndex(stepIndex - 1);
   };
 
+  // "Editar respuestas" desde el resultado (ver ResultScreen): a
+  // diferencia de handleRestart, NO limpia `answers` — solo vuelve a
+  // mostrar el wizard desde el primer paso, que ya prellena cada pregunta
+  // con lo respondido antes vía stepInitialValues/withSuggestedDefaults
+  // (mismo mecanismo que ya usa cada paso, no hace falta nada nuevo).
+  // Coexiste con RecalculateField: ese es para ajustar un solo campo sin
+  // salir del resultado; esto es para cambiar cualquier respuesta.
+  const handleEditAnswers = () => {
+    setCalculation(null);
+    setError(null);
+    setStepIndex(0);
+  };
+
   const handleRestart = () => {
     setAnswers({});
     setCalculation(null);
@@ -324,6 +337,7 @@ export function ModuleWizard({
           planContext={planContext}
           recalculateField={recalculateField}
           onRecalculate={handleRecalculate}
+          onEditAnswers={handleEditAnswers}
         />
       )}
     </div>
