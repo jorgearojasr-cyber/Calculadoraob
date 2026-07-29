@@ -63,6 +63,10 @@ type InterpolationContext = {
   // Unidad (Formula.unit) de la fórmula que se está armando — solo para
   // resolver el token {unit} pluralizado según ownValue.
   ownUnit?: string;
+  // Unit de CADA fórmula del módulo (no solo la propia) — permite
+  // pluralizar valores traídos vía {refUnit:formulaKey}, igual que {unit}
+  // pluraliza el propio {value}.
+  formulaUnits: Record<string, string>;
 };
 
 // Reemplaza placeholders en una plantilla (materialLabelTemplate o note) con
@@ -79,6 +83,13 @@ type InterpolationContext = {
 //                        unidad a mano en la plantilla, para no repetir el
 //                        bug de "1 galones" que ya resuelve pluralize.ts en
 //                        el resto de la app (valor+unidad de cada resultado).
+//   {refUnit:key}     -> Formula.unit de esa OTRA fórmula, pluralizada según
+//                        su propio formulaResults[key] (vía pluralizeUnit) —
+//                        el equivalente de {unit} pero para un {ref:key} en
+//                        vez del propio {value}. Usar en vez de escribir a
+//                        mano la palabra plural junto a un {ref:...} (ej.
+//                        "{ref:planchas-ancho-malla} {refUnit:planchas-ancho-malla}
+//                        de ancho"), para no repetir el bug de "1 planchas".
 // Si el placeholder no resuelve a nada (rama condicional no calculada), se
 // deja el texto intacto en vez de lanzar — no debería ocurrir si la
 // plantilla solo referencia valores garantizados por la condición.
@@ -95,6 +106,12 @@ function interpolateTemplate(template: string, ctx: InterpolationContext): strin
     if (token.startsWith("ref:")) {
       const value = ctx.formulaResults[token.slice(4)];
       return value !== undefined ? formatInterpolatedNumber(value) : match;
+    }
+    if (token.startsWith("refUnit:")) {
+      const key = token.slice(8);
+      const value = ctx.formulaResults[key];
+      const unit = ctx.formulaUnits[key];
+      return value !== undefined && unit !== undefined ? pluralizeUnit(value, unit) : match;
     }
     if (token.startsWith("lossFactor:")) {
       const factor = ctx.lossFactors[token.slice(11)];
@@ -138,6 +155,9 @@ export function calculateModule(input: {
 
   const formulaResults: Record<string, number> = {};
   const results: CalculationResult[] = [];
+  const formulaUnits: Record<string, string> = Object.fromEntries(
+    input.formulas.map((f) => [f.key, f.unit])
+  );
 
   const orderedFormulas = [...input.formulas].sort((a, b) => a.order - b.order);
 
@@ -160,6 +180,7 @@ export function calculateModule(input: {
         lossFactors,
         ownValue: value,
         ownUnit: formula.unit,
+        formulaUnits,
       };
       const materialName = formula.materialLabelTemplate
         ? interpolateTemplate(formula.materialLabelTemplate, interpolationCtx)
