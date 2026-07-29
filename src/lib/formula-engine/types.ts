@@ -22,7 +22,14 @@ export type DslNode =
   // vez (rama no calculada), se salta al siguiente en vez de lanzar error.
   // Permite converger varias fórmulas condicionadas mutuamente excluyentes
   // (ej. una por cada opción de un SELECT) en un único valor downstream.
-  | { op: "coalesce"; args: DslNode[] };
+  | { op: "coalesce"; args: DslNode[] }
+  // Verdadero si la Variable existe en el contexto (su Question fue
+  // respondida) — a diferencia de {var: key}, NUNCA lanza error si no lo
+  // está. Pensado para condicionar una Formula sobre una o más preguntas
+  // NUMBER opcionales del wizard (ej. "horas de uso" + "precio kWh" en el
+  // circuito eléctrico): sin esto, referenciar {var: key} de una pregunta
+  // sin responder lanza "Variable no resuelta" y rompe el cálculo entero.
+  | { op: "defined"; key: string };
 
 export type VariableSource =
   | { type: "QUESTION"; questionKey: string }

@@ -136,6 +136,10 @@ export function evaluateNode(node: DslNode, ctx: EvalContext): DslValue {
       return node.op === "max" ? Math.max(...values) : Math.min(...values);
     }
 
+    case "defined": {
+      return ctx.variables[node.key] !== undefined;
+    }
+
     case "coalesce": {
       for (const arg of node.args) {
         if (typeof arg === "object" && arg !== null && "ref" in arg) {

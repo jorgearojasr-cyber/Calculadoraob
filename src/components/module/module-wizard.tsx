@@ -22,6 +22,16 @@ const RECALCULATE_FIELDS: Record<string, string> = {
   radier: "espesor-cm",
 };
 
+// Preguntas NUMBER que el usuario puede dejar en blanco y avanzar igual
+// (ver botón "Omitir" en QuestionStep) — hoy solo las 2 preguntas de
+// costo estimado en el circuito eléctrico (horas de uso + precio kWh):
+// si se omiten, la Formula condicionada con {op:"defined",...} sobre esas
+// Variables simplemente no se calcula y su tarjeta de resultado no
+// aparece, sin romper el resto del cálculo técnico.
+const OPTIONAL_QUESTION_KEYS: Record<string, string[]> = {
+  "calcular-consumo-electrico-de-un-circuito": ["horas-de-uso-al-mes", "precio-por-kwh"],
+};
+
 function isQuestionVisible(question: WizardQuestion, answers: WizardAnswers): boolean {
   if (!question.visibleIfQuestionKey) return true;
   const answer = answers[question.visibleIfQuestionKey];
@@ -154,6 +164,10 @@ export function ModuleWizard({
     advanceOrCalculate({ ...answers, ...values });
   };
 
+  const handleSkip = () => {
+    advanceOrCalculate(answers);
+  };
+
   // Recalcula desde la pantalla de RESULTADO (ver RecalculateField) sin
   // pasar por steps ni stepIndex — misma calculateModuleAction que usa el
   // wizard, con las respuestas ya guardadas + el patch. Actualiza answers
@@ -271,6 +285,11 @@ export function ModuleWizard({
               initialValue={stepInitialValues[currentGroup[0].key]}
               answers={answers}
               onAnswer={handleAnswer}
+              onSkip={
+                moduleSlug && OPTIONAL_QUESTION_KEYS[moduleSlug]?.includes(currentGroup[0].key)
+                  ? handleSkip
+                  : undefined
+              }
               moduleSlug={moduleSlug}
             />
           )}

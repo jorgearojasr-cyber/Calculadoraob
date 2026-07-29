@@ -62,12 +62,17 @@ export function QuestionStep({
   initialValue,
   answers,
   onAnswer,
+  onSkip,
   moduleSlug,
 }: {
   question: WizardQuestion;
   initialValue: string | number | undefined;
   answers: WizardAnswers;
   onAnswer: (value: string | number) => void;
+  // Presente solo para preguntas NUMBER marcadas opcionales (ver
+  // OPTIONAL_QUESTION_KEYS en module-wizard.tsx) — avanza sin registrar
+  // respuesta, en vez de exigir un número > 0 como Siguiente.
+  onSkip?: () => void;
   moduleSlug?: string;
 }) {
   const [textValue, setTextValue] = useState(
@@ -239,13 +244,23 @@ export function QuestionStep({
       </div>
       {error && <p className="mt-2 text-sm text-safety">{error}</p>}
       {!error && rangeWarning && <p className="mt-2 text-sm text-amber-600">{rangeWarning}</p>}
-      <button
-        onClick={handleSubmit}
-        className="mt-6 rounded-full px-6 py-3 text-sm font-semibold text-white flex items-center gap-2 bg-action"
-      >
-        Siguiente
-        <ArrowRight className="w-4 h-4" />
-      </button>
+      <div className="mt-6 flex items-center gap-4">
+        <button
+          onClick={handleSubmit}
+          className="rounded-full px-6 py-3 text-sm font-semibold text-white flex items-center gap-2 bg-action"
+        >
+          Siguiente
+          <ArrowRight className="w-4 h-4" />
+        </button>
+        {onSkip && (
+          <button
+            onClick={onSkip}
+            className="text-sm font-medium text-ink-muted hover:text-ink underline underline-offset-4"
+          >
+            Omitir
+          </button>
+        )}
+      </div>
     </div>
   );
 }

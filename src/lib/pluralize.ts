@@ -26,6 +26,7 @@ const IRREGULAR: Record<string, string> = {
 const INVARIANT = new Set([
   "a",
   "w",
+  "$",
   "cm",
   "kg",
   "m",
