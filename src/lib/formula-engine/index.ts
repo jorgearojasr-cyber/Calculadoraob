@@ -1,4 +1,5 @@
 import { evaluateCondition, evaluateNode, resolveVariables } from "./evaluate";
+import { pluralizeUnit } from "../pluralize";
 import type { Answers, DslNode, DslValue } from "./types";
 
 export type { Answers, DslNode, DslValue, VariableSource } from "./types";
@@ -59,17 +60,25 @@ type InterpolationContext = {
   // Valor propio de la fórmula que se está armando (recién calculado, aún
   // no necesariamente en formulaResults al momento de interpolar su note).
   ownValue?: number;
+  // Unidad (Formula.unit) de la fórmula que se está armando — solo para
+  // resolver el token {unit} pluralizado según ownValue.
+  ownUnit?: string;
 };
 
 // Reemplaza placeholders en una plantilla (materialLabelTemplate o note) con
 // valores ya resueltos en este cálculo — usado para mostrar texto explicativo
 // dinámico sin hardcodear números en el componente (ej. "Cada caja cubre
 // {cobertura-por-caja-m} m² → para {ref:area-m2} m² + {lossFactor:perdida-x}%
-// de pérdida necesitas {value} cajas"). Formas soportadas:
+// de pérdida necesitas {value} {unit}"). Formas soportadas:
 //   {variableKey}     -> variables[variableKey]
 //   {ref:formulaKey}  -> formulaResults[formulaKey]
 //   {lossFactor:key}  -> lossFactors[key].percentage, como % entero/decimal
 //   {value}           -> valor recién calculado de esta misma fórmula
+//   {unit}            -> Formula.unit pluralizada según ese mismo valor (vía
+//                        pluralizeUnit) — usar esto en vez de escribir la
+//                        unidad a mano en la plantilla, para no repetir el
+//                        bug de "1 galones" que ya resuelve pluralize.ts en
+//                        el resto de la app (valor+unidad de cada resultado).
 // Si el placeholder no resuelve a nada (rama condicional no calculada), se
 // deja el texto intacto en vez de lanzar — no debería ocurrir si la
 // plantilla solo referencia valores garantizados por la condición.
@@ -77,6 +86,11 @@ function interpolateTemplate(template: string, ctx: InterpolationContext): strin
   return template.replace(/\{([a-zA-Z0-9_.-]+(?::[a-zA-Z0-9_.-]+)?)\}/g, (match, token: string) => {
     if (token === "value") {
       return ctx.ownValue !== undefined ? formatInterpolatedNumber(ctx.ownValue) : match;
+    }
+    if (token === "unit") {
+      return ctx.ownValue !== undefined && ctx.ownUnit !== undefined
+        ? pluralizeUnit(ctx.ownValue, ctx.ownUnit)
+        : match;
     }
     if (token.startsWith("ref:")) {
       const value = ctx.formulaResults[token.slice(4)];
@@ -140,7 +154,13 @@ export function calculateModule(input: {
     formulaResults[formula.key] = value;
 
     if (formula.isResult) {
-      const interpolationCtx: InterpolationContext = { variables, formulaResults, lossFactors, ownValue: value };
+      const interpolationCtx: InterpolationContext = {
+        variables,
+        formulaResults,
+        lossFactors,
+        ownValue: value,
+        ownUnit: formula.unit,
+      };
       const materialName = formula.materialLabelTemplate
         ? interpolateTemplate(formula.materialLabelTemplate, interpolationCtx)
         : formula.material?.name ?? null;
