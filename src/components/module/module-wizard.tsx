@@ -2,7 +2,7 @@
 
 import { useMemo, useState, useTransition } from "react";
 import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, TriangleAlert } from "lucide-react";
 import { QuestionStep } from "./question-step";
 import { QuestionGroupStep, hasAreaToggle } from "./question-group-step";
 import { ConditionalRevealStep } from "./conditional-reveal-step";
@@ -104,6 +104,7 @@ export function ModuleWizard({
   guide,
   approvedPhotos,
   planContext,
+  isAdvancedMode,
 }: {
   moduleId: string;
   // Usado solo para gatillar el nivel 4 de disclaimer de Gas (ver
@@ -119,6 +120,14 @@ export function ModuleWizard({
   // Presente cuando el módulo se abrió desde una fase de /plan/[slug] — ver
   // ResultScreen para el redirect de vuelta al plan al guardar.
   planContext?: { slug: string; phaseId: string };
+  // Modo profesional (grupo herramientas-avanzadas, ver page.tsx) — antes
+  // el encuadre de "esto es una pieza suelta, no el proyecto completo"
+  // solo vivía en /grupos/herramientas-avanzadas; un usuario que llegaba
+  // directo al módulo (búsqueda, link directo, /empezar) nunca lo veía.
+  // No duplica el aviso de NormsDisclaimer (ver result-screen.tsx): ese es
+  // específico del cálculo y aparece al final: este es genérico del
+  // módulo y aparece antes de la primera pregunta.
+  isAdvancedMode?: boolean;
 }) {
   const [stepIndex, setStepIndex] = useState(0);
   const [answers, setAnswers] = useState<WizardAnswers>(initialAnswers ?? {});
@@ -261,6 +270,19 @@ export function ModuleWizard({
       <p className="font-mono text-xs uppercase tracking-wider mt-6 mb-2 text-safety">
         {moduleName}
       </p>
+
+      {isAdvancedMode && !calculation && stepIndex === 0 && (
+        <div className="mb-6 rounded-2xl p-4 bg-danger-tint border-2 border-danger">
+          <div className="flex items-start gap-2.5">
+            <TriangleAlert className="w-5 h-5 flex-shrink-0 mt-0.5 text-danger" strokeWidth={2.75} />
+            <p className="text-sm text-ink-muted">
+              <span className="font-semibold text-danger">Modo profesional: </span>
+              este cálculo es una pieza suelta de tu proyecto, no un diseño estructural completo. Úsalo
+              junto con la especificación de tu plano o maestro/constructor, no en su reemplazo.
+            </p>
+          </div>
+        </div>
+      )}
 
       {!calculation && (
         <>

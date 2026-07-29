@@ -25,6 +25,19 @@ export default async function ModulePage({
 
   if (!mod) notFound();
 
+  // Modo profesional (grupo herramientas-avanzadas) — el mismo criterio de
+  // membresía que ya usa /grupos/herramientas-avanzadas para decidir el
+  // disclaimer reforzado ahí. Antes ese aviso solo vivía en la página del
+  // grupo: un usuario que llegaba directo al módulo (búsqueda, link
+  // directo, /empezar con un solo link) nunca lo veía. Un módulo puede
+  // aparecer en 2+ tareas de grupos distintos en teoría, así que basta con
+  // que UNA lo vincule a herramientas-avanzadas para mostrar el aviso.
+  const advancedLink = await prisma.projectTaskModule.findFirst({
+    where: { moduleId: mod.id, task: { group: { slug: "herramientas-avanzadas" } } },
+    select: { id: true },
+  });
+  const isAdvancedMode = advancedLink !== null;
+
   const approvedPhotos = await prisma.projectPhoto.findMany({
     where: { moduleId: mod.id, status: "APPROVED" },
     orderBy: { createdAt: "desc" },
@@ -116,6 +129,7 @@ export default async function ModulePage({
       guide={guide}
       approvedPhotos={approvedPhotos}
       planContext={planContext}
+      isAdvancedMode={isAdvancedMode}
     />
   );
 }

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { ArrowLeft, LayoutGrid, Layers, SearchX } from "lucide-react";
+import { ArrowLeft, Calculator, LayoutGrid, Layers, SearchX } from "lucide-react";
 import { searchContent } from "@/lib/search";
 
 export default async function BuscarPage({
@@ -58,10 +58,12 @@ export default async function BuscarPage({
                 <div className="flex items-center gap-1.5 text-xs font-medium mb-1.5 text-safety">
                   {result.type === "module" ? (
                     <Layers className="w-3.5 h-3.5" />
+                  ) : result.type === "task" ? (
+                    <Calculator className="w-3.5 h-3.5" />
                   ) : (
                     <LayoutGrid className="w-3.5 h-3.5" />
                   )}
-                  {result.type === "module" ? result.categoryName : "Categoría"}
+                  {result.type === "category" ? "Categoría" : result.categoryName}
                 </div>
                 <h3 className="font-semibold text-[15px] mb-1">{result.name}</h3>
                 <p className="text-xs text-ink-muted">{result.description}</p>

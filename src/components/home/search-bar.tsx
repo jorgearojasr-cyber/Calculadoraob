@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowRight, Layers, LayoutGrid, Search } from "lucide-react";
+import { ArrowRight, Calculator, Layers, LayoutGrid, Search } from "lucide-react";
 import { searchSuggestionsAction } from "./search-actions";
 import type { SearchResult } from "@/lib/search";
 
@@ -111,7 +111,7 @@ export function SearchBar() {
       {isOpen && results.length > 0 && (
         <div className="absolute z-20 mt-2 w-full rounded-2xl shadow-lg bg-white border border-border overflow-hidden">
           {results.map((result, index) => {
-            const Icon = result.type === "module" ? Layers : LayoutGrid;
+            const Icon = result.type === "module" ? Layers : result.type === "task" ? Calculator : LayoutGrid;
             return (
               <button
                 key={`${result.type}-${result.id}`}
