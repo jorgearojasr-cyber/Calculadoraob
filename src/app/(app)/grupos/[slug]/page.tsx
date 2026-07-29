@@ -6,6 +6,7 @@ import { getCategoryIcon } from "@/lib/category-icons";
 import { pluralizeUnit } from "@/lib/pluralize";
 import { GROUP_ICON_CHIP_CLASS } from "@/lib/group-colors";
 import { GroupChip } from "@/components/home/group-chip";
+import { TaskPhotoCard } from "@/components/home/task-photo-card";
 
 export const dynamic = "force-dynamic";
 
@@ -52,6 +53,43 @@ export default async function GroupDetailPage({ params }: { params: Promise<{ sl
   const Icon = getCategoryIcon(group.icon);
   const total = group.tasks.length;
 
+  // Cada tarea se muestra como una tarjeta de texto plano, salvo que
+  // tenga foto — ahí pasa a TaskPhotoCard. Si una tarea con foto tiene
+  // 2+ moduleLinks (ej. "Construir una piscina" -> Rectangular/Circular),
+  // cada link con su propia foto se muestra como su propia tarjeta en
+  // vez de una sola tarjeta para toda la tarea, porque la foto real
+  // corresponde a la opción específica, no a la tarea genérica.
+  type TaskCard =
+    | { kind: "photo"; key: string; href: string; imageUrl: string | null; title: string; description: string | null }
+    | { kind: "plain"; key: string; href: string; title: string };
+
+  const taskCards: TaskCard[] = group.tasks.flatMap((task): TaskCard[] => {
+    const linksWithPhoto = task.moduleLinks.filter((l) => l.imageUrl);
+    if (task.moduleLinks.length > 1 && linksWithPhoto.length > 0) {
+      return task.moduleLinks.map((link) => ({
+        kind: "photo",
+        key: link.id,
+        href: `/empezar/${task.slug}`,
+        imageUrl: link.imageUrl,
+        title: link.module.name,
+        description: link.description,
+      }));
+    }
+    if (task.imageUrl) {
+      return [
+        {
+          kind: "photo",
+          key: task.id,
+          href: `/empezar/${task.slug}`,
+          imageUrl: task.imageUrl,
+          title: task.name,
+          description: task.description,
+        },
+      ];
+    }
+    return [{ kind: "plain", key: task.id, href: `/empezar/${task.slug}`, title: task.name }];
+  });
+
   return (
     <div className="max-w-5xl mx-auto px-6 pt-8 pb-20">
       <Link href="/" className="text-sm text-ink-muted hover:text-ink transition-colors">
@@ -93,17 +131,29 @@ export default async function GroupDetailPage({ params }: { params: Promise<{ sl
         </div>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-10">
-        {group.tasks.map((task) => (
-          <Link
-            key={task.id}
-            href={`/empezar/${task.slug}`}
-            className="flex items-center justify-between gap-3 rounded-2xl p-5 bg-white border border-border hover:border-safety/40 hover:-translate-y-0.5 transition-all"
-          >
-            <span className="font-semibold text-[15px]">{task.name}</span>
-            <ChevronRight className="w-4 h-4 text-ink-faint flex-shrink-0 md:hidden" />
-          </Link>
-        ))}
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 mb-10">
+        {taskCards.map((card) =>
+          card.kind === "photo" ? (
+            <TaskPhotoCard
+              key={card.key}
+              href={card.href}
+              imageUrl={card.imageUrl}
+              groupSlug={group.slug}
+              groupName={group.name}
+              title={card.title}
+              description={card.description}
+            />
+          ) : (
+            <Link
+              key={card.key}
+              href={card.href}
+              className="flex items-center justify-between gap-3 rounded-2xl p-5 bg-white border border-border hover:border-safety/40 hover:-translate-y-0.5 transition-all"
+            >
+              <span className="font-semibold text-[15px]">{card.title}</span>
+              <ChevronRight className="w-4 h-4 text-ink-faint flex-shrink-0 md:hidden" />
+            </Link>
+          )
+        )}
       </div>
 
       {modulesWithGuide.length > 0 && (

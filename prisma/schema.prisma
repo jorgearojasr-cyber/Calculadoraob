@@ -403,6 +403,14 @@ model ProjectTask {
   order   Int          @default(0)
   group   ProjectGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
   groupId String
+  // Descripción corta (1-2 líneas) y foto opcionales para la variante
+  // visual con foto en /grupos/[slug] (ver TaskPhotoCard) — sin admin UI
+  // todavía, se configuran por script. Si la tarea tiene un solo
+  // moduleLink, esta es la tarjeta; si tiene varios, cada
+  // ProjectTaskModule trae su propia foto/descripción en su lugar (ver
+  // abajo) y estos 2 campos no se usan.
+  description String?
+  imageUrl    String?
 
   moduleLinks ProjectTaskModule[]
   // Si está seteado, /empezar/[slug] redirige directo a /guias-rapidas/[quickGuide.slug]
@@ -468,6 +476,13 @@ model ProjectTaskModule {
   // "tipo=bodega_industrial"), para preseleccionar la primera pregunta.
   presetQuery String?
   order    Int @default(0)
+  // Descripción corta y foto opcionales para cuando ESTE link se muestra
+  // como su propia tarjeta en /grupos/[slug] — solo aplica si la
+  // ProjectTask tiene 2+ moduleLinks (ej. "Piscina rectangular" /
+  // "Piscina circular" dentro de la tarea "Construir una piscina"); con
+  // un solo link, la foto/descripción vive en ProjectTask en su lugar.
+  description String?
+  imageUrl    String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
