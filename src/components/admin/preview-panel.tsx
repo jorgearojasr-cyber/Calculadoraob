@@ -9,7 +9,6 @@ import type { WizardQuestion } from "@/components/module/types";
 export function PreviewPanel({
   moduleId,
   moduleName,
-  categorySlug,
   categoryName,
   questions,
   published,
@@ -17,7 +16,6 @@ export function PreviewPanel({
 }: {
   moduleId: string;
   moduleName: string;
-  categorySlug: string;
   categoryName: string;
   questions: WizardQuestion[];
   published: boolean;
@@ -117,7 +115,6 @@ export function PreviewPanel({
             key={wizardKey}
             moduleId={moduleId}
             moduleName={moduleName}
-            categorySlug={categorySlug}
             categoryName={categoryName}
             questions={questions}
           />

@@ -46,7 +46,6 @@ export default async function ModulePreviewPage({ params }: { params: { id: stri
     <PreviewPanel
       moduleId={mod.id}
       moduleName={mod.name}
-      categorySlug={mod.category.slug}
       categoryName={mod.category.name}
       questions={questions}
       published={mod.published}

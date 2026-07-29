@@ -88,7 +88,6 @@ export function ModuleWizard({
   moduleId,
   moduleSlug,
   moduleName,
-  categorySlug,
   categoryName,
   questions,
   initialAnswers,
@@ -102,7 +101,6 @@ export function ModuleWizard({
   // Opcional: la vista previa de /admin no lo pasa (no aplica ahí).
   moduleSlug?: string;
   moduleName: string;
-  categorySlug: string;
   categoryName: string;
   questions: WizardQuestion[];
   initialAnswers?: WizardAnswers;
@@ -219,12 +217,18 @@ export function ModuleWizard({
 
   return (
     <div className="max-w-2xl mx-auto px-6 pt-8 pb-20">
+      {/* Antes apuntaba a /categorias/[categorySlug] (breadcrumb fijo a la
+          categoría padre) — pero varias rutas llevan a un módulo sin pasar
+          nunca por esa pantalla (buscador, /empezar, /guias, /plan,
+          /galeria), así que el link mentía sobre de dónde "volvía" el
+          usuario. Apunta a Inicio, igual que el resto de los "volver" de
+          la app (ver /grupos/[slug]). */}
       <Link
-        href={`/categorias/${categorySlug}`}
+        href="/"
         className="inline-flex items-center gap-1.5 text-sm text-ink-muted hover:text-ink"
       >
         <ArrowLeft className="w-4 h-4" />
-        {categoryName}
+        Inicio
       </Link>
 
       <p className="font-mono text-xs uppercase tracking-wider mt-6 mb-2 text-safety">

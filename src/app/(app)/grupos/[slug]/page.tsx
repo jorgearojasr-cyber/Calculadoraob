@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ChevronRight, ListChecks, Clock, HelpCircle as HelpCircleIcon } from "lucide-react";
+import { ChevronRight, ListChecks, Clock, HelpCircle as HelpCircleIcon, TriangleAlert } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { getCategoryIcon } from "@/lib/category-icons";
 import { pluralizeUnit } from "@/lib/pluralize";
@@ -69,6 +69,29 @@ export default async function GroupDetailPage({ params }: { params: Promise<{ sl
           </p>
         </div>
       </div>
+
+      {/* Disclaimer reforzado (mismo tratamiento visual que el nivel 4 de
+          NormsDisclaimer) — este grupo ya no aparece en la exploración de
+          Home a propósito (ver exploration-section.tsx): cada cálculo acá
+          es solo una pieza del proyecto completo, no el diseño estructural
+          total, y eso es menos obvio dado el nombre "Modo profesional". */}
+      {group.slug === "herramientas-avanzadas" && (
+        <div className="mb-8 rounded-2xl p-4 bg-danger-tint border-2 border-danger">
+          <div className="flex items-start gap-2.5">
+            <TriangleAlert className="w-6 h-6 flex-shrink-0 mt-0.5 text-danger" strokeWidth={2.75} />
+            <div className="text-sm text-ink-muted">
+              <p className="font-semibold text-danger">
+                Estos cálculos son piezas sueltas, no un diseño estructural completo.
+              </p>
+              <p className="mt-1">
+                Por ejemplo, un cálculo de hormigón acá no incluye el diseño de armadura/refuerzo — eso requiere
+                un profesional certificado. Úsalos junto con la especificación de tu plano o maestro/constructor,
+                no en su reemplazo.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-10">
         {group.tasks.map((task) => (

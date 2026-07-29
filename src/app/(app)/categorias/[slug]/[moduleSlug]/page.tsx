@@ -110,7 +110,6 @@ export default async function ModulePage({
       moduleId={mod.id}
       moduleSlug={mod.slug}
       moduleName={mod.name}
-      categorySlug={mod.category.slug}
       categoryName={mod.category.name}
       questions={questions}
       initialAnswers={initialAnswers}

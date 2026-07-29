@@ -18,7 +18,7 @@ export default async function GuiasPage() {
         Inicio
       </Link>
 
-      <p className="font-mono text-xs uppercase tracking-wider mb-2 text-safety">Guías y consejos</p>
+      <p className="font-mono text-xs uppercase tracking-wider mb-2 text-safety">Consejos y buenas prácticas</p>
       <h1 className="font-display text-3xl font-semibold tracking-tight mb-2">Aprende antes de construir</h1>
       <p className="text-ink-muted mb-8">
         Consejos prácticos, errores comunes y experiencia de obra para los proyectos que ya tienen guía completa.
