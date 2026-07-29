@@ -213,14 +213,27 @@ export function AreaInputToggle({
                 <Plus className="w-3.5 h-3.5" />
                 Agregar puerta o ventana
               </button>
-              {deductionTotal > 0 && grossArea !== null && (
-                <p className="mt-2 text-xs text-ink-muted">
-                  {formatQuantity(grossArea)} m² brutos − {formatQuantity(deductionTotal)} m² de vanos ={" "}
-                  {formatQuantity(Math.max(0, grossArea - deductionTotal))} m² netos
-                </p>
-              )}
             </div>
           )}
+
+          {/* Caja de superficie siempre visible, igual al patrón de los
+              módulos migrados a pregunta combinada (ver COMBINED_AREA_QUESTION
+              en question-group-step.tsx) — antes esto no existía acá: solo se
+              mostraba una línea bruto/neto, y solo si ya había vanos con
+              valores. */}
+          <div className="mt-4 rounded-2xl bg-concrete px-5 py-4 text-center">
+            <p className="text-sm text-ink-muted">
+              {enableDeduction && deductionTotal > 0 ? "Superficie neta" : "Superficie"}
+            </p>
+            <p className="font-display text-2xl font-semibold text-ink">
+              {computedArea !== null ? `${formatQuantity(computedArea)} m²` : "—"}
+            </p>
+            {enableDeduction && deductionTotal > 0 && grossArea !== null && (
+              <p className="mt-1 text-xs text-ink-muted">
+                {formatQuantity(grossArea)} m² brutos − {formatQuantity(deductionTotal)} m² de vanos
+              </p>
+            )}
+          </div>
         </>
       ) : (
         <label className="grid gap-1.5">
