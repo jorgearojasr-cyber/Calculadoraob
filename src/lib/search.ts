@@ -20,8 +20,63 @@ function normalize(value: string): string {
     .trim();
 }
 
+// Palabras de relleno frecuentes en preguntas naturales ("¿Cuántos
+// ladrillos necesito para un muro?") que no aportan ningún contenido
+// buscable — sin filtrarlas, el AND estricto por token falla apenas el
+// usuario escribe una pregunta en vez de una lista de palabras clave.
+const STOPWORDS = new Set([
+  "cuanto", "cuantos", "cuanta", "cuantas", "que", "como", "cual", "cuales",
+  "de", "del", "la", "el", "los", "las", "un", "una", "unos", "unas",
+  "para", "con", "y", "o", "en", "por", "al", "es", "mi", "necesito", "quiero",
+]);
+
+function tokenize(value: string): string[] {
+  const all = normalize(value).split(/\s+/).filter(Boolean);
+  const meaningful = all.filter((t) => !STOPWORDS.has(t));
+  // Si TODO era relleno (raro, pero posible con una query de 1 palabra que
+  // coincide con una stopword), no nos quedamos sin tokens para buscar.
+  return meaningful.length > 0 ? meaningful : all;
+}
+
+// Peso por campo para el fallback por tokens — menor = mejor/más relevante.
+// "name" pesa más que "searchKeywords", que a su vez pesa más que
+// "description", tal como pide la regla de ranking.
+const FIELD_WEIGHT = { name: 1, keywords: 2, description: 3 } as const;
+
+// Fallback cuando la frase completa no aparece literal en ningún campo
+// (ver scoreMatch): la query se separa en tokens y CADA token debe
+// aparecer en AL MENOS UNO de los 3 campos — no necesariamente el mismo
+// campo ni en el mismo orden — para que "circuito electrico" encuentre un
+// módulo con "circuito" en el name y "eléctrico" solo en la descripción.
+// Si algún token no aparece en ningún campo, no hay match (AND estricto).
+// El score se arma con el mejor (menor) peso de campo por token,
+// promediado, y se desplaza a partir de 5 para que siempre rankee por
+// debajo de una coincidencia de frase literal (scores 0-4).
+function tokenScore(query: string, name: string, description: string, keywords?: string | null): number | null {
+  const tokens = tokenize(query);
+  if (tokens.length === 0) return null;
+
+  const normalizedName = normalize(name);
+  const normalizedDescription = normalize(description);
+  const normalizedKeywords = keywords ? normalize(keywords) : "";
+
+  let totalWeight = 0;
+  for (const token of tokens) {
+    const weights: number[] = [];
+    if (normalizedName.includes(token)) weights.push(FIELD_WEIGHT.name);
+    if (normalizedKeywords.includes(token)) weights.push(FIELD_WEIGHT.keywords);
+    if (normalizedDescription.includes(token)) weights.push(FIELD_WEIGHT.description);
+    if (weights.length === 0) return null; // este token no aparece en ningun campo -> sin match
+    totalWeight += Math.min(...weights);
+  }
+
+  return 5 + totalWeight / tokens.length / 10;
+}
+
 // Menor score = mejor coincidencia. Nombre exacto/prefijo pesa mucho más
-// que un match perdido en la descripción o en las palabras clave.
+// que un match perdido en la descripción o en las palabras clave. Si la
+// frase completa no aparece literal en ningún campo, cae al fallback por
+// tokens (ver tokenScore) antes de descartar el resultado.
 function scoreMatch(query: string, name: string, description: string, keywords?: string | null): number | null {
   const normalizedQuery = normalize(query);
   const normalizedName = normalize(name);
@@ -31,7 +86,7 @@ function scoreMatch(query: string, name: string, description: string, keywords?:
   if (normalizedName.includes(normalizedQuery)) return 2;
   if (keywords && normalize(keywords).includes(normalizedQuery)) return 3;
   if (normalize(description).includes(normalizedQuery)) return 4;
-  return null;
+  return tokenScore(query, name, description, keywords);
 }
 
 export async function searchContent(rawQuery: string): Promise<SearchResult[]> {
