@@ -10,7 +10,7 @@ import { GroupChip } from "./group-chip";
 import { CategoryGrid } from "./category-grid";
 import { getGroupIconClasses } from "@/lib/group-colors";
 
-// Foto real por tarea destacada — mismo set de 5 que CURATED_TASK_SLUGS en
+// Foto real por tarea destacada — mismo set que CURATED_TASK_SLUGS en
 // exploration-section.tsx. Si una tarea no tiene foto en el mapa, la tarjeta
 // cae de vuelta al layout de solo texto (sin romper si se agrega una tarea
 // curada nueva sin foto todavía).
@@ -20,6 +20,20 @@ const TASK_IMAGES: Record<string, string> = {
   "construir-un-radier": "/images/categorias/hacer-radier.png",
   "pintar-una-habitacion": "/images/categorias/pintar-muro.png",
   "instalar-ceramica": "/images/categorias/piso-ceramica.png",
+  // Misma foto que usa el link "Rectangular" en /grupos/piscinas — no hay
+  // una foto genérica de "piscina" separada, y rectangular es la variante
+  // por defecto más común.
+  "construir-una-piscina": "/images/piscinas/piscina-rectangular.png",
+};
+
+// Excepciones de destino: "Construir una piscina" tiene 2 formas
+// (Rectangular/Circular) sin una foto/módulo único que represente a
+// "piscina en general" — en vez de /empezar/[slug] (que ahora redirige
+// directo al plan de 3 fases), esta tarjeta lleva al selector de forma con
+// fotos que ya vive en /grupos/piscinas (el grupo "Piscinas" solo tiene
+// esta tarea, así que esa página ES el selector, sin nada más alrededor).
+const TASK_HREF_OVERRIDES: Record<string, string> = {
+  "construir-una-piscina": "/grupos/piscinas",
 };
 
 type PopularTask = ProjectTask & { group: { name: string; slug: string } };
@@ -84,13 +98,13 @@ export function ExplorationToggle({
           {popularTasks.length > 0 && (
             <div>
               <p className="text-xs text-ink-muted mb-3">Proyectos más buscados</p>
-              <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+              <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
                 {popularTasks.map((task) => {
                   const image = TASK_IMAGES[task.slug];
                   return (
                     <Link
                       key={task.id}
-                      href={`/empezar/${task.slug}`}
+                      href={TASK_HREF_OVERRIDES[task.slug] ?? `/empezar/${task.slug}`}
                       className="group rounded-2xl overflow-hidden bg-white border border-border hover:border-safety/40 hover:-translate-y-0.5 transition-all"
                     >
                       {image && (
