@@ -11,12 +11,17 @@ const ITEMS: { label: string; desc: string; icon: LucideIcon }[] = [
 // Banner puramente descriptivo — cada ítem referencia contenido real ya
 // construido (ModuleGuide, hoy solo en algunos módulos; ver /guias) o una
 // ruta real (Lista de compras). Sin cifras ni afirmaciones inventadas.
+//
+// Tratamiento de fondo sutil (bg-concrete/border-border), igual al de
+// otras cajas informativas de la app (ver "¿No sabes cuál elegir?" en
+// not-sure-helper.tsx) — antes usaba el tinte de acento (bg-safety-tint),
+// que se leía más como CTA que como caja informativa.
 export function LearnBanner() {
   return (
     <section className="max-w-6xl mx-auto px-6 py-12">
       <Link
         href="/guias"
-        className="block rounded-3xl p-8 bg-safety-tint border border-safety-border hover:border-safety/50 transition-colors"
+        className="block rounded-3xl p-8 bg-concrete border border-border hover:border-safety/40 transition-colors"
       >
         <h2 className="font-display text-2xl font-semibold tracking-tight mb-6">
           Más que cálculos, te enseñamos a construir mejor
