@@ -12,6 +12,16 @@ import type { WizardAnswers, WizardQuestion } from "./types";
 import type { ModuleGuideData } from "./guide-section";
 import { calculateModuleAction, type CalculateModuleResult } from "@/app/(app)/categorias/[slug]/[moduleSlug]/actions";
 
+// Módulos donde el resultado permite editar una pregunta NUMBER ya
+// contestada y recalcular todo sin volver atrás en el wizard (ver
+// RecalculateField en result-screen.tsx) — mecanismo genérico, pero por
+// ahora solo conectado en Radier (espesor). Cualquier otro módulo con una
+// pregunta NUMBER editable en el wizard podría sumarse acá sin tocar
+// ResultScreen ni la Server Action.
+const RECALCULATE_FIELDS: Record<string, string> = {
+  radier: "espesor-cm",
+};
+
 function isQuestionVisible(question: WizardQuestion, answers: WizardAnswers): boolean {
   if (!question.visibleIfQuestionKey) return true;
   const answer = answers[question.visibleIfQuestionKey];
@@ -146,6 +156,18 @@ export function ModuleWizard({
     advanceOrCalculate({ ...answers, ...values });
   };
 
+  // Recalcula desde la pantalla de RESULTADO (ver RecalculateField) sin
+  // pasar por steps ni stepIndex — misma calculateModuleAction que usa el
+  // wizard, con las respuestas ya guardadas + el patch. Actualiza answers
+  // además de calculation para que "Con estos datos respondiste" y
+  // "Guardar como proyecto" reflejen el valor nuevo, no el original.
+  const handleRecalculate = async (patch: WizardAnswers) => {
+    const nextAnswers = { ...answers, ...patch };
+    const result = await calculateModuleAction(moduleId, withHiddenDefaults(questions, nextAnswers));
+    setCalculation(result);
+    setAnswers(nextAnswers);
+  };
+
   const handleBack = () => {
     if (stepIndex === 0) return;
     setStepIndex(stepIndex - 1);
@@ -180,6 +202,20 @@ export function ModuleWizard({
     () => (currentGroup ? withSuggestedDefaults(currentGroup, answers) : answers),
     [currentGroup, answers]
   );
+
+  const recalculateQuestionKey = moduleSlug ? RECALCULATE_FIELDS[moduleSlug] : undefined;
+  const recalculateQuestion = recalculateQuestionKey
+    ? questions.find((q) => q.key === recalculateQuestionKey)
+    : undefined;
+  const recalculateField =
+    recalculateQuestion && answers[recalculateQuestion.key] !== undefined
+      ? {
+          questionKey: recalculateQuestion.key,
+          label: recalculateQuestion.label,
+          unit: recalculateQuestion.unit,
+          value: Number(answers[recalculateQuestion.key]),
+        }
+      : undefined;
 
   return (
     <div className="max-w-2xl mx-auto px-6 pt-8 pb-20">
@@ -262,6 +298,8 @@ export function ModuleWizard({
           guide={guide}
           approvedPhotos={approvedPhotos ?? []}
           planContext={planContext}
+          recalculateField={recalculateField}
+          onRecalculate={handleRecalculate}
         />
       )}
     </div>

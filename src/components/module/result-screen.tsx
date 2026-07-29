@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Check, Copy, FolderPlus, RotateCcw, Sparkles } from "lucide-react";
 import { buildCalculationPrompt, buildRestartLabel } from "@/lib/prompt-generator";
@@ -13,6 +13,24 @@ import { NormsDisclaimer } from "./norms-disclaimer";
 import { PricedResults } from "./priced-results";
 import { GuideSection, type ModuleGuideData } from "./guide-section";
 import { PhotoGallery } from "./photo-gallery";
+import { RecalculateField } from "./recalculate-field";
+
+// Aplica el precio de referencia (sugerencia editable) como unitPrice
+// inicial a cada línea de resultado que aún no tiene uno propio. `previous`
+// trae los precios YA ingresados por el usuario en el cálculo anterior
+// (keyed por Formula.key, que es estable — no cambia al recalcular con un
+// valor de pregunta distinto), para que un recálculo (ver
+// RecalculateField) no borre un precio ya tipeado aunque la cantidad haya
+// cambiado.
+function seedPrices(results: CalculationResult[], previous: CalculationResult[]): CalculationResult[] {
+  const previousPriceByKey = new Map(previous.map((r) => [r.key, r.unitPrice]));
+  return results.map((r) => {
+    if (!r.materialName) return r;
+    const preserved = previousPriceByKey.get(r.key);
+    const unitPrice = preserved != null ? preserved : r.unitPrice ?? r.referencePrice ?? null;
+    return { ...r, unitPrice };
+  });
+}
 
 export function ResultScreen({
   moduleId,
@@ -27,6 +45,8 @@ export function ResultScreen({
   guide,
   approvedPhotos,
   planContext,
+  recalculateField,
+  onRecalculate,
 }: {
   moduleId: string;
   moduleName: string;
@@ -40,6 +60,13 @@ export function ResultScreen({
   guide?: ModuleGuideData | null;
   approvedPhotos?: { id: string; url: string }[];
   planContext?: { slug: string; phaseId: string };
+  // Campo opcional editable desde el resultado (ej. espesor de Radier) que
+  // dispara un recálculo completo vía onRecalculate — ver
+  // RECALCULATE_FIELDS en module-wizard.tsx. Ninguno de los dos viene
+  // seteado para la mayoría de los módulos, así que RecalculateField no se
+  // renderiza.
+  recalculateField?: { questionKey: string; label: string; unit: string | null; value: number };
+  onRecalculate?: (patch: Record<string, string | number>) => Promise<void>;
 }) {
   const router = useRouter();
   const [promptOpen, setPromptOpen] = useState(false);
@@ -48,14 +75,27 @@ export function ResultScreen({
   // Precarga el precio de referencia (sugerencia editable) como unitPrice
   // inicial, para que lo que se ve en pantalla sea lo mismo que se guarda
   // si el usuario no lo edita.
-  const [seededResults] = useState<CalculationResult[]>(() =>
-    results.map((r) =>
-      r.materialName && r.unitPrice == null && r.referencePrice != null
-        ? { ...r, unitPrice: r.referencePrice }
-        : r
-    )
-  );
+  const [seededResults, setSeededResults] = useState<CalculationResult[]>(() => seedPrices(results, []));
   const [pricedResults, setPricedResults] = useState<CalculationResult[]>(seededResults);
+
+  // Si `results` cambia de referencia (un recálculo real, ver
+  // RecalculateField), vuelve a sembrar seededResults/pricedResults con
+  // las cantidades nuevas — preservando cualquier precio ya tipeado por
+  // Formula.key (ver seedPrices). Sin esto, ambos quedarían congelados con
+  // las cantidades del primer cálculo para siempre.
+  const pricedResultsRef = useRef(pricedResults);
+  useEffect(() => {
+    pricedResultsRef.current = pricedResults;
+  }, [pricedResults]);
+
+  const resultsRef = useRef(results);
+  useEffect(() => {
+    if (results === resultsRef.current) return;
+    resultsRef.current = results;
+    const next = seedPrices(results, pricedResultsRef.current);
+    setSeededResults(next);
+    setPricedResults(next);
+  }, [results]);
 
   const prompt = buildCalculationPrompt({ moduleName, categoryName, answersSummary, results, infoResults, norms });
 
@@ -109,6 +149,15 @@ export function ResultScreen({
       <h2 className="font-display text-[22px] font-semibold tracking-tight mb-6">
         Esto es lo que necesitas
       </h2>
+
+      {recalculateField && onRecalculate && (
+        <RecalculateField
+          label={recalculateField.label}
+          unit={recalculateField.unit}
+          value={recalculateField.value}
+          onRecalculate={(newValue) => onRecalculate({ [recalculateField.questionKey]: newValue })}
+        />
+      )}
 
       {infoResults.length > 0 && (
         <div className="grid gap-3 mb-3">
