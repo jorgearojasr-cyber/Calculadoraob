@@ -15,6 +15,7 @@
 // nunca se tocan.
 const IRREGULAR: Record<string, string> = {
   galón: "galones",
+  camión: "camiones",
 };
 
 // Unidades que nunca deben pluralizarse: abreviaturas/símbolos (m², kg, cm),

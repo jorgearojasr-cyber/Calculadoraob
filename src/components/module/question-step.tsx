@@ -6,6 +6,7 @@ import type { WizardQuestion } from "./types";
 import { checkRangeWarning, parseTypicalRange } from "@/lib/range-hint";
 import { EquipmentChecklistStep } from "./equipment-checklist-step";
 import { GasConfirmationGate } from "./gas-confirmation-gate";
+import { CollapsibleHelp } from "./collapsible-help";
 
 // Caso especial: en vez de pedir el Watt total como número directo, se
 // reemplaza por una lista de equipos comunes preseleccionables (ver
@@ -90,7 +91,13 @@ export function QuestionStep({
         <h2 className="font-display text-[19px] font-semibold tracking-tight mb-2">
           {question.label}
         </h2>
-        {question.helpText && <p className="text-sm text-ink-muted mb-6">{question.helpText}</p>}
+        {question.helpText && (
+          <div className="mb-6">
+            <CollapsibleHelp label="Cómo elegir" ariaLabel="Más detalle para elegir esta opción">
+              <p className="text-sm text-ink-muted">{question.helpText}</p>
+            </CollapsibleHelp>
+          </div>
+        )}
         <div className="grid gap-3 mt-6">
           {question.options.map((option) => {
             const selected = initialValue === option.key;
