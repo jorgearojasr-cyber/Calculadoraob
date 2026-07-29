@@ -261,6 +261,13 @@ export function QuestionGroupStep({
   const combined = stepGroup ? COMBINED_AREA_QUESTION[stepGroup] : undefined;
   const pairedQuestions = combined ? questions.slice(0, 2) : [];
   const extraQuestions = combined ? questions.slice(2) : questions;
+  // Grupos de exactamente 3 campos con diagrama de caja/cilindro 3D y SIN
+  // el layout combinado (ej. Excavación): las 3 medidas van en una sola
+  // fila en tablet/desktop, apiladas en mobile — mismo criterio que ya
+  // aplicaba sideBySide para pares de 2. Los grupos combinados (Piscina
+  // rectangular, Jardinera) NO entran acá: mantienen su layout ya auditado
+  // (2 campos bajo un título + superficie en vivo, 3er campo aparte).
+  const threeInRow = !combined && questions.length === 3 && Boolean(diagram);
   const toNum = (raw: string | undefined) => {
     const n = Number((raw ?? "").replace(",", "."));
     return Number.isFinite(n) && n > 0 ? n : null;
@@ -452,7 +459,13 @@ export function QuestionGroupStep({
       {extraQuestions.length > 0 && (
       <div
         className={
-          compact ? "grid gap-3 sm:grid-cols-2" : sideBySide ? "grid gap-5 sm:grid-cols-2" : "grid gap-5"
+          threeInRow
+            ? "grid gap-3 sm:grid-cols-3"
+            : compact
+              ? "grid gap-3 sm:grid-cols-2"
+              : sideBySide
+                ? "grid gap-5 sm:grid-cols-2"
+                : "grid gap-5"
         }
       >
         {extraQuestions.map((question, i) => {
