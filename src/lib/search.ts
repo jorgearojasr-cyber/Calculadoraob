@@ -38,7 +38,7 @@ export async function searchContent(rawQuery: string): Promise<SearchResult[]> {
   const query = rawQuery.trim();
   if (query.length < 2) return [];
 
-  const [modules, categories] = await Promise.all([
+  const [modules, categories, groups] = await Promise.all([
     prisma.module.findMany({
       where: { published: true },
       select: {
@@ -53,7 +53,19 @@ export async function searchContent(rawQuery: string): Promise<SearchResult[]> {
     prisma.category.findMany({
       select: { id: true, slug: true, name: true, description: true },
     }),
+    prisma.projectGroup.findMany({
+      where: { tasks: { some: {} } },
+      select: { slug: true, name: true },
+    }),
   ]);
+
+  // Categoría y ProjectGroup son taxonomías paralelas (Categoría = "por
+  // material" en /categorias, ProjectGroup = "qué quieres construir" en
+  // /grupos, con fotos vía TaskPhotoCard). Cuando una categoría tiene un
+  // grupo homónimo, el resultado de búsqueda lleva a /grupos en vez de
+  // /categorias — evita que buscar "piscina" caiga en el listado de texto
+  // plano cuando ya existe la versión con fotos para lo mismo.
+  const groupSlugByName = new Map(groups.map((g) => [normalize(g.name), g.slug]));
 
   const scored: { result: SearchResult; score: number }[] = [];
 
@@ -76,6 +88,7 @@ export async function searchContent(rawQuery: string): Promise<SearchResult[]> {
   for (const category of categories) {
     const score = scoreMatch(query, category.name, category.description);
     if (score === null) continue;
+    const matchingGroupSlug = groupSlugByName.get(normalize(category.name));
     scored.push({
       score,
       result: {
@@ -83,7 +96,7 @@ export async function searchContent(rawQuery: string): Promise<SearchResult[]> {
         id: category.id,
         name: category.name,
         description: category.description,
-        href: `/categorias/${category.slug}`,
+        href: matchingGroupSlug ? `/grupos/${matchingGroupSlug}` : `/categorias/${category.slug}`,
         categoryName: category.name,
       },
     });

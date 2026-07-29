@@ -131,7 +131,12 @@ export default async function GroupDetailPage({ params }: { params: Promise<{ sl
         </div>
       )}
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 mb-10">
+      {/* 2 columnas ya desde mobile (no 1) — mismo patron que "Proyectos
+          mas buscados" en Home (exploration-toggle.tsx): con foto+aspect
+          4/3 a ancho completo de un mobile de 375px, la tarjeta ocupaba
+          casi toda la pantalla y obligaba a scroll excesivo para ver mas
+          de una opcion. */}
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-10">
         {taskCards.map((card) =>
           card.kind === "photo" ? (
             <TaskPhotoCard
