@@ -82,6 +82,12 @@ const DIMENSION_DIAGRAMS: Record<
   // cuadrado ficticio y rompería ese cálculo para cualquier rectángulo real
   // (mismo riesgo ya identificado y evitado en Pasto sintético).
   cmrsdqraw0005dkseiur36yb7: { shape: "rectangle", primaryLabel: "largo", secondaryLabel: "ancho" },
+  // Malla electrosoldada: mismo motivo que Techo (cubierta) — pasó de
+  // pedir m² directo a largo/ancho reales para calcular planchas por
+  // grilla (ancho útil × largo útil, con traslape real). allowAreaToggle
+  // desactivado a propósito: "m² directo" reconstruiría un cuadrado
+  // ficticio y rompería la grilla para cualquier rectángulo real.
+  "malla-electrosoldada-dims": { shape: "rectangle", primaryLabel: "largo", secondaryLabel: "ancho" },
 
   // Grupos de 1 pregunta (antes single-question steps, sin diagrama): el
   // toggle también aplica cuando el módulo solo pedía m² directo — ver
