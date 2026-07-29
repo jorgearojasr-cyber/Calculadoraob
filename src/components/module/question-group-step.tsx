@@ -75,6 +75,7 @@ const DIMENSION_DIAGRAMS: Record<
   // relación visual con largo/alto. depthLabel="ancho" es la profundidad
   // de la jardinera (front-to-back), mismo patrón que Piscina rectangular.
   "jardinera-muro-dims": { shape: "rectangle-with-depth", primaryLabel: "largo", secondaryLabel: "alto", depthLabel: "ancho" }, // Jardinera de albañilería — largo/alto/ancho también calculan el volumen de tierra
+  "excavacion-circular-dims": { shape: "circle-with-depth", primaryLabel: "diámetro", depthLabel: "profundidad" }, // Excavación circular — mismo shape que Piscina circular
   "cielo-metalcon-dims": { shape: "rectangle", primaryLabel: "largo", secondaryLabel: "ancho" }, // Cielo raso en Metalcon
   // Techo (cubierta): antes 2 pasos sin agrupar ni diagrama. allowAreaToggle
   // desactivado a propósito — desde que zinc/acero usa cálculo por grilla
