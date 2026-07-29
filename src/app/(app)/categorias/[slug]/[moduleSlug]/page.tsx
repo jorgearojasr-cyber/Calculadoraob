@@ -9,7 +9,7 @@ export default async function ModulePage({
   searchParams,
 }: {
   params: { slug: string; moduleSlug: string };
-  searchParams: { tipo?: string; plan?: string; phase?: string; [key: string]: string | string[] | undefined };
+  searchParams: { tipo?: string; plan?: string; phase?: string; shape?: string; [key: string]: string | string[] | undefined };
 }) {
   const mod = await prisma.module.findFirst({
     where: { slug: params.moduleSlug, published: true, category: { slug: params.slug } },
@@ -115,7 +115,7 @@ export default async function ModulePage({
   // de dejar al usuario en /proyectos/[id] sin salida hacia la fase siguiente.
   const planContext =
     searchParams.plan && searchParams.phase
-      ? { slug: searchParams.plan, phaseId: searchParams.phase }
+      ? { slug: searchParams.plan, phaseId: searchParams.phase, shape: searchParams.shape }
       : undefined;
 
   return (

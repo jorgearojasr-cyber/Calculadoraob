@@ -3,7 +3,13 @@ import { notFound, redirect } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 
-export default async function StartTaskPage({ params }: { params: { taskSlug: string } }) {
+export default async function StartTaskPage({
+  params,
+  searchParams,
+}: {
+  params: { taskSlug: string };
+  searchParams: { shape?: string };
+}) {
   const task = await prisma.projectTask.findUnique({
     where: { slug: params.taskSlug },
     include: {
@@ -19,9 +25,12 @@ export default async function StartTaskPage({ params }: { params: { taskSlug: st
   if (!task) notFound();
 
   // Piloto de "Plan de fases": va directo al plan, nunca a la lista simple
-  // de módulos ni al wizard de uno solo.
+  // de módulos ni al wizard de uno solo. Si la tarea de origen ya traía una
+  // forma elegida (ver grupos/[slug]/page.tsx), se propaga al plan para que
+  // no vuelva a preguntarse en la Fase 1.
   if (task.plan) {
-    redirect(`/plan/${task.plan.slug}`);
+    const shapeQuery = searchParams.shape ? `?shape=${encodeURIComponent(searchParams.shape)}` : "";
+    redirect(`/plan/${task.plan.slug}${shapeQuery}`);
   }
 
   // Guía rápida sin cálculo: va directo a la guía, nunca a un wizard.

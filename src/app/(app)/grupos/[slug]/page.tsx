@@ -69,7 +69,11 @@ export default async function GroupDetailPage({ params }: { params: Promise<{ sl
       return task.moduleLinks.map((link) => ({
         kind: "photo",
         key: link.id,
-        href: `/empezar/${task.slug}`,
+        // La forma elegida (label, ej. "Rectangular"/"Circular") viaja como
+        // ?shape= para que /empezar/[taskSlug] la propague al plan — antes
+        // las 2 tarjetas apuntaban al mismo href y la elección no llegaba a
+        // ningún lado (ver diagnóstico de "Construir una piscina").
+        href: link.label ? `/empezar/${task.slug}?shape=${encodeURIComponent(link.label.toLowerCase())}` : `/empezar/${task.slug}`,
         imageUrl: link.imageUrl,
         title: link.module.name,
         description: link.description,

@@ -118,8 +118,10 @@ export function ModuleWizard({
   guide?: ModuleGuideData | null;
   approvedPhotos?: { id: string; url: string }[];
   // Presente cuando el módulo se abrió desde una fase de /plan/[slug] — ver
-  // ResultScreen para el redirect de vuelta al plan al guardar.
-  planContext?: { slug: string; phaseId: string };
+  // ResultScreen para el redirect de vuelta al plan al guardar. `shape`
+  // (Rectangular/Circular) viaja solo si el link de esta fase era de ese
+  // tipo — ver SHAPE_LABELS en plan/[slug]/page.tsx.
+  planContext?: { slug: string; phaseId: string; shape?: string };
   // Cálculos especiales (grupo herramientas-avanzadas, ver page.tsx) — antes
   // el encuadre de "esto es una pieza suelta, no el proyecto completo"
   // solo vivía en /grupos/herramientas-avanzadas; un usuario que llegaba

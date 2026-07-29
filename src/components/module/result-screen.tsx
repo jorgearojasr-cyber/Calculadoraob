@@ -60,7 +60,7 @@ export function ResultScreen({
   onRestart: () => void;
   guide?: ModuleGuideData | null;
   approvedPhotos?: { id: string; url: string }[];
-  planContext?: { slug: string; phaseId: string };
+  planContext?: { slug: string; phaseId: string; shape?: string };
   // Campo opcional editable desde el resultado (ej. espesor de Radier) que
   // dispara un recálculo completo vía onRecalculate — ver
   // RECALCULATE_FIELDS en module-wizard.tsx. Ninguno de los dos viene
@@ -138,7 +138,8 @@ export function ResultScreen({
       // al usuario en /proyectos/[id] sin un camino de vuelta.
       if (planContext) {
         await togglePhaseCompletionAction(planContext.slug, planContext.phaseId, true);
-        router.push(`/plan/${planContext.slug}?justCompleted=${planContext.phaseId}`);
+        const shapeQuery = planContext.shape ? `&shape=${encodeURIComponent(planContext.shape)}` : "";
+        router.push(`/plan/${planContext.slug}?justCompleted=${planContext.phaseId}${shapeQuery}`);
         return;
       }
 
