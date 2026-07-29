@@ -1,7 +1,8 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { ArrowLeft, TriangleAlert } from "lucide-react";
 import { QuestionStep } from "./question-step";
 import { QuestionGroupStep, hasAreaToggle } from "./question-group-step";
@@ -131,11 +132,23 @@ export function ModuleWizard({
   // módulo y aparece antes de la primera pregunta.
   isAdvancedMode?: boolean;
 }) {
+  const router = useRouter();
   const [stepIndex, setStepIndex] = useState(0);
   const [answers, setAnswers] = useState<WizardAnswers>(initialAnswers ?? {});
   const [calculation, setCalculation] = useState<CalculateModuleResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  // history.length > 1 es la heurística estándar para "hay a dónde volver
+  // en esta pestaña" — cubre los 3 puntos de entrada reales (buscador,
+  // /grupos/[slug], /plan/[slug]) y cualquier otro link interno. Si el
+  // módulo se abrió en pestaña nueva o por link pegado directo, history
+  // arranca en 1 y el botón no se muestra (el link "Inicio" de arriba
+  // sigue siendo el respaldo). Se calcula en useEffect porque
+  // window.history no existe en el render de servidor.
+  const [canGoBack, setCanGoBack] = useState(false);
+  useEffect(() => {
+    setCanGoBack(window.history.length > 1);
+  }, []);
 
   const steps = useMemo(() => buildSteps(questions, answers), [questions, answers]);
   const currentGroup = steps[stepIndex];
@@ -340,6 +353,23 @@ export function ModuleWizard({
               className="mt-8 text-sm font-medium underline underline-offset-4 text-ink-muted"
             >
               Volver a la pregunta anterior
+            </button>
+          )}
+          {/* Paso 1: no hay pregunta anterior DENTRO del módulo, pero antes
+              la única salida si el usuario entró al módulo equivocado era
+              el link "Inicio" de arriba (te saca de todo el contexto).
+              router.back() vuelve exactamente a la pantalla real de origen
+              (buscador, /grupos/[slug], /plan/[slug], etc.) — no se puede
+              armar un href fijo porque hay demasiados puntos de entrada
+              distintos (ver comentario del link "Inicio" más arriba). Sin
+              historial detectable (pestaña nueva, link pegado), no se
+              muestra nada acá y "Inicio" sigue siendo el respaldo. */}
+          {stepIndex === 0 && canGoBack && !isPending && (
+            <button
+              onClick={() => router.back()}
+              className="mt-8 text-sm font-medium underline underline-offset-4 text-ink-muted"
+            >
+              Volver
             </button>
           )}
         </>
