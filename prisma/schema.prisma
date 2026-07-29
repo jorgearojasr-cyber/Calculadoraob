@@ -226,6 +226,16 @@ model QuestionOption {
   key        String
   label      String
   order      Int      @default(0)
+  // Descripción corta (1-2 líneas) opcional para la variante visual con
+  // foto (ver ImageOptionCard) — sin admin UI todavía, se configura por
+  // script. Si una opción no la tiene, esa pregunta cae al layout de lista
+  // de texto plano de siempre.
+  description String?
+  // URL de la foto opcional para la variante visual con foto. Cuando TODAS
+  // las opciones de una pregunta SELECT tienen imageUrl, QuestionStep
+  // renderiza ImageOptionCard en vez de la lista de botones de texto plano
+  // — esto la hace opt-in por pregunta sin flag adicional.
+  imageUrl    String?
 
   @@unique([questionId, key])
   @@map("question_options")

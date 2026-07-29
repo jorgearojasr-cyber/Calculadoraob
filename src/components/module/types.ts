@@ -13,7 +13,7 @@ export type WizardQuestion = {
   type: "NUMBER" | "SELECT" | "TEXT";
   unit: string | null;
   helpText: string | null;
-  options: { key: string; label: string }[];
+  options: { key: string; label: string; description: string | null; imageUrl: string | null }[];
   stepGroup: string | null;
   visibleIfQuestionKey: string | null;
   visibleIfValues: string[];

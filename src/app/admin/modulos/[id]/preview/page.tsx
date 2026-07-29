@@ -29,7 +29,12 @@ export default async function ModulePreviewPage({ params }: { params: { id: stri
     type: question.type,
     unit: question.unit,
     helpText: question.helpText,
-    options: question.options.map((option) => ({ key: option.key, label: option.label })),
+    options: question.options.map((option) => ({
+      key: option.key,
+      label: option.label,
+      description: option.description,
+      imageUrl: option.imageUrl,
+    })),
     stepGroup: question.stepGroup,
     visibleIfQuestionKey: question.visibleIfQuestionKey,
     visibleIfValues: question.visibleIfValues,
