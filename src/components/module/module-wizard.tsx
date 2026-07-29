@@ -269,6 +269,7 @@ export function ModuleWizard({
               key={currentGroup[0].id}
               question={currentGroup[0]}
               initialValue={stepInitialValues[currentGroup[0].key]}
+              answers={answers}
               onAnswer={handleAnswer}
               moduleSlug={moduleSlug}
             />

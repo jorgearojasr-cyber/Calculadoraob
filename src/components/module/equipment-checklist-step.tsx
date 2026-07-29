@@ -2,35 +2,61 @@
 
 import { useMemo, useState } from "react";
 import { ArrowRight, Check } from "lucide-react";
-import type { WizardQuestion } from "./types";
+import type { WizardAnswers, WizardQuestion } from "./types";
 
-// Lista de equipos comunes con potencia típica de referencia (práctica
+// Clave de la pregunta anterior en el mismo módulo ("¿Qué tipo de circuito
+// quieres calcular?") — determina qué lista de equipos mostrar. Antes se
+// mostraba SIEMPRE la misma lista sin importar el tipo elegido (ej.
+// microondas/plancha al calcular un circuito de Iluminación), que no tenía
+// sentido — ver auditoría 2026-07-29.
+const CIRCUIT_TYPE_QUESTION_KEY = "que-tipo-de-circuito-quieres-calcular";
+
+// Listas de equipos comunes con potencia típica de referencia (práctica
 // general no verificada contra ficha técnica — son valores aproximados,
-// varían según marca/modelo real del equipo).
-const COMMON_EQUIPMENT = [
-  { id: "microondas", label: "Microondas", watts: 1200 },
-  { id: "hervidor-electrico", label: "Hervidor eléctrico", watts: 1800 },
-  { id: "plancha", label: "Plancha", watts: 1200 },
-  { id: "secador-de-pelo", label: "Secador de pelo", watts: 1800 },
-  { id: "lavadora", label: "Lavadora", watts: 500 },
-  { id: "refrigerador", label: "Refrigerador (funcionamiento normal, no arranque)", watts: 150 },
-  { id: "aire-acondicionado", label: "Aire acondicionado (split pequeño)", watts: 1000 },
-  { id: "estufa-electrica", label: "Estufa eléctrica", watts: 1500 },
-  { id: "horno-electrico", label: "Horno eléctrico", watts: 2000 },
-  { id: "televisor", label: "Televisor", watts: 100 },
-  { id: "computador", label: "Computador", watts: 200 },
-  { id: "ampolletas", label: "Ampolletas/luces (grupo, ej. 5 ampolletas LED)", watts: 50 },
-] as const;
+// varían según marca/modelo real del equipo), una por tipo de circuito.
+const EQUIPMENT_BY_CIRCUIT_TYPE: Record<string, { id: string; label: string; watts: number }[]> = {
+  iluminacion: [
+    { id: "ampolletas-led", label: "Ampolletas LED (grupo, ej. 6 ampolletas)", watts: 54 },
+    { id: "tubos-fluorescentes", label: "Tubos fluorescentes (grupo, ej. 2 tubos)", watts: 72 },
+    { id: "focos-halogenos", label: "Focos halógenos/spots (grupo, ej. 4 focos)", watts: 200 },
+    { id: "ventilador-de-techo-con-luz", label: "Ventilador de techo con luz", watts: 75 },
+    { id: "aplique-exterior-led", label: "Aplique o plafón LED exterior", watts: 15 },
+  ],
+  "enchufes-uso-general": [
+    { id: "microondas", label: "Microondas", watts: 1200 },
+    { id: "hervidor-electrico", label: "Hervidor eléctrico", watts: 1800 },
+    { id: "plancha", label: "Plancha", watts: 1200 },
+    { id: "secador-de-pelo", label: "Secador de pelo", watts: 1800 },
+    { id: "lavadora", label: "Lavadora", watts: 500 },
+    { id: "refrigerador", label: "Refrigerador (funcionamiento normal, no arranque)", watts: 150 },
+    { id: "aire-acondicionado", label: "Aire acondicionado (split pequeño)", watts: 1000 },
+    { id: "televisor", label: "Televisor", watts: 100 },
+    { id: "computador", label: "Computador", watts: 200 },
+  ],
+  "circuito-dedicado": [
+    { id: "cocina-electrica", label: "Cocina eléctrica (encimera)", watts: 3000 },
+    { id: "horno-electrico", label: "Horno eléctrico", watts: 2000 },
+    { id: "calefont-electrico", label: "Calefont eléctrico", watts: 5500 },
+    { id: "termo-acumulador-electrico", label: "Termo acumulador eléctrico", watts: 1500 },
+    { id: "estufa-electrica", label: "Estufa eléctrica", watts: 1500 },
+    { id: "secadora-de-ropa", label: "Secadora de ropa", watts: 3000 },
+    { id: "aire-acondicionado-grande", label: "Aire acondicionado (split grande/central)", watts: 2500 },
+  ],
+};
 
 export function EquipmentChecklistStep({
   question,
   initialValue,
+  answers,
   onAnswer,
 }: {
   question: WizardQuestion;
   initialValue: string | number | undefined;
+  answers: WizardAnswers;
   onAnswer: (value: number) => void;
 }) {
+  const circuitType = String(answers[CIRCUIT_TYPE_QUESTION_KEY] ?? "");
+  const COMMON_EQUIPMENT = EQUIPMENT_BY_CIRCUIT_TYPE[circuitType] ?? EQUIPMENT_BY_CIRCUIT_TYPE["enchufes-uso-general"];
   const [checked, setChecked] = useState<Record<string, boolean>>({});
   const [otherChecked, setOtherChecked] = useState(initialValue !== undefined);
   const [otherWatts, setOtherWatts] = useState(initialValue !== undefined ? String(initialValue) : "");
@@ -41,7 +67,7 @@ export function EquipmentChecklistStep({
     const otherNum = Number(otherWatts.replace(",", "."));
     const fromOther = otherChecked && Number.isFinite(otherNum) && otherNum > 0 ? otherNum : 0;
     return fromList + fromOther;
-  }, [checked, otherChecked, otherWatts]);
+  }, [checked, otherChecked, otherWatts, COMMON_EQUIPMENT]);
 
   const toggle = (id: string) => {
     setChecked((prev) => ({ ...prev, [id]: !prev[id] }));

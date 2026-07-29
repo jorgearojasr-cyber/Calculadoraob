@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import { ArrowRight, ArrowUp, Building2, Car, Check, Home, TreePine, Warehouse } from "lucide-react";
-import type { WizardQuestion } from "./types";
+import type { WizardAnswers, WizardQuestion } from "./types";
 import { checkRangeWarning, parseTypicalRange } from "@/lib/range-hint";
 import { EquipmentChecklistStep } from "./equipment-checklist-step";
 import { GasConfirmationGate } from "./gas-confirmation-gate";
@@ -60,11 +60,13 @@ const NOT_SURE_HELPERS: Record<
 export function QuestionStep({
   question,
   initialValue,
+  answers,
   onAnswer,
   moduleSlug,
 }: {
   question: WizardQuestion;
   initialValue: string | number | undefined;
+  answers: WizardAnswers;
   onAnswer: (value: string | number) => void;
   moduleSlug?: string;
 }) {
@@ -87,7 +89,9 @@ export function QuestionStep({
   }, [typicalRange, textValue]);
 
   if (question.key === EQUIPMENT_CHECKLIST_KEY) {
-    return <EquipmentChecklistStep question={question} initialValue={initialValue} onAnswer={onAnswer} />;
+    return (
+      <EquipmentChecklistStep question={question} initialValue={initialValue} answers={answers} onAnswer={onAnswer} />
+    );
   }
 
   if (question.type === "SELECT" && question.options.length === 1) {
