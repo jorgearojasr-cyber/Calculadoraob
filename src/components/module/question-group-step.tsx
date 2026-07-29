@@ -49,7 +49,6 @@ const DIMENSION_DIAGRAMS: Record<
   cmrtvl3aw000fmcsezs6inad3: { shape: "rectangle", primaryLabel: "largo", secondaryLabel: "ancho", allowAreaToggle: true }, // Tabiques y cielos
   cmrtvl24q000amcse8s2dj1ex: { shape: "rectangle", primaryLabel: "largo", secondaryLabel: "ancho", allowAreaToggle: true }, // Pasto en rollos
   "rollo-personalizado": { shape: "rectangle", primaryLabel: "ancho", secondaryLabel: "largo" }, // Pasto en rollos (personalizado) — medida del rollo, no área a cubrir
-  cmrsjnt8q000pwsseqrzjcd3p: { shape: "rectangle", primaryLabel: "largo", secondaryLabel: "ancho" }, // Estructura y techo (quincho) — largo/ancho también arman el perímetro (suma-largo-y-ancho)
   cmrtvkzox0000mcse4sc28ke7: { shape: "rectangle", primaryLabel: "largo", secondaryLabel: "ancho", allowAreaToggle: true }, // Impermeabilización
   cmrvizbv10000csse7oy2pha3: { shape: "rectangle", primaryLabel: "ancho", secondaryLabel: "alto" }, // Fundación — base
   cmrvizc2d0002csseiddijwkl: { shape: "rectangle", primaryLabel: "ancho", secondaryLabel: "alto" }, // Fundación — cuello
@@ -67,7 +66,6 @@ const DIMENSION_DIAGRAMS: Record<
   cmru4zt0j0001yssecv7ercx3: { shape: "rectangle", primaryLabel: "largo", secondaryLabel: "ancho" }, // Piso flotante (laminado) — largo-m/ancho-m también calculan el perímetro (moldura)
   cmru51j2t000128se69qh7xm7: { shape: "rectangle", primaryLabel: "largo", secondaryLabel: "ancho" }, // Piso SPC — mismo caso que Piso flotante (perímetro)
   cmruwyzxk0001gcseu3hskggo: { shape: "rectangle", primaryLabel: "largo", secondaryLabel: "ancho", allowAreaToggle: true }, // Aislación térmica bajo cubierta
-  cmrv63db30001t8seqpqqyfrk: { shape: "rectangle", primaryLabel: "largo", secondaryLabel: "ancho" }, // Techo de tejas o policarbonato — perímetro (suma-largo-y-ancho)
   cmrv640ny00013oseqrvvxb50: { shape: "rectangle", primaryLabel: "largo", secondaryLabel: "ancho", allowAreaToggle: true }, // Techo inclinado (bajo teja/zinc)
   "area-pasto-sintetico": { shape: "rectangle", primaryLabel: "largo", secondaryLabel: "ancho" }, // Pasto sintético — largo/ancho también calculan costuras, franjas y grapas
   // Jardinera de albañilería: las 3 medidas (largo/alto/ancho) ahora
@@ -186,16 +184,6 @@ const COMBINED_AREA_QUESTION: Record<string, { label: string; helpText: string; 
     helpText: "Mide el piso o terraza de borde a borde, por el suelo.",
     areaLabel: "Superficie del piso/terraza",
   }, // Piso y Terraza en madera
-  cmrsjnt8q000pwsseqrzjcd3p: {
-    label: "¿Cuánto mide de largo y ancho el quincho?",
-    helpText: "Medida de la estructura completa, de borde a borde.",
-    areaLabel: "Superficie del quincho",
-  }, // Estructura y techo
-  cmrv63db30001t8seqpqqyfrk: {
-    label: "¿Cuánto mide de largo y ancho el quincho?",
-    helpText: "Medida de la estructura completa, de borde a borde.",
-    areaLabel: "Superficie del techo",
-  }, // Techo de tejas o policarbonato
   "jardinera-muro-dims": {
     label: "¿Cuánto mide de largo y alto la jardinera?",
     helpText: "Largo total del muro y su altura. Lo típico es entre 0,3 y 0,5 metros de alto.",
