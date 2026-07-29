@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import type { ReactNode } from "react";
-import { ArrowRight, Car, Check, Home, TreePine, Warehouse } from "lucide-react";
+import { ArrowRight, ArrowUp, Building2, Car, Check, Home, TreePine, Warehouse } from "lucide-react";
 import type { WizardQuestion } from "./types";
 import { checkRangeWarning, parseTypicalRange } from "@/lib/range-hint";
 import { EquipmentChecklistStep } from "./equipment-checklist-step";
@@ -33,6 +33,9 @@ const OPTION_ICONS: Record<string, ReactNode> = {
   "radier/uso/antepiso_interior": <Home className="w-4 h-4 text-ink-muted flex-shrink-0" />,
   "radier/uso/estacionamiento": <Car className="w-4 h-4 text-ink-muted flex-shrink-0" />,
   "radier/uso/bodega_industrial": <Warehouse className="w-4 h-4 text-ink-muted flex-shrink-0" />,
+  "pintura/que-vas-a-pintar/muro-interior": <Home className="w-4 h-4 text-ink-muted flex-shrink-0" />,
+  "pintura/que-vas-a-pintar/muro-exterior": <Building2 className="w-4 h-4 text-ink-muted flex-shrink-0" />,
+  "pintura/que-vas-a-pintar/cielo": <ArrowUp className="w-4 h-4 text-ink-muted flex-shrink-0" />,
 };
 
 // Caja "¿No sabes cuál elegir?" opcional debajo de una pregunta con
@@ -47,6 +50,10 @@ const NOT_SURE_HELPERS: Record<
     description:
       "Para la mayoría de las casas y ampliaciones, el radier de patio o terraza es la opción más común.",
     recommendedOptionKey: "patio_terraza",
+  },
+  "pintura/que-vas-a-pintar": {
+    description: "En la mayoría de los casos, se comienza pintando los muros interiores.",
+    recommendedOptionKey: "muro-interior",
   },
 };
 
