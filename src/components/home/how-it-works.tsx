@@ -15,27 +15,29 @@ export function HowItWorks() {
         <h2 className="font-display text-3xl font-semibold tracking-tight mb-10">
           Cuatro pasos, cero jerga técnica
         </h2>
-        {/* 4 en fila desde sm (640px), no recién en md (768px) — tarjetas
-            compactas (padding/gap reducidos) para que quepan legibles en
-            anchos intermedios. En mobile (2x2) el conector punteado se
-            oculta: cruzar filas distintas no comunica un flujo lineal. */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+        {/* Siempre 4 en fila, incluido mobile (375px) — decisión explícita
+            del dueño de producto de no colapsar a 2x2, con tarjetas mas
+            compactas (padding/texto/icono mas chicos en la base, crecen
+            desde sm) para que quepan sin overflow horizontal. El conector
+            punteado ahora esta siempre visible (ya no depende de un
+            breakpoint donde antes podia colapsar a 2 filas). */}
+        <div className="grid grid-cols-4 gap-2 sm:gap-4">
           {STEPS.map((step, i) => {
             const Icon = step.icon;
             return (
-              <div key={step.label} className="rounded-2xl border border-border bg-white p-4 relative">
-                <div className="relative inline-block mb-3">
-                  <span className="w-7 h-7 rounded-full flex items-center justify-center bg-safety-tint text-safety font-mono text-xs font-semibold">
+              <div key={step.label} className="rounded-xl sm:rounded-2xl border border-border bg-white p-2 sm:p-4 relative">
+                <div className="relative inline-block mb-1.5 sm:mb-3">
+                  <span className="w-5 h-5 sm:w-7 sm:h-7 rounded-full flex items-center justify-center bg-safety-tint text-safety font-mono text-[9px] sm:text-xs font-semibold">
                     {String(i + 1).padStart(2, "0")}
                   </span>
                   {i < STEPS.length - 1 && (
-                    <span className="hidden sm:block absolute top-1/2 left-full w-3 md:w-4 -translate-y-1/2 border-t border-dashed border-border" />
+                    <span className="absolute top-1/2 left-full w-2 sm:w-4 -translate-y-1/2 border-t border-dashed border-border" />
                   )}
                 </div>
-                <Icon className="w-5 h-5 mb-2 text-safety" />
-                <h3 className="font-semibold text-sm mb-1">{step.label}</h3>
-                <p className="text-xs text-ink-muted leading-snug">{step.desc}</p>
-                <ArrowRight className="w-3.5 h-3.5 mt-3 text-ink-faint" />
+                <Icon className="w-4 h-4 sm:w-5 sm:h-5 mb-1 sm:mb-2 text-safety" />
+                <h3 className="font-semibold text-[11px] sm:text-sm mb-0.5 sm:mb-1 leading-tight">{step.label}</h3>
+                <p className="text-[10px] sm:text-xs text-ink-muted leading-snug">{step.desc}</p>
+                <ArrowRight className="w-3 h-3 sm:w-3.5 sm:h-3.5 mt-1.5 sm:mt-3 text-ink-faint" />
               </div>
             );
           })}
