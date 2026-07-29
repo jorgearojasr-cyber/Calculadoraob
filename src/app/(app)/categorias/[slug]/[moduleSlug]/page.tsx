@@ -25,7 +25,7 @@ export default async function ModulePage({
 
   if (!mod) notFound();
 
-  // Modo profesional (grupo herramientas-avanzadas) — el mismo criterio de
+  // Cálculos especiales (grupo herramientas-avanzadas) — el mismo criterio de
   // membresía que ya usa /grupos/herramientas-avanzadas para decidir el
   // disclaimer reforzado ahí. Antes ese aviso solo vivía en la página del
   // grupo: un usuario que llegaba directo al módulo (búsqueda, link

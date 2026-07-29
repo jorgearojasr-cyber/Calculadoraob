@@ -112,7 +112,8 @@ export default async function GroupDetailPage({ params }: { params: Promise<{ sl
           NormsDisclaimer) — este grupo ya no aparece en la exploración de
           Home a propósito (ver exploration-section.tsx): cada cálculo acá
           es solo una pieza del proyecto completo, no el diseño estructural
-          total, y eso es menos obvio dado el nombre "Modo profesional". */}
+          total (renombrado de "Modo profesional" a "Cálculos especiales"
+          para dejar más claro que calculan cantidad, no ejecutan/diseñan). */}
       {group.slug === "herramientas-avanzadas" && (
         <div className="mb-8 rounded-2xl p-4 bg-danger-tint border-2 border-danger">
           <div className="flex items-start gap-2.5">

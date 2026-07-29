@@ -7,10 +7,10 @@ import { getCategoryIcon } from "@/lib/category-icons";
 export const revalidate = 3600;
 
 export default async function CategoryPage({ params }: { params: { slug: string } }) {
-  // Los módulos de "Modo profesional" (ProjectGroup herramientas-avanzadas)
+  // Los módulos de "Cálculos especiales" (ProjectGroup herramientas-avanzadas)
   // ya se sacaron de la exploración de Home, pero "Por material" listaba
   // TODOS los módulos publicados de la categoría sin ese filtro — mismos
-  // 16 módulos (Escalera, Fundación, etc.) seguían apareciendo completos
+  // 17 módulos (Escalera, Fundación, etc.) seguían apareciendo completos
   // acá. Se excluyen acá también, con el mismo criterio.
   const advancedGroup = await prisma.projectGroup.findUnique({
     where: { slug: "herramientas-avanzadas" },
@@ -32,7 +32,7 @@ export default async function CategoryPage({ params }: { params: { slug: string 
 
   const visibleModules = category.modules.filter((m) => !advancedModuleIds.has(m.id));
   const hiddenAdvancedCount = category.modules.length - visibleModules.length;
-  // Categorías donde TODOS los módulos son de Modo profesional (ej. Acero y
+  // Categorías donde TODOS los módulos son de Cálculos especiales (ej. Acero y
   // Enfierradura, Excavaciones) quedarían vacías con el filtro — en vez de
   // ocultarlas del todo (nadie que busque "fierro" o "excavación"
   // encontraría nada), se dejan visibles con un link directo al grupo.
@@ -63,14 +63,14 @@ export default async function CategoryPage({ params }: { params: { slug: string 
         {onlyHasAdvanced ? (
           <div className="rounded-2xl p-10 text-center bg-white border border-border">
             <p className="text-ink-muted mb-3">
-              Estos cálculos están en Modo profesional — piezas puntuales de un proyecto, no el diseño estructural
+              Estos cálculos están en Cálculos especiales — piezas puntuales de un proyecto, no el diseño estructural
               completo.
             </p>
             <Link
               href="/grupos/herramientas-avanzadas"
               className="inline-flex items-center gap-1 text-sm font-medium text-safety hover:underline"
             >
-              Ver Modo profesional
+              Ver Cálculos especiales
               <ChevronRight className="w-4 h-4" />
             </Link>
           </div>
@@ -100,8 +100,8 @@ export default async function CategoryPage({ params }: { params: { slug: string 
                 href="/grupos/herramientas-avanzadas"
                 className="mt-4 inline-flex items-center gap-1 text-sm font-medium text-ink-muted hover:text-ink"
               >
-                +{hiddenAdvancedCount} {hiddenAdvancedCount === 1 ? "cálculo más" : "cálculos más"} en Modo
-                profesional
+                +{hiddenAdvancedCount} {hiddenAdvancedCount === 1 ? "cálculo más" : "cálculos más"} en Cálculos
+                especiales
                 <ChevronRight className="w-4 h-4" />
               </Link>
             )}

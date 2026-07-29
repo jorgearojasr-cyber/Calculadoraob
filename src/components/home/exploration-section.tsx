@@ -18,7 +18,7 @@ const CURATED_TASK_SLUGS = [
 export async function ExplorationSection() {
   const [groups, categories, popularTasksRaw] = await Promise.all([
     prisma.projectGroup.findMany({
-      // "Modo profesional" (slug real "herramientas-avanzadas") queda
+      // "Cálculos especiales" (slug real "herramientas-avanzadas") queda
       // fuera de la fila de exploración de Home a propósito — cada cálculo
       // ahí es solo una pieza del proyecto (ej. Pilar/columna no incluye
       // enfierradura/estribos), y mostrarlo junto a los demás grupos daba

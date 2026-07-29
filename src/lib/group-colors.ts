@@ -24,7 +24,7 @@ const GROUP_ICON_COLORS: Record<string, { bg: string; text: string }> = {
   techumbre: { bg: "bg-ochre/[0.1]", text: "text-ochre" },
   piscinas: { bg: "bg-poolblue/[0.1]", text: "text-poolblue" },
   "guias-rapidas": { bg: "bg-ink-muted/[0.1]", text: "text-ink-muted" },
-  // Modo profesional — slug real en la base es "herramientas-avanzadas".
+  // Cálculos especiales — slug real en la base es "herramientas-avanzadas".
   "herramientas-avanzadas": { bg: "bg-safety-hover/[0.1]", text: "text-safety-hover" },
 };
 
