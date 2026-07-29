@@ -121,7 +121,7 @@ export function ExplorationToggle({
 
           <div>
             <p className="text-xs text-ink-muted mb-3">Todas las categorías</p>
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid gap-2 sm:grid-cols-2">
               {groups.map((group) => (
                 <GroupCard key={group.id} group={group} />
               ))}
