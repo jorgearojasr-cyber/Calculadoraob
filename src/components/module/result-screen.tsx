@@ -104,6 +104,24 @@ export function ResultScreen({
 
   const prompt = buildCalculationPrompt({ moduleName, categoryName, answersSummary, results, infoResults, norms });
 
+  // Consumo eléctrico: la Variable "consumo_detalle_json" (si existe en este
+  // módulo) trae el desglose por artefacto como JSON — no pasa por el motor
+  // de fórmulas (que no soporta listas/arrays), se parsea acá directo para
+  // mostrar una tabla. En cualquier otro módulo esta variable no existe y
+  // consumptionBreakdown queda null, sin afectar nada.
+  const consumptionBreakdownRaw = variables["consumo_detalle_json"];
+  const consumptionBreakdown: { label: string; watts: number; hoursPerDay: number; kwhMes: number }[] | null =
+    typeof consumptionBreakdownRaw === "string"
+      ? (() => {
+          try {
+            const parsed = JSON.parse(consumptionBreakdownRaw);
+            return Array.isArray(parsed) ? parsed : null;
+          } catch {
+            return null;
+          }
+        })()
+      : null;
+
   const handleCopy = async () => {
     await navigator.clipboard.writeText(prompt);
     setCopied(true);
@@ -177,6 +195,24 @@ export function ResultScreen({
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {consumptionBreakdown && consumptionBreakdown.length > 0 && (
+        <div className="rounded-2xl p-5 mb-3 bg-white border border-border">
+          <p className="text-xs font-mono uppercase tracking-wider text-ink-muted mb-3">
+            Desglose por artefacto
+          </p>
+          <div className="grid gap-2">
+            {[...consumptionBreakdown]
+              .sort((a, b) => b.kwhMes - a.kwhMes)
+              .map((item) => (
+                <div key={item.label} className="flex items-center justify-between gap-3 text-sm">
+                  <span className="min-w-0 truncate">{item.label}</span>
+                  <span className="font-mono text-ink-muted shrink-0">{item.kwhMes.toFixed(1)} kWh/mes</span>
+                </div>
+              ))}
+          </div>
         </div>
       )}
 

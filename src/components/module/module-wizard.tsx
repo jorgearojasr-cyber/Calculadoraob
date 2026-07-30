@@ -7,6 +7,7 @@ import { ArrowLeft, TriangleAlert } from "lucide-react";
 import { QuestionStep } from "./question-step";
 import { QuestionGroupStep, hasAreaToggle } from "./question-group-step";
 import { ConditionalRevealStep } from "./conditional-reveal-step";
+import { ApplianceConsumptionStep } from "./appliance-consumption-step";
 import { ResultScreen } from "./result-screen";
 import { pluralizeUnit } from "@/lib/pluralize";
 import type { WizardAnswers, WizardQuestion } from "./types";
@@ -24,13 +25,12 @@ const RECALCULATE_FIELDS: Record<string, string> = {
 };
 
 // Preguntas NUMBER que el usuario puede dejar en blanco y avanzar igual
-// (ver botón "Omitir" en QuestionStep) — hoy solo las 2 preguntas de
-// costo estimado en el circuito eléctrico (horas de uso + precio kWh):
-// si se omiten, la Formula condicionada con {op:"defined",...} sobre esas
-// Variables simplemente no se calcula y su tarjeta de resultado no
-// aparece, sin romper el resto del cálculo técnico.
+// (ver botón "Omitir" en QuestionStep) — hoy solo el precio del kWh en
+// Consumo eléctrico: si se omite, la Formula condicionada con
+// {op:"defined",...} sobre esa Variable simplemente no se calcula y la
+// tarjeta de costo no aparece (el consumo en kWh sí se muestra siempre).
 const OPTIONAL_QUESTION_KEYS: Record<string, string[]> = {
-  "calcular-consumo-electrico-de-un-circuito": ["horas-de-uso-al-mes", "precio-por-kwh"],
+  "consumo-electrico": ["precio-kwh"],
 };
 
 function isQuestionVisible(question: WizardQuestion, answers: WizardAnswers): boolean {
@@ -232,6 +232,14 @@ export function ModuleWizard({
   const answersSummary = useMemo(() => {
     return questions
       .filter((question) => isQuestionVisible(question, answers))
+      // Respuestas TEXT que son un blob JSON (ej. el desglose de Consumo
+      // eléctrico, ver appliance-consumption-step.tsx) son para consumo
+      // interno del cálculo, no algo legible para mostrar acá — regla
+      // genérica por forma de la respuesta, no por módulo puntual.
+      .filter((question) => {
+        const raw = answers[question.key];
+        return !(question.type === "TEXT" && typeof raw === "string" && /^[[{]/.test(raw.trim()));
+      })
       .map((question) => {
         const raw = answers[question.key];
         if (question.type === "SELECT") {
@@ -246,6 +254,12 @@ export function ModuleWizard({
 
   const isConditionalReveal =
     currentGroup?.length === 2 && currentGroup[0].type === "SELECT" && currentGroup[1].type === "NUMBER";
+
+  // Consumo eléctrico: paso de 2 preguntas (detalle JSON del desglose +
+  // total en kWh) respondidas juntas por un único componente a medida —
+  // mismo criterio que isConditionalReveal para saltarse QuestionGroupStep
+  // por completo en este caso especial.
+  const isApplianceConsumption = currentGroup?.length === 2 && currentGroup[0].key === "consumo-detalle-json";
 
   const stepInitialValues = useMemo(
     () => (currentGroup ? withSuggestedDefaults(currentGroup, answers) : answers),
@@ -321,6 +335,13 @@ export function ModuleWizard({
               initialValues={stepInitialValues}
               onAnswer={handleGroupAnswer}
             />
+          ) : isApplianceConsumption ? (
+            <ApplianceConsumptionStep
+              key={currentGroup.map((q) => q.id).join("-")}
+              detailQuestion={currentGroup[0]}
+              totalQuestion={currentGroup[1]}
+              onAnswer={handleGroupAnswer}
+            />
           ) : currentGroup.length > 1 || hasAreaToggle(currentGroup[0].stepGroup) ? (
             <QuestionGroupStep
               key={currentGroup.map((q) => q.id).join("-")}
@@ -333,7 +354,6 @@ export function ModuleWizard({
               key={currentGroup[0].id}
               question={currentGroup[0]}
               initialValue={stepInitialValues[currentGroup[0].key]}
-              answers={answers}
               onAnswer={handleAnswer}
               onSkip={
                 moduleSlug && OPTIONAL_QUESTION_KEYS[moduleSlug]?.includes(currentGroup[0].key)

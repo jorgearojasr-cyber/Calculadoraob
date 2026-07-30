@@ -2,20 +2,19 @@
 
 import { useMemo, useState } from "react";
 import type { ReactNode } from "react";
-import { ArrowRight, ArrowUp, Building2, Car, Check, Home, TreePine, Warehouse } from "lucide-react";
-import type { WizardAnswers, WizardQuestion } from "./types";
+import { ArrowRight, ArrowUp, Building2, Car, Check, ExternalLink, Home, TreePine, Warehouse } from "lucide-react";
+import type { WizardQuestion } from "./types";
 import { checkRangeWarning, parseTypicalRange } from "@/lib/range-hint";
-import { EquipmentChecklistStep } from "./equipment-checklist-step";
 import { GasConfirmationGate } from "./gas-confirmation-gate";
 import { CollapsibleHelp } from "./collapsible-help";
 import { ImageOptionCard } from "./image-option-card";
 import { NotSureHelper } from "./not-sure-helper";
 
-// Caso especial: en vez de pedir el Watt total como número directo, se
-// reemplaza por una lista de equipos comunes preseleccionables (ver
-// equipment-checklist-step.tsx) — el tipo de la pregunta en la base sigue
-// siendo NUMBER, solo cambia cómo se ingresa el valor.
-const EQUIPMENT_CHECKLIST_KEY = "suma-la-potencia-total-de-los-equipos-que-iran-conectados-watts";
+// Consumo eléctrico: link clickeable a la tarifa oficial de la CNE, debajo
+// del campo de precio del kWh — el valor exacto depende de la distribuidora
+// y comuna de cada usuario, esto solo ayuda a ubicar la fuente oficial.
+const CNE_PRICE_QUESTION_KEY = "precio-kwh";
+const CNE_TARIFF_URL = "https://www.cne.cl/tarificacion/electrica/";
 
 // Nivel 4 de disclaimer (dirección visual 2026-07-28): SOLO estos 2
 // módulos de Gas, que ya tenían checkbox de confirmación SEC obligatorio
@@ -60,14 +59,12 @@ const NOT_SURE_HELPERS: Record<
 export function QuestionStep({
   question,
   initialValue,
-  answers,
   onAnswer,
   onSkip,
   moduleSlug,
 }: {
   question: WizardQuestion;
   initialValue: string | number | undefined;
-  answers: WizardAnswers;
   onAnswer: (value: string | number) => void;
   // Presente solo para preguntas NUMBER marcadas opcionales (ver
   // OPTIONAL_QUESTION_KEYS en module-wizard.tsx) — avanza sin registrar
@@ -92,12 +89,6 @@ export function QuestionStep({
     if (!textValue || !Number.isFinite(num) || num <= 0) return null;
     return checkRangeWarning(num, typicalRange);
   }, [typicalRange, textValue]);
-
-  if (question.key === EQUIPMENT_CHECKLIST_KEY) {
-    return (
-      <EquipmentChecklistStep question={question} initialValue={initialValue} answers={answers} onAnswer={onAnswer} />
-    );
-  }
 
   if (question.type === "SELECT" && question.options.length === 1) {
     const option = question.options[0];
@@ -242,6 +233,17 @@ export function QuestionStep({
         />
         {question.unit && <span className="font-mono text-sm text-ink-muted">{question.unit}</span>}
       </div>
+      {question.key === CNE_PRICE_QUESTION_KEY && (
+        <a
+          href={CNE_TARIFF_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mt-2 inline-flex items-center gap-1 text-sm font-medium text-safety hover:underline"
+        >
+          Consulta el proceso tarifario vigente en la CNE
+          <ExternalLink className="w-3.5 h-3.5" />
+        </a>
+      )}
       {error && <p className="mt-2 text-sm text-safety">{error}</p>}
       {!error && rangeWarning && <p className="mt-2 text-sm text-amber-600">{rangeWarning}</p>}
       <div className="mt-6 flex items-center gap-4">
