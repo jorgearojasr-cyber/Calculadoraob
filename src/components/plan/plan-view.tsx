@@ -69,9 +69,19 @@ function ContornoAreaField({
   const effectiveLinks = useMemo(() => {
     if (area === null) return links;
     const side = round2(Math.sqrt(area));
+    // Radier calcula malla electrosoldada asumiendo una losa sólida
+    // rectangular (planchas por largo/ancho reales) — no tiene forma de
+    // representar un anillo con un agujero en el medio (la piscina), así
+    // que la malla quedaría sobreestimada para cualquier contorno, incluso
+    // con dimensiones reales (no es un problema del cuadrado ficticio, es
+    // que la fórmula no aplica a esta geometría). Se preselecciona "No
+    // necesito calcular malla" (opción ya existente en Radier) para no
+    // mostrar un número engañoso — el usuario puede cambiarlo si igual
+    // quiere una referencia gruesa. Los otros 3 módulos de esta fase no
+    // tienen esa pregunta, así que el param extra no les afecta en nada.
     return links.map((link) => ({
       ...link,
-      href: `${link.href}&area-inicial=${area}&largo=${side}&ancho=${side}`,
+      href: `${link.href}&area-inicial=${area}&largo=${side}&ancho=${side}&que-malla-de-refuerzo-vas-a-usar=no-necesito`,
     }));
   }, [links, area]);
 
