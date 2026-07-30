@@ -41,7 +41,7 @@ const APPLIANCES: ApplianceDef[] = [
   { id: "calefactor", label: "Calefactor eléctrico", watts: 1500, hoursPerDay: 4 },
   { id: "aire-acondicionado", label: "Aire acondicionado / split", watts: 1000, hoursPerDay: 3 },
   { id: "hervidor", label: "Hervidor eléctrico", watts: 1800, hoursPerDay: 0.15 },
-  { id: "plancha", label: "Plancha", watts: 1200, hoursPerDay: 0.3 },
+  { id: "plancha", label: "Plancha", watts: 1200, hoursPerDay: 0.2 },
   { id: "secador-pelo", label: "Secador de pelo", watts: 1800, hoursPerDay: 0.15 },
 ];
 
