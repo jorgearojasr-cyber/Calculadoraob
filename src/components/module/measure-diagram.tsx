@@ -256,8 +256,14 @@ function IsometricBoxDiagram({
   };
   const allAbs = Object.values(P);
 
-  const cotaLargo = placeCota(P.P0, P.P1, allAbs, fit.viewBoxW, fit.viewBoxH, CHIP_SIZE);
-  const cotaAncho = placeCota(P.P0, P.P2, allAbs, fit.viewBoxW, fit.viewBoxH, CHIP_SIZE);
+  // Largo y ancho intercambiados de lado a propósito (pedido 2026-07-30):
+  // la cota de "largo" ahora se dibuja sobre la arista P0-P2 y la de
+  // "ancho" sobre P0-P1 — al revés de lo geométricamente "natural" (P1 es
+  // la arista de largo por construcción, ver buildLocalBox), pero así la
+  // profundidad —atada a P1-P1d— se queda exactamente en su posición
+  // actual en vez de moverse de lado junto con largo.
+  const cotaLargo = placeCota(P.P0, P.P2, allAbs, fit.viewBoxW, fit.viewBoxH, CHIP_SIZE);
+  const cotaAncho = placeCota(P.P0, P.P1, allAbs, fit.viewBoxW, fit.viewBoxH, CHIP_SIZE);
   const cotaProfundidad = placeCota(P.P1, P.P1d, allAbs, fit.viewBoxW, fit.viewBoxH, CHIP_SIZE);
 
   const poly = (pts: Point[]) => pts.map((p) => `${p[0]},${p[1]}`).join(" ");
