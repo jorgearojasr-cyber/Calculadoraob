@@ -208,10 +208,17 @@ export function QuestionGroupStep({
   questions,
   initialValues,
   onAnswer,
+  forcedInitialArea,
 }: {
   questions: WizardQuestion[];
   initialValues: Record<string, string | number | undefined>;
   onAnswer: (values: Record<string, number>) => void;
+  // Fuerza el AreaInputToggle (ver useAreaToggle más abajo) a abrir en modo
+  // "m² directo" con este valor precargado, sin importar cuántas preguntas
+  // tenga el grupo (1 o 2) — usado por la Fase 3 de "Construir una piscina"
+  // para precargar el área del contorno ya calculada (ver plan/[slug]/page.tsx).
+  // Sin esto, el comportamiento es idéntico al de siempre.
+  forcedInitialArea?: number;
 }) {
   const [values, setValues] = useState<Record<string, string>>(() =>
     Object.fromEntries(
@@ -367,12 +374,22 @@ export function QuestionGroupStep({
           // "Editar respuestas" en Pintura), abre directo en "m² directo"
           // con ese valor precargado, en vez del tab "largo × ancho" vacío
           // por defecto.
-          initialMode={questions.length === 1 && values[questions[0].key] ? "area" : "dims"}
+          initialMode={
+            forcedInitialArea !== undefined || (questions.length === 1 && values[questions[0].key])
+              ? "area"
+              : "dims"
+          }
           enableDeduction={diagram!.enableDeduction}
           deductionLabel={diagram!.deductionLabel}
           initialPrimary={questions.length === 2 ? values[questions[0].key] || undefined : undefined}
           initialSecondary={questions.length === 2 ? values[questions[1].key] || undefined : undefined}
-          initialArea={questions.length === 1 ? values[questions[0].key] || undefined : undefined}
+          initialArea={
+            forcedInitialArea !== undefined
+              ? String(forcedInitialArea)
+              : questions.length === 1
+                ? values[questions[0].key] || undefined
+                : undefined
+          }
           onAreaChange={handleAreaChange}
         />
 

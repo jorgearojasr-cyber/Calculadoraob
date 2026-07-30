@@ -1,19 +1,108 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useMemo, useState, useTransition, type ReactNode } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Check, Circle, Calculator, PartyPopper, ArrowRight } from "lucide-react";
 import { togglePhaseCompletionAction } from "@/app/(app)/plan/[slug]/actions";
 import { STALE_SESSION_ERROR, STALE_SESSION_MESSAGE } from "@/lib/stale-session";
 
-export type PlanPhaseLink = { label: string | null; href: string; moduleName: string };
+export type PlanPhaseLink = { label: string | null; href: string; moduleName: string; moduleSlug: string };
 export type PlanPhaseData = {
   id: string;
   name: string;
   completed: boolean;
   links: PlanPhaseLink[];
 };
+
+export type PoolShape =
+  | { kind: "rectangular"; largo: number; ancho: number }
+  | { kind: "circular"; radio: number };
+
+// Módulos de "Terminar el entorno" que aceptan un área directa (ver
+// AreaInputToggle / forcedInitialArea en question-group-step.tsx) — si una
+// fase tiene al menos uno de estos links Y ya se conoce la forma/medidas de
+// la piscina (poolShape), se muestra el campo de ancho de contorno antes de
+// los botones de módulo. Caso puntual de este plan, no una feature genérica.
+const CONTORNO_MODULE_SLUGS = new Set([
+  "radier",
+  "instalar-pastelones",
+  "ceramica-pisos",
+  "porcelanato-piso",
+]);
+
+function round2(value: number): number {
+  return Math.round(value * 100) / 100;
+}
+
+// Área EXACTA del anillo de contorno (no perímetro × ancho — eso subestima
+// las esquinas/curvatura): rectangular resta el rectángulo interior del
+// exterior agrandado; circular resta el círculo interior del exterior.
+function computeContornoArea(pool: PoolShape, contornoWidth: number): number {
+  if (pool.kind === "rectangular") {
+    const largoExt = pool.largo + 2 * contornoWidth;
+    const anchoExt = pool.ancho + 2 * contornoWidth;
+    return largoExt * anchoExt - pool.largo * pool.ancho;
+  }
+  const radioExt = pool.radio + contornoWidth;
+  return Math.PI * (radioExt * radioExt - pool.radio * pool.radio);
+}
+
+// Campo de ancho de contorno + botones de módulo de la fase, con el área
+// calculada precargada en cada href (ver forcedInitialArea en
+// question-group-step.tsx). Se muestra SOLO si hay poolShape disponible —
+// sin eso, el llamador ya renderiza los links tal cual, sin este campo.
+function ContornoAreaField({
+  pool,
+  links,
+  renderLinks,
+}: {
+  pool: PoolShape;
+  links: PlanPhaseLink[];
+  renderLinks: (links: PlanPhaseLink[]) => ReactNode;
+}) {
+  const [width, setWidth] = useState("");
+  const widthNum = Number(width.replace(",", "."));
+  const area =
+    width && Number.isFinite(widthNum) && widthNum > 0 ? round2(computeContornoArea(pool, widthNum)) : null;
+
+  const effectiveLinks = useMemo(() => {
+    if (area === null) return links;
+    const side = round2(Math.sqrt(area));
+    return links.map((link) => ({
+      ...link,
+      href: `${link.href}&area-inicial=${area}&largo=${side}&ancho=${side}`,
+    }));
+  }, [links, area]);
+
+  return (
+    <div>
+      <div className="mb-3">
+        <span className="block text-sm font-medium text-ink-muted mb-1.5">
+          ¿Cuánto ancho tendrá el contorno alrededor de la piscina?
+        </span>
+        <div className="flex items-center gap-3 rounded-2xl bg-white border-[1.5px] border-ink px-4 py-2.5 max-w-[200px]">
+          <input
+            type="text"
+            inputMode="decimal"
+            value={width}
+            onChange={(e) => setWidth(e.target.value)}
+            placeholder="0"
+            className="w-full bg-transparent outline-none font-display text-lg placeholder:text-ink-faint"
+          />
+          <span className="font-mono text-sm text-ink-muted">m</span>
+        </div>
+        {area !== null && (
+          <p className="mt-1.5 text-xs text-ink-muted">
+            Área del contorno: <span className="font-mono font-semibold">{area} m²</span> — se precarga en
+            el módulo que elijas, editable ahí.
+          </p>
+        )}
+      </div>
+      {renderLinks(effectiveLinks)}
+    </div>
+  );
+}
 
 // Piloto de "Plan de fases": progreso simple sin lógica de dependencia
 // entre fases (se pueden completar en cualquier orden) — deliberadamente
@@ -22,6 +111,7 @@ export function PlanView({
   planSlug,
   phases,
   justCompletedPhaseId,
+  poolShape,
 }: {
   planSlug: string;
   phases: PlanPhaseData[];
@@ -30,6 +120,11 @@ export function PlanView({
   // para el banner de bienvenida al volver; el estado real de "completada"
   // ya se guardó en ProjectPlanPhaseCompletion antes de redirigir.
   justCompletedPhaseId?: string;
+  // Forma y medidas reales de la piscina, derivadas de un SavedProject de
+  // Fase 1/2 (ver plan/[slug]/page.tsx) — null si el usuario no llegó a
+  // completar esas fases (o no está logueado): en ese caso "Terminar el
+  // entorno" sigue funcionando exactamente como antes, sin este campo.
+  poolShape?: PoolShape | null;
 }) {
   const [completedIds, setCompletedIds] = useState(
     new Set(phases.filter((p) => p.completed).map((p) => p.id))
@@ -129,6 +224,30 @@ export function PlanView({
         {phases.map((phase) => {
           const isDone = completedIds.has(phase.id);
           const isHighlighted = phase.id === nextPhase?.id && justCompletedPhase !== undefined;
+          const isContornoPhase = phase.links.some((l) => CONTORNO_MODULE_SLUGS.has(l.moduleSlug));
+          const renderPhaseLinks = (links: PlanPhaseLink[]) =>
+            links.length === 1 ? (
+              <Link
+                href={links[0].href}
+                className="mt-2 inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold text-white bg-ink"
+              >
+                <Calculator className="w-3.5 h-3.5" />
+                Calcular esta fase
+              </Link>
+            ) : (
+              <div className="mt-2 flex flex-wrap gap-2">
+                {links.map((link) => (
+                  <Link
+                    key={link.href}
+                    href={link.href}
+                    className="inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium border border-ink"
+                  >
+                    <Calculator className="w-3.5 h-3.5" />
+                    {link.label ?? link.moduleName}
+                  </Link>
+                ))}
+              </div>
+            );
           return (
             <div
               key={phase.id}
@@ -162,27 +281,10 @@ export function PlanView({
                     )}
                   </div>
 
-                  {phase.links.length === 1 ? (
-                    <Link
-                      href={phase.links[0].href}
-                      className="mt-2 inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold text-white bg-ink"
-                    >
-                      <Calculator className="w-3.5 h-3.5" />
-                      Calcular esta fase
-                    </Link>
+                  {isContornoPhase && poolShape ? (
+                    <ContornoAreaField pool={poolShape} links={phase.links} renderLinks={renderPhaseLinks} />
                   ) : (
-                    <div className="mt-2 flex flex-wrap gap-2">
-                      {phase.links.map((link) => (
-                        <Link
-                          key={link.href}
-                          href={link.href}
-                          className="inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium border border-ink"
-                        >
-                          <Calculator className="w-3.5 h-3.5" />
-                          {link.label ?? link.moduleName}
-                        </Link>
-                      ))}
-                    </div>
+                    renderPhaseLinks(phase.links)
                   )}
                 </div>
               </div>

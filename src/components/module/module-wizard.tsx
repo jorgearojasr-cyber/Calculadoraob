@@ -106,6 +106,7 @@ export function ModuleWizard({
   approvedPhotos,
   planContext,
   isAdvancedMode,
+  forcedInitialArea,
 }: {
   moduleId: string;
   // Usado solo para gatillar el nivel 4 de disclaimer de Gas (ver
@@ -131,6 +132,13 @@ export function ModuleWizard({
   // específico del cálculo y aparece al final: este es genérico del
   // módulo y aparece antes de la primera pregunta.
   isAdvancedMode?: boolean;
+  // Precarga el AreaInputToggle del primer step con esta área ya calculada
+  // (modo "m² directo") — usado por la Fase 3 de "Construir una piscina"
+  // para pasar el área del contorno de la piscina (ver plan/[slug]/page.tsx
+  // y ContornoAreaField en plan-view.tsx). Solo se aplica mientras el
+  // usuario no haya respondido ya ese step (ver stepIndex===0 más abajo) —
+  // así "Volver" no pisa un valor que el usuario ya editó.
+  forcedInitialArea?: number;
 }) {
   const router = useRouter();
   const [stepIndex, setStepIndex] = useState(0);
@@ -348,6 +356,14 @@ export function ModuleWizard({
               questions={currentGroup}
               initialValues={stepInitialValues}
               onAnswer={handleGroupAnswer}
+              forcedInitialArea={
+                forcedInitialArea !== undefined &&
+                stepIndex === 0 &&
+                hasAreaToggle(currentGroup[0].stepGroup) &&
+                !currentGroup.some((q) => stepInitialValues[q.key])
+                  ? forcedInitialArea
+                  : undefined
+              }
             />
           ) : (
             <QuestionStep

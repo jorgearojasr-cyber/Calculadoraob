@@ -52,31 +52,49 @@ export default async function ProjectPlanPage({
   }
 
   // Caso puntual (no una feature genérica de "memoria entre fases"): si el
-  // usuario ya guardó la Piscina rectangular de este mismo plan, se deriva
-  // el perímetro para prellenar el largo del Sendero en "Terminar el
-  // entorno" — editable, y si no hay dato guardado (guardó la Circular, o
-  // nada), el módulo de Sendero sigue funcionando suelto como siempre.
-  const rectangularPoolLink = plan.phases
+  // usuario ya guardó la Piscina rectangular o circular de este mismo plan,
+  // se derivan sus medidas reales para poder calcular el área EXACTA del
+  // contorno en la Fase 3 (ver ContornoAreaField en plan-view.tsx). Sin
+  // dato guardado (ninguna forma guardada aún), poolShape queda null y la
+  // Fase 3 sigue funcionando exactamente como antes (largo/ancho manual).
+  const userId = session?.user?.id;
+  const poolLinks = plan.phases
     .flatMap((phase) => phase.moduleLinks)
-    .find((link) => link.module.slug === "piscina-rectangular-hormigon-armado");
+    .filter(
+      (link) =>
+        link.module.slug === "piscina-rectangular-hormigon-armado" ||
+        link.module.slug === "piscina-circular-hormigon-armado"
+    );
 
-  let poolPerimeterMeters: number | null = null;
-  if (session?.user?.id && rectangularPoolLink) {
-    const savedPool = await prisma.savedProject.findFirst({
-      where: { userId: session.user.id, planId: plan.id, moduleId: rectangularPoolLink.module.id },
-      orderBy: { createdAt: "desc" },
-      select: { result: true },
-    });
-    // result.variables está keyado por Variable.key (el nombre corto usado en
-    // el DSL de fórmulas, ej. "largo"), no por Question.key (el nombre largo
-    // usado en el wizard/URL, ej. "largo-de-la-piscina-metros") — son
-    // entidades distintas en el schema (ver Variable.source: {type:
-    // "QUESTION", questionKey: "..."}).
-    const variables = (savedPool?.result as { variables?: Record<string, unknown> } | undefined)?.variables;
-    const largo = Number(variables?.["largo"]);
-    const ancho = Number(variables?.["ancho"]);
-    if (Number.isFinite(largo) && Number.isFinite(ancho)) {
-      poolPerimeterMeters = 2 * (largo + ancho);
+  let poolShape: { kind: "rectangular"; largo: number; ancho: number } | { kind: "circular"; radio: number } | null =
+    null;
+  if (userId) {
+    for (const link of poolLinks) {
+      const savedPool = await prisma.savedProject.findFirst({
+        where: { userId, planId: plan.id, moduleId: link.module.id },
+        orderBy: { createdAt: "desc" },
+        select: { result: true },
+      });
+      // result.variables está keyado por Variable.key (el nombre corto usado
+      // en el DSL de fórmulas, ej. "largo"), no por Question.key (el nombre
+      // largo usado en el wizard/URL) — entidades distintas en el schema
+      // (ver Variable.source: {type: "QUESTION", questionKey: "..."}).
+      const variables = (savedPool?.result as { variables?: Record<string, unknown> } | undefined)?.variables;
+      if (!variables) continue;
+      if (link.module.slug === "piscina-rectangular-hormigon-armado") {
+        const largo = Number(variables["largo"]);
+        const ancho = Number(variables["ancho"]);
+        if (Number.isFinite(largo) && largo > 0 && Number.isFinite(ancho) && ancho > 0) {
+          poolShape = { kind: "rectangular", largo, ancho };
+          break;
+        }
+      } else {
+        const diametro = Number(variables["diametro"]);
+        if (Number.isFinite(diametro) && diametro > 0) {
+          poolShape = { kind: "circular", radio: diametro / 2 };
+          break;
+        }
+      }
     }
   }
 
@@ -116,12 +134,10 @@ export default async function ProjectPlanPage({
         if (link.label && SHAPE_LABELS.has(link.label.toLowerCase())) {
           query.set("shape", link.label.toLowerCase());
         }
-        if (link.module.slug === "hacer-un-sendero" && poolPerimeterMeters !== null) {
-          query.set("largo-del-sendero-metros", String(poolPerimeterMeters));
-        }
         return {
           label: link.label,
           moduleName: link.module.name,
+          moduleSlug: link.module.slug,
           href: `/categorias/${link.module.category.slug}/${link.module.slug}?${query.toString()}`,
         };
       }),
@@ -139,7 +155,12 @@ export default async function ProjectPlanPage({
       <h1 className="font-display text-2xl md:text-3xl font-semibold tracking-tight mb-2">{plan.title}</h1>
       <p className="text-sm text-ink-muted mb-8">{plan.description}</p>
 
-      <PlanView planSlug={plan.slug} phases={phases} justCompletedPhaseId={searchParams.justCompleted} />
+      <PlanView
+        planSlug={plan.slug}
+        phases={phases}
+        justCompletedPhaseId={searchParams.justCompleted}
+        poolShape={poolShape}
+      />
     </div>
   );
 }

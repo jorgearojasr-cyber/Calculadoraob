@@ -9,7 +9,14 @@ export default async function ModulePage({
   searchParams,
 }: {
   params: { slug: string; moduleSlug: string };
-  searchParams: { tipo?: string; plan?: string; phase?: string; shape?: string; [key: string]: string | string[] | undefined };
+  searchParams: {
+    tipo?: string;
+    plan?: string;
+    phase?: string;
+    shape?: string;
+    "area-inicial"?: string;
+    [key: string]: string | string[] | undefined;
+  };
 }) {
   const mod = await prisma.module.findFirst({
     where: { slug: params.moduleSlug, published: true, category: { slug: params.slug } },
@@ -118,6 +125,13 @@ export default async function ModulePage({
       ? { slug: searchParams.plan, phaseId: searchParams.phase, shape: searchParams.shape }
       : undefined;
 
+  // Precarga de área (ver Fase 3 de "Construir una piscina", plan/[slug]/
+  // page.tsx) — solo un número parseable, cualquier otro valor se ignora
+  // en vez de romper la página.
+  const areaInicialRaw = searchParams["area-inicial"];
+  const areaInicialNum = areaInicialRaw ? Number(areaInicialRaw) : NaN;
+  const forcedInitialArea = Number.isFinite(areaInicialNum) && areaInicialNum > 0 ? areaInicialNum : undefined;
+
   return (
     <ModuleWizard
       moduleId={mod.id}
@@ -130,6 +144,7 @@ export default async function ModulePage({
       approvedPhotos={approvedPhotos}
       planContext={planContext}
       isAdvancedMode={isAdvancedMode}
+      forcedInitialArea={forcedInitialArea}
     />
   );
 }
