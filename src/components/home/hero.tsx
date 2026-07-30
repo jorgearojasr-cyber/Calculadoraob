@@ -4,10 +4,17 @@ import { FileCheck2, Zap, ShoppingCart, ShieldCheck } from "lucide-react";
 import { SearchBar } from "./search-bar";
 import { HeroIllustration } from "./hero-illustration";
 
+// Textos genéricos a propósito: el flujo real no usa ninguna medida o
+// cantidad específica (el usuario igual ingresa las suyas), así que un
+// label tipo "Piscina 6x3" o "Pintar 3 piezas" prometía algo que el
+// resultado no cumplía — ver auditoría 2026-07-29. Radier ya cubre
+// casa/bodega/estacionamiento/etc. vía su propia pregunta de uso, y
+// Pintura cubre muro exterior/interior/cielo — ninguno de los 3 es
+// realmente un caso único y específico.
 const SUGGESTIONS = [
-  { label: "Radier de casa", href: "/categorias/hormigon/radier" },
-  { label: "Pintar 3 piezas", href: "/categorias/pintura/pintura" },
-  { label: "Piscina 6x3", href: "/categorias/piscinas/piscina-rectangular-hormigon-armado" },
+  { label: "Radier", href: "/categorias/hormigon/radier" },
+  { label: "Pintar", href: "/categorias/pintura/pintura" },
+  { label: "Piscina", href: "/categorias/piscinas/piscina-rectangular-hormigon-armado" },
 ];
 
 const BENEFITS = [
