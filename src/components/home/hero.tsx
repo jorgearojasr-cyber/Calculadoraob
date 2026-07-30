@@ -7,14 +7,20 @@ import { HeroIllustration } from "./hero-illustration";
 // Textos genéricos a propósito: el flujo real no usa ninguna medida o
 // cantidad específica (el usuario igual ingresa las suyas), así que un
 // label tipo "Piscina 6x3" o "Pintar 3 piezas" prometía algo que el
-// resultado no cumplía — ver auditoría 2026-07-29. Radier ya cubre
-// casa/bodega/estacionamiento/etc. vía su propia pregunta de uso, y
-// Pintura cubre muro exterior/interior/cielo — ninguno de los 3 es
-// realmente un caso único y específico.
+// resultado no cumplía — ver auditoría 2026-07-29. Radier y Pintar
+// enlazan directo a un único módulo genérico (cubren casa/bodega/
+// estacionamiento/etc., o muro exterior/interior/cielo, vía su propia
+// primera pregunta) — un href fijo ahí SÍ representa bien "elegir
+// después adentro". Piscina NO tiene ese módulo genérico único: son 2
+// módulos separados (rectangular/circular) sin selector interno
+// compartido, así que iba directo a Rectangular sin dar la opción real
+// de elegir forma — bug reportado 2026-07-30. Apunta en cambio a
+// /grupos/piscinas, la pantalla de selección con fotos (mismo patrón ya
+// usado para la tarjeta "Construir una piscina" en exploration-toggle.tsx).
 const SUGGESTIONS = [
   { label: "Radier", href: "/categorias/hormigon/radier" },
   { label: "Pintar", href: "/categorias/pintura/pintura" },
-  { label: "Piscina", href: "/categorias/piscinas/piscina-rectangular-hormigon-armado" },
+  { label: "Piscina", href: "/grupos/piscinas" },
 ];
 
 const BENEFITS = [
