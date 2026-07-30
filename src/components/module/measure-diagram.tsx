@@ -269,11 +269,11 @@ function IsometricBoxDiagram({
       role="img"
       aria-label={`Diagrama de ${primaryLabel}, ${secondaryLabel} y ${depthLabel}`}
     >
-      {/* Cara superior (planta), sin relleno */}
+      {/* Cara superior (planta, largo × ancho) — transparente, solo contorno */}
       <polygon points={poly([P.P2, P.P3, P.P1, P.P0])} fill="none" className="stroke-navy" strokeWidth="1.6" />
-      {/* Caras laterales visibles, tinte plano */}
-      <polygon points={poly([P.P0, P.P1, P.P1d, P.P0d])} className="fill-navy/10" />
-      <polygon points={poly([P.P0, P.P2, P.P2d, P.P0d])} className="fill-navy/10" />
+      {/* Caras frontales (profundidad) — sombreadas/sólidas */}
+      <polygon points={poly([P.P0, P.P1, P.P1d, P.P0d])} className="fill-navy/20" />
+      <polygon points={poly([P.P0, P.P2, P.P2d, P.P0d])} className="fill-navy/20" />
 
       {/* Aristas ocultas (fondo del sólido) */}
       <line x1={P.P3[0]} y1={P.P3[1]} x2={P.P3d[0]} y2={P.P3d[1]} className="stroke-navy" strokeOpacity="0.35" strokeWidth="1.3" strokeDasharray="3 3" />
@@ -365,10 +365,10 @@ function IsometricCylinderDiagram({
       role="img"
       aria-label={`Diagrama de ${primaryLabel} y ${depthLabel}`}
     >
-      {/* Pared lateral visible: mitad frontal de ambas elipses + costados */}
+      {/* Pared lateral visible (profundidad) — sombreada/sólida: mitad frontal de ambas elipses + costados */}
       <path
         d={`M ${topLeft[0]} ${topLeft[1]} A ${rx} ${ry} 0 0 1 ${topRight[0]} ${topRight[1]} L ${bottomRight[0]} ${bottomRight[1]} A ${rx} ${ry} 0 0 1 ${bottomLeft[0]} ${bottomLeft[1]} Z`}
-        className="fill-navy/10"
+        className="fill-navy/20"
       />
 
       {/* Elipse inferior: arco trasero (oculto, punteado) */}
@@ -392,8 +392,10 @@ function IsometricCylinderDiagram({
       <line x1={topLeft[0]} y1={topLeft[1]} x2={bottomLeft[0]} y2={bottomLeft[1]} className="stroke-navy" strokeWidth="2" strokeLinecap="round" />
       <line x1={topRight[0]} y1={topRight[1]} x2={bottomRight[0]} y2={bottomRight[1]} className="stroke-navy" strokeWidth="2" strokeLinecap="round" />
 
-      {/* Elipse superior (planta), sin relleno, encima de las paredes */}
-      <ellipse cx={topCenter[0]} cy={topCenter[1]} rx={rx} ry={ry} fill="white" className="stroke-navy" strokeWidth="1.8" />
+      {/* Elipse superior (planta, diámetro) — transparente, solo contorno.
+          Antes tenía fill="white" (opaca) para tapar la pared detrás — eso
+          se leía como "cara superior sólida", al revés de lo pedido. */}
+      <ellipse cx={topCenter[0]} cy={topCenter[1]} rx={rx} ry={ry} fill="none" className="stroke-navy" strokeWidth="1.8" />
 
       {/* Línea de diámetro cruzando la elipse superior */}
       <line x1={topLeft[0]} y1={topLeft[1]} x2={topRight[0]} y2={topRight[1]} className="stroke-navy" strokeWidth="1.4" />
