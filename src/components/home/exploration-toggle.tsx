@@ -15,15 +15,12 @@ import { getGroupIconClasses } from "@/lib/group-colors";
 // cae de vuelta al layout de solo texto (sin romper si se agrega una tarea
 // curada nueva sin foto todavía).
 const TASK_IMAGES: Record<string, string> = {
-  "cambiar-o-instalar-un-wc": "/images/categorias/cambiar-wc.png",
-  "instalar-un-enchufe-reemplazo": "/images/categorias/cambiar-enchufe.png",
-  "construir-un-radier": "/images/categorias/hacer-radier.png",
+  "cambiar-o-instalar-un-wc": "/images/categorias/wc.png",
+  "instalar-un-enchufe-reemplazo": "/images/categorias/enchufe.png",
+  "construir-un-radier": "/images/categorias/radier.png",
   "pintar-una-habitacion": "/images/categorias/pintar-muro.png",
-  "instalar-ceramica": "/images/categorias/piso-ceramica.png",
-  // Misma foto que usa el link "Rectangular" en /grupos/piscinas — no hay
-  // una foto genérica de "piscina" separada, y rectangular es la variante
-  // por defecto más común.
-  "construir-una-piscina": "/images/piscinas/piscina-rectangular.png",
+  "instalar-ceramica": "/images/categorias/ceramica.png",
+  "construir-una-piscina": "/images/categorias/piscina.png",
 };
 
 // Excepciones de destino: "Construir una piscina" tiene 2 formas

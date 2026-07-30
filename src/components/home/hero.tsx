@@ -2,7 +2,6 @@ import Image from "next/image";
 import Link from "next/link";
 import { FileCheck2, Zap, ShoppingCart, ShieldCheck } from "lucide-react";
 import { SearchBar } from "./search-bar";
-import { HeroIllustration } from "./hero-illustration";
 
 // Textos genéricos a propósito: el flujo real no usa ninguna medida o
 // cantidad específica (el usuario igual ingresa las suyas), así que un
@@ -126,7 +125,21 @@ export function Hero() {
           </div>
         </div>
 
-        <HeroIllustration />
+        {/* Foto laptop + celular con capturas reales de la app (Radier de
+            escritorio, Excavación en mobile) compuestas sobre las pantallas —
+            reemplaza el placeholder de HeroIllustration. Solo desktop: en
+            mobile el hero ya se ve completo sin esta imagen, y agregarla ahí
+            solo compite por espacio con el buscador. */}
+        <div className="relative hidden lg:block w-full aspect-[1536/1024]">
+          <Image
+            src="/images/hero/hero-laptop-celular.png"
+            alt="Laptop y celular mostrando resultados reales de ObraBien Calcula, junto a huincha, nivel y plano"
+            fill
+            className="object-contain"
+            sizes="50vw"
+            priority
+          />
+        </div>
       </div>
     </section>
   );
