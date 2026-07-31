@@ -1,7 +1,6 @@
 "use client";
 
 import { useId } from "react";
-import { formatQuantity } from "@/lib/format-number";
 import {
   buildLocalBox,
   buildLocalCylinder,
@@ -44,19 +43,7 @@ export function MeasureDiagram({
   depthUnit?: string;
 }) {
   const rawId = useId();
-  const cleanId = rawId.replace(/[^a-zA-Z0-9]/g, "");
-  const markerId = `md-arrow-${cleanId}`;
-  const patternId = `md-hatch-${cleanId}`;
-
-  // Texto de cada borde: mientras no se haya escrito un valor válido se
-  // muestra la etiqueta genérica ("largo"/"ancho"); apenas hay un número
-  // válido, se reemplaza por el valor real + unidad, en vivo.
-  const borderText = (label: string, raw: string | undefined, unit: string | undefined) => {
-    if (!raw) return label;
-    const num = Number(raw.replace(",", "."));
-    if (!Number.isFinite(num) || num <= 0) return label;
-    return unit ? `${formatQuantity(num)} ${unit}` : formatQuantity(num);
-  };
+  const markerId = `md-arrow-${rawId.replace(/[^a-zA-Z0-9]/g, "")}`;
 
   if (shape === "rectangle-with-depth" && depthLabel) {
     return (
@@ -87,92 +74,102 @@ export function MeasureDiagram({
     );
   }
 
-  const fillDefs = (
-    <>
-      <marker
-        id={markerId}
-        viewBox="0 0 10 10"
-        refX="5"
-        refY="5"
-        markerWidth="5"
-        markerHeight="5"
-        orient="auto-start-reverse"
-      >
-        <path d="M0,0 L10,5 L0,10 Z" className="fill-navy" />
-      </marker>
-      <pattern id={patternId} width="7" height="7" patternTransform="rotate(45)" patternUnits="userSpaceOnUse">
-        <rect width="7" height="7" fill="#00215210" />
-        <line x1="0" y1="0" x2="0" y2="7" stroke="#002152" strokeOpacity="0.3" strokeWidth="1.5" />
-      </pattern>
-    </>
-  );
-
+  // Mismo lenguaje visual que los diagramas 3D (ver docs/svg-diagram-system.md):
+  // relleno sólido gris muy claro (nunca rayado/semi-transparente), flechas
+  // naranjas, etiquetas en chip blanco/borde azul fuera de la figura. Antes
+  // esta vista plana tenía su propio estilo (rayado azul translúcido,
+  // flechas azules, texto plano encima de la figura) — quedaba
+  // inconsistente con caja/cilindro.
   if (shape === "circle") {
+    const cx = 110;
+    const cy = 66;
+    const r = 50;
+    const chipCenter: Point = [cx, cy + r + 30];
     return (
-      <svg viewBox="0 0 220 140" className="w-full max-w-[340px] mx-auto" aria-hidden="true">
-        <defs>{fillDefs}</defs>
-        <circle cx="110" cy="70" r="50" fill={`url(#${patternId})`} className="stroke-navy" strokeWidth="2" />
+      <svg viewBox="0 0 220 172" className="w-full" role="img" aria-label={`Diagrama de ${primaryLabel}`}>
+        <defs>
+          <OrangeArrowMarker id={markerId} />
+        </defs>
+        <circle cx={cx} cy={cy} r={r} fill={TOP_FILL} stroke={SOLID_STROKE} strokeWidth="2.5" />
         <line
-          x1="60"
-          y1="70"
-          x2="160"
-          y2="70"
-          className="stroke-navy"
-          strokeWidth="1.5"
+          x1={cx - r + 8}
+          y1={cy}
+          x2={cx + r - 8}
+          y2={cy}
+          stroke={DIM_ORANGE}
+          strokeWidth="2"
+          strokeLinecap="round"
           markerStart={`url(#${markerId})`}
           markerEnd={`url(#${markerId})`}
         />
-        <text x="110" y="62" textAnchor="middle" className="fill-navy text-sm font-mono font-semibold">
-          {borderText(primaryLabel, primaryValue, primaryUnit)}
-        </text>
+        <line x1={cx} y1={cy + r} x2={chipCenter[0]} y2={chipCenter[1] - CHIP_SIZE[1] / 2} stroke="#8C8579" strokeWidth="1.3" />
+        <ValueChip center={chipCenter} size={CHIP_SIZE} label={primaryLabel} raw={primaryValue} unit={primaryUnit} />
       </svg>
     );
   }
 
+  const rx0 = 84;
+  const ry0 = 20;
+  const rw = 130;
+  const rh = 86;
+  const primaryChip: Point = [rx0 + rw / 2, ry0 + rh + 30];
+  const secondaryChip: Point = [rx0 - 46, ry0 + rh / 2];
+
   return (
-    <svg viewBox="0 0 220 150" className="w-full max-w-[380px] mx-auto" aria-hidden="true">
-      <defs>{fillDefs}</defs>
+    <svg viewBox="0 0 300 172" className="w-full" role="img" aria-label={`Diagrama de ${primaryLabel}${secondaryLabel ? `, ${secondaryLabel}` : ""}`}>
+      <defs>
+        <OrangeArrowMarker id={markerId} />
+      </defs>
 
-      {/* Rectángulo principal (vista en planta) */}
-      <rect x="34" y="24" width="130" height="86" rx="2" fill={`url(#${patternId})`} className="stroke-navy" strokeWidth="2" />
+      {/* Rectángulo principal (vista en planta) — sólido, mismo relleno
+          "cara superior" que la caja/cilindro isométricos. */}
+      <rect x={rx0} y={ry0} width={rw} height={rh} rx="2" fill={TOP_FILL} stroke={SOLID_STROKE} strokeWidth="2.5" />
 
-      {/* Flecha horizontal: medida principal */}
+      {/* Flecha horizontal, sobre el borde inferior real */}
       <line
-        x1="34"
-        y1="124"
-        x2="164"
-        y2="124"
-        className="stroke-navy"
-        strokeWidth="1.5"
+        x1={rx0 + 10}
+        y1={ry0 + rh}
+        x2={rx0 + rw - 10}
+        y2={ry0 + rh}
+        stroke={DIM_ORANGE}
+        strokeWidth="2"
+        strokeLinecap="round"
         markerStart={`url(#${markerId})`}
         markerEnd={`url(#${markerId})`}
       />
-      <text x="99" y="142" textAnchor="middle" className="fill-navy text-sm font-mono font-semibold">
-        {borderText(primaryLabel, primaryValue, primaryUnit)}
-      </text>
+      <line
+        x1={rx0 + rw / 2}
+        y1={ry0 + rh}
+        x2={primaryChip[0]}
+        y2={primaryChip[1] - CHIP_SIZE[1] / 2}
+        stroke="#8C8579"
+        strokeWidth="1.3"
+      />
+      <ValueChip center={primaryChip} size={CHIP_SIZE} label={primaryLabel} raw={primaryValue} unit={primaryUnit} />
 
-      {/* Flecha vertical: medida secundaria */}
+      {/* Flecha vertical, sobre el borde izquierdo real */}
       {secondaryLabel && (
         <>
           <line
-            x1="20"
-            y1="24"
-            x2="20"
-            y2="110"
-            className="stroke-navy"
-            strokeWidth="1.5"
+            x1={rx0}
+            y1={ry0 + 10}
+            x2={rx0}
+            y2={ry0 + rh - 10}
+            stroke={DIM_ORANGE}
+            strokeWidth="2"
+            strokeLinecap="round"
             markerStart={`url(#${markerId})`}
             markerEnd={`url(#${markerId})`}
           />
-          <text
-            x="12"
-            y="67"
-            textAnchor="middle"
-            className="fill-navy text-sm font-mono font-semibold"
-            transform="rotate(-90 12 67)"
-          >
-            {borderText(secondaryLabel, secondaryValue, secondaryUnit)}
-          </text>
+          <line
+            x1={rx0}
+            y1={ry0 + rh / 2}
+            x2={secondaryChip[0] + CHIP_SIZE[0] / 2}
+            y2={secondaryChip[1]}
+            stroke="#8C8579"
+            strokeWidth="1.3"
+          />
+          <ValueChip center={secondaryChip} size={CHIP_SIZE} label={secondaryLabel} raw={secondaryValue} unit={secondaryUnit} />
         </>
       )}
     </svg>
@@ -213,14 +210,31 @@ const PAD = 40;
 const VIEWBOX_W = 340;
 const MAX_HEIGHT = 260;
 const CHIP_SIZE: [number, number] = [72, 24];
-const DEPTH_RATIO_BOUNDS = { min: 0.2, max: 0.6, fallback: 1.2 / 4.5 };
+// Proporción real del usuario, acotada a un rango razonable — ver
+// docs/svg-diagram-system.md "nunca cambia el estilo, solo las
+// proporciones". El piso (0.38) es exageración deliberada de legibilidad
+// (misma idea que sugiere la propia spec: "profundidad=3 → el bloque se
+// ve más alto") — un prisma real casi plano (profundidad << largo/ancho,
+// el caso más común) se ve como una cuña delgada en vez de un bloque
+// reconocible si se dibuja a la proporción literal. No es un parche para
+// el bug de superposición (ese ya se resolvió cambiando qué polígono
+// forma la cara de arriba) ni para las flechas (esas ya no dependen del
+// largo de la arista, ver más abajo) — es puramente para que el sólido se
+// LEA como un bloque de un vistazo.
+const DEPTH_RATIO_BOUNDS = { min: 0.38, max: 0.65, fallback: 0.4 };
 const CYL_DEPTH_RATIO_BOUNDS = { min: 0.15, max: 1.4, fallback: 1.8 / 6 };
 // Naranjo de marca (mismo #FF4E00 que los CTA) — reservado acá para la
 // flecha de doble punta de cada cota, nunca para el sólido en sí (ver
 // conversación 2026-07-30, rediseño de diagrama de volumen).
 const DIM_ORANGE = "#FF4E00";
-const FACE_LIGHT = "#F7FAFD";
-const FACE_DARK = "#DFE7F2";
+// Sólido opaco (ver ajuste 2026-07-30 "no wireframe"): cara superior gris
+// muy claro, caras laterales blancas, contorno azul grueso — sin caras
+// transparentes, sin aristas ocultas, sin líneas punteadas. El volumen se
+// lee de un vistazo por el contorno + la sombra de color de la cara de
+// arriba, no por transparencias.
+const TOP_FILL = "#EEF2F6";
+const SIDE_FILL = "#FFFFFF";
+const SOLID_STROKE = "#002152";
 
 function sub2(a: Point, b: Point): Point {
   return [a[0] - b[0], a[1] - b[1]];
@@ -266,40 +280,6 @@ function placeBelowCota(
   return { M, extEnd, chipCenter };
 }
 
-// Flecha naranja de doble punta, corta, centrada sobre `at` — para
-// largo/ancho (horizontal-ish, paralela a la arista que mide) va justo
-// encima de la cajita de valor; se arma con la MISMA dirección que la
-// arista para que quede paralela a lo que está midiendo.
-function DimArrow({
-  at,
-  dir,
-  length,
-  markerId,
-}: {
-  at: Point;
-  dir: Point;
-  length: number;
-  markerId: string;
-}) {
-  const d = norm2(dir);
-  const half = length / 2;
-  const a: Point = [at[0] - d[0] * half, at[1] - d[1] * half];
-  const b: Point = [at[0] + d[0] * half, at[1] + d[1] * half];
-  return (
-    <line
-      x1={a[0]}
-      y1={a[1]}
-      x2={b[0]}
-      y2={b[1]}
-      stroke={DIM_ORANGE}
-      strokeWidth="2"
-      strokeLinecap="round"
-      markerStart={`url(#${markerId})`}
-      markerEnd={`url(#${markerId})`}
-    />
-  );
-}
-
 // Definición del marker de flecha naranja, compartida por caja y cilindro.
 function OrangeArrowMarker({ id }: { id: string }) {
   return (
@@ -309,10 +289,11 @@ function OrangeArrowMarker({ id }: { id: string }) {
   );
 }
 
-// Cota lateral "estándar" (extensión punteada desde cada extremo real de la
-// arista + flecha vertical/orizontal entre esos extremos) — usada para
-// profundidad, la única que pide explícitamente esta convención ("como se
-// mide con huincha") en vez del leader+cajita simple de largo/ancho.
+// Cota lateral "estándar" (extensión + flecha vertical/horizontal entre
+// esos extremos) — usada para profundidad, la única que pide explícitamente
+// esta convención ("como se mide con huincha") en vez del leader+cajita
+// simple de largo/ancho. Líneas de extensión SÓLIDAS (no punteadas, ver
+// ajuste 2026-07-30 "sin líneas punteadas").
 function LateralDimension({
   A,
   B,
@@ -331,8 +312,8 @@ function LateralDimension({
   const B2: Point = [B[0] + n[0] * gap, B[1] + n[1] * gap];
   return (
     <g>
-      <line x1={A[0]} y1={A[1]} x2={A2[0]} y2={A2[1]} stroke="#8C8579" strokeOpacity="0.6" strokeWidth="1.3" strokeDasharray="2.5 2.5" />
-      <line x1={B[0]} y1={B[1]} x2={B2[0]} y2={B2[1]} stroke="#8C8579" strokeOpacity="0.6" strokeWidth="1.3" strokeDasharray="2.5 2.5" />
+      <line x1={A[0]} y1={A[1]} x2={A2[0]} y2={A2[1]} stroke="#8C8579" strokeWidth="1.3" />
+      <line x1={B[0]} y1={B[1]} x2={B2[0]} y2={B2[1]} stroke="#8C8579" strokeWidth="1.3" />
       <line
         x1={A2[0]}
         y1={A2[1]}
@@ -389,20 +370,12 @@ function IsometricBoxDiagram({
   };
   // Largo → arista inferior de la cara IZQUIERDA (P0d-P2d), ancho → arista
   // inferior de la cara DERECHA (P0d-P1d) — sobre las paredes del frente,
-  // no colgando del rombo superior (pedido 2026-07-30, reemplaza el
-  // esquema anterior que las colgaba de P0-P1/P0-P2). Profundidad se queda
-  // en la arista vertical derecha (P1-P1d), como cota lateral.
+  // no colgando del rombo superior. Profundidad se queda en la arista
+  // vertical derecha (P1-P1d), como cota lateral.
   const cotaLargo = placeBelowCota(P.P0d, P.P2d, 50, CHIP_SIZE, fit.viewBoxW, fit.viewBoxH);
   const cotaAncho = placeBelowCota(P.P0d, P.P1d, 50, CHIP_SIZE, fit.viewBoxW, fit.viewBoxH);
 
   const poly = (pts: Point[]) => pts.map((p) => `${p[0]},${p[1]}`).join(" ");
-  // Flecha siempre horizontal y siempre justo encima de la cajita — más
-  // simple y más legible que "paralela a la arista" (que en isométrico
-  // queda diagonal y es más difícil de leer como "esto mide esto").
-  const arrowAbove = (chipCenter: Point): Point => {
-    const up: Point = [0, -1];
-    return [chipCenter[0] + up[0] * (CHIP_SIZE[1] / 2 + 9), chipCenter[1] + up[1] * (CHIP_SIZE[1] / 2 + 9)];
-  };
 
   return (
     <svg
@@ -415,36 +388,39 @@ function IsometricBoxDiagram({
         <OrangeArrowMarker id={markerId} />
       </defs>
 
-      {/* Cara superior (planta, largo × ancho) — transparente, solo contorno */}
-      <polygon points={poly([P.P2, P.P3, P.P1, P.P0])} fill="none" className="stroke-navy" strokeWidth="1.6" />
-      {/* Caras frontales — 2 tonos distintos para que el volumen se lea de
-          un vistazo (pedido 2026-07-30): izquierda más clara, derecha más
-          oscura. */}
-      <polygon points={poly([P.P0, P.P2, P.P2d, P.P0d])} fill={FACE_LIGHT} className="stroke-navy" strokeWidth="1" />
-      <polygon points={poly([P.P0, P.P1, P.P1d, P.P0d])} fill={FACE_DARK} className="stroke-navy" strokeWidth="1" />
+      {/* Prisma SÓLIDO y opaco (ver ajuste 2026-07-30 "no wireframe"): 3
+          caras rellenas, contorno azul grueso, sin caras ocultas, sin
+          transparencias — el volumen se lee de un vistazo.
 
-      {/* Fondo del hoyo/sólido (cara inferior, oculta) — punteada al 30% */}
+          OJO: esta proyección (l, ancho y profundidad los 3 apuntando
+          "hacia abajo" en pantalla, no repartidos en 360°) NO arma un
+          hexágono sin superposición si la cara de arriba se dibuja como el
+          rombo completo P0-P1-P3-P2 — P0d cae DENTRO de ese rombo (no en
+          su borde), así que el rombo se comía visualmente las 2 caras
+          laterales. Usando el triángulo P2-P3-P1 (sin P0) para la cara de
+          arriba sí queda 100% afuera de ambas caras laterales — mismo
+          contorno real del sólido, sin parche ni superposición. */}
       <polygon
-        points={poly([P.P0d, P.P1d, P.P3d, P.P2d])}
-        fill="none"
-        className="stroke-navy"
-        strokeOpacity="0.3"
-        strokeWidth="1.3"
-        strokeDasharray="3 3"
+        points={poly([P.P2, P.P3, P.P1, P.P0])}
+        fill={TOP_FILL}
+        stroke={SOLID_STROKE}
+        strokeWidth="2.5"
+        strokeLinejoin="round"
       />
-      {/* Arista vertical oculta (esquina trasera) */}
-      <line x1={P.P3[0]} y1={P.P3[1]} x2={P.P3d[0]} y2={P.P3d[1]} className="stroke-navy" strokeOpacity="0.3" strokeWidth="1.3" strokeDasharray="3 3" />
-
-      {/* Aristas estructurales visibles */}
-      <line x1={P.P1[0]} y1={P.P1[1]} x2={P.P3[0]} y2={P.P3[1]} className="stroke-navy" strokeWidth="2" strokeLinecap="round" />
-      <line x1={P.P2[0]} y1={P.P2[1]} x2={P.P3[0]} y2={P.P3[1]} className="stroke-navy" strokeWidth="2" strokeLinecap="round" />
-      <line x1={P.P1[0]} y1={P.P1[1]} x2={P.P1d[0]} y2={P.P1d[1]} className="stroke-navy" strokeWidth="2" strokeLinecap="round" />
-      <line x1={P.P2[0]} y1={P.P2[1]} x2={P.P2d[0]} y2={P.P2d[1]} className="stroke-navy" strokeWidth="2" strokeLinecap="round" />
-      <line x1={P.P1d[0]} y1={P.P1d[1]} x2={P.P0d[0]} y2={P.P0d[1]} className="stroke-navy" strokeWidth="2" strokeLinecap="round" />
-      <line x1={P.P2d[0]} y1={P.P2d[1]} x2={P.P0d[0]} y2={P.P0d[1]} className="stroke-navy" strokeWidth="2" strokeLinecap="round" />
-      <line x1={P.P0[0]} y1={P.P0[1]} x2={P.P0d[0]} y2={P.P0d[1]} className="stroke-navy" strokeWidth="2" strokeLinecap="round" />
-      <line x1={P.P0[0]} y1={P.P0[1]} x2={P.P1[0]} y2={P.P1[1]} className="stroke-navy" strokeWidth="1.4" />
-      <line x1={P.P0[0]} y1={P.P0[1]} x2={P.P2[0]} y2={P.P2[1]} className="stroke-navy" strokeWidth="1.4" />
+      <polygon
+        points={poly([P.P0, P.P2, P.P2d, P.P0d])}
+        fill={SIDE_FILL}
+        stroke={SOLID_STROKE}
+        strokeWidth="2.5"
+        strokeLinejoin="round"
+      />
+      <polygon
+        points={poly([P.P0, P.P1, P.P1d, P.P0d])}
+        fill={SIDE_FILL}
+        stroke={SOLID_STROKE}
+        strokeWidth="2.5"
+        strokeLinejoin="round"
+      />
 
       {/* Profundidad: cota lateral estándar (extensión + flecha vertical) */}
       <LateralDimension A={P.P1} B={P.P1d} outward={sub2(P.P1, P.P0)} gap={18} markerId={markerId} />
@@ -460,27 +436,48 @@ function IsometricBoxDiagram({
         return <ValueChip center={chipCenter} size={CHIP_SIZE} label={depthLabel} raw={depthValue} unit={depthUnit} />;
       })()}
 
-      {/* Largo/ancho: cajita apoyada en la arista inferior de su cara +
-          flecha naranja horizontal encima, doble punta */}
+      {/* Largo/ancho: flecha naranja corta, anclada a la cajita de valor
+          (crece/decrece con el diagrama entero vía CHIP_SIZE, nunca queda
+          flotando suelta — ver docs/svg-diagram-system.md), en vez de
+          abarcar la arista completa esquina-a-esquina: en un prisma ancho
+          y bajo (profundidad << largo/ancho, el caso real más común) esa
+          arista es casi tan larga como la diagonal del dibujo entero, y
+          una flecha de ese largo se lee como una línea cruzando todo el
+          diagrama en vez de una cota clara sobre "este borde". */}
       {[
-        { c: cotaLargo, label: primaryLabel, raw: primaryValue, unit: primaryUnit },
-        { c: cotaAncho, label: secondaryLabel, raw: secondaryValue, unit: secondaryUnit },
-      ].map((item, i) => (
-        <g key={i}>
-          <line
-            x1={item.c.extEnd[0]}
-            y1={item.c.extEnd[1]}
-            x2={item.c.chipCenter[0]}
-            y2={item.c.chipCenter[1]}
-            stroke="#8C8579"
-            strokeOpacity="0.55"
-            strokeWidth="1.3"
-            strokeDasharray="1.5 2"
-          />
-          <DimArrow at={arrowAbove(item.c.chipCenter)} dir={[1, 0]} length={CHIP_SIZE[0] * 0.62} markerId={markerId} />
-          <ValueChip center={item.c.chipCenter} size={CHIP_SIZE} label={item.label} raw={item.raw} unit={item.unit} />
-        </g>
-      ))}
+        { c: cotaLargo, dir: sub2(P.P2d, P.P0d), label: primaryLabel, raw: primaryValue, unit: primaryUnit },
+        { c: cotaAncho, dir: sub2(P.P1d, P.P0d), label: secondaryLabel, raw: secondaryValue, unit: secondaryUnit },
+      ].map((item, i) => {
+        const d = norm2(item.dir);
+        const half = CHIP_SIZE[0] * 0.34;
+        const at: Point = [item.c.chipCenter[0], item.c.chipCenter[1] - (CHIP_SIZE[1] / 2 + 9)];
+        const arrowA: Point = [at[0] - d[0] * half, at[1] - d[1] * half];
+        const arrowB: Point = [at[0] + d[0] * half, at[1] + d[1] * half];
+        return (
+          <g key={i}>
+            <line
+              x1={arrowA[0]}
+              y1={arrowA[1]}
+              x2={arrowB[0]}
+              y2={arrowB[1]}
+              stroke={DIM_ORANGE}
+              strokeWidth="2"
+              strokeLinecap="round"
+              markerStart={`url(#${markerId})`}
+              markerEnd={`url(#${markerId})`}
+            />
+            <line
+              x1={item.c.extEnd[0]}
+              y1={item.c.extEnd[1]}
+              x2={item.c.chipCenter[0]}
+              y2={item.c.chipCenter[1]}
+              stroke="#8C8579"
+              strokeWidth="1.3"
+            />
+            <ValueChip center={item.c.chipCenter} size={CHIP_SIZE} label={item.label} raw={item.raw} unit={item.unit} />
+          </g>
+        );
+      })}
     </svg>
   );
 }
@@ -524,10 +521,6 @@ function IsometricCylinderDiagram({
   // criterio que largo/ancho en la caja: no cuelga del plano superior).
   const cotaDiametro = placeBelowCota(bottomLeft, bottomRight, 50, CHIP_SIZE, fit.viewBoxW, fit.viewBoxH);
 
-  // Media elipse visible (frontal/inferior) vs. oculta (trasera/superior):
-  // convención estándar del "arco de barril" en SVG — sweep=0 va por
-  // arriba (trasera, oculta), sweep=1 va por abajo (frontal, visible).
-
   return (
     <svg
       viewBox={`0 0 ${fit.viewBoxW} ${fit.viewBoxH}`}
@@ -539,47 +532,29 @@ function IsometricCylinderDiagram({
         <OrangeArrowMarker id={markerId} />
       </defs>
 
-      {/* Pared lateral — degradado izq. clara → der. oscura (mismo par de
-          tonos que las 2 caras frontales de la caja); un cilindro no tiene
-          2 caras planas separadas, así que el degradado es el equivalente
-          honesto en vez de forzar una división que no existe. */}
-      <defs>
-        <linearGradient id={`${markerId}-wall`} x1={topLeft[0]} y1="0" x2={topRight[0]} y2="0" gradientUnits="userSpaceOnUse">
-          <stop offset="0%" stopColor={FACE_LIGHT} />
-          <stop offset="100%" stopColor={FACE_DARK} />
-        </linearGradient>
-      </defs>
+      {/* Cilindro SÓLIDO y opaco (ver ajuste 2026-07-30 "no wireframe"):
+          pared con relleno único (blanco, como las caras laterales de la
+          caja), sin degradado ni arco trasero punteado — un cilindro no
+          tiene 2 caras planas que dividir, así que un solo tono es el
+          equivalente honesto a "sin transparencias, sin reinterpretar". */}
       <path
         d={`M ${topLeft[0]} ${topLeft[1]} A ${rx} ${ry} 0 0 1 ${topRight[0]} ${topRight[1]} L ${bottomRight[0]} ${bottomRight[1]} A ${rx} ${ry} 0 0 1 ${bottomLeft[0]} ${bottomLeft[1]} Z`}
-        fill={`url(#${markerId}-wall)`}
-        className="stroke-navy"
-        strokeWidth="1"
+        fill={SIDE_FILL}
+        stroke={SOLID_STROKE}
+        strokeWidth="2.5"
+        strokeLinejoin="round"
       />
-
-      {/* Elipse inferior: arco trasero (oculto, punteado, 30%) */}
-      <path
-        d={`M ${bottomLeft[0]} ${bottomLeft[1]} A ${rx} ${ry} 0 0 1 ${bottomRight[0]} ${bottomRight[1]}`}
-        fill="none"
-        className="stroke-navy"
-        strokeOpacity="0.3"
-        strokeWidth="1.3"
-        strokeDasharray="3 3"
-      />
-      {/* Elipse inferior: arco frontal (visible) */}
+      {/* Arco frontal (visible) de la elipse inferior */}
       <path
         d={`M ${bottomLeft[0]} ${bottomLeft[1]} A ${rx} ${ry} 0 0 0 ${bottomRight[0]} ${bottomRight[1]}`}
         fill="none"
-        className="stroke-navy"
-        strokeWidth="2"
+        stroke={SOLID_STROKE}
+        strokeWidth="2.5"
       />
 
-      {/* Costados verticales */}
-      <line x1={topLeft[0]} y1={topLeft[1]} x2={bottomLeft[0]} y2={bottomLeft[1]} className="stroke-navy" strokeWidth="2" strokeLinecap="round" />
-      <line x1={topRight[0]} y1={topRight[1]} x2={bottomRight[0]} y2={bottomRight[1]} className="stroke-navy" strokeWidth="2" strokeLinecap="round" />
-
-      {/* Elipse superior (planta, diámetro) — transparente, solo contorno. */}
-      <ellipse cx={topCenter[0]} cy={topCenter[1]} rx={rx} ry={ry} fill="none" className="stroke-navy" strokeWidth="1.8" />
-      <line x1={topLeft[0]} y1={topLeft[1]} x2={topRight[0]} y2={topRight[1]} className="stroke-navy" strokeWidth="1.4" />
+      {/* Elipse superior (planta, diámetro) — rellena, misma cara "de
+          arriba" que el top del prisma. */}
+      <ellipse cx={topCenter[0]} cy={topCenter[1]} rx={rx} ry={ry} fill={TOP_FILL} stroke={SOLID_STROKE} strokeWidth="2.5" />
 
       {/* Profundidad: cota lateral estándar (extensión + flecha vertical) */}
       <LateralDimension A={topRight} B={bottomRight} outward={sub2(topRight, topCenter)} gap={18} markerId={markerId} />
@@ -595,21 +570,27 @@ function IsometricCylinderDiagram({
         return <ValueChip center={chipCenter} size={CHIP_SIZE} label={depthLabel} raw={depthValue} unit={depthUnit} />;
       })()}
 
-      {/* Diámetro: cajita apoyada en la arista inferior + flecha naranja */}
+      {/* Diámetro: flecha naranja SOBRE la arista inferior real + leader
+          fino a la cajita, apoyada debajo. */}
+      <line
+        x1={bottomLeft[0]}
+        y1={bottomLeft[1]}
+        x2={bottomRight[0]}
+        y2={bottomRight[1]}
+        stroke={DIM_ORANGE}
+        strokeWidth="2"
+        strokeLinecap="round"
+        markerStart={`url(#${markerId})`}
+        markerEnd={`url(#${markerId})`}
+      />
       <line
         x1={cotaDiametro.extEnd[0]}
         y1={cotaDiametro.extEnd[1]}
         x2={cotaDiametro.chipCenter[0]}
         y2={cotaDiametro.chipCenter[1]}
         stroke="#8C8579"
-        strokeOpacity="0.55"
         strokeWidth="1.3"
-        strokeDasharray="1.5 2"
       />
-      {(() => {
-        const at: Point = [cotaDiametro.chipCenter[0], cotaDiametro.chipCenter[1] - (CHIP_SIZE[1] / 2 + 9)];
-        return <DimArrow at={at} dir={[1, 0]} length={CHIP_SIZE[0] * 0.62} markerId={markerId} />;
-      })()}
       <ValueChip center={cotaDiametro.chipCenter} size={CHIP_SIZE} label={primaryLabel} raw={primaryValue} unit={primaryUnit} />
     </svg>
   );
