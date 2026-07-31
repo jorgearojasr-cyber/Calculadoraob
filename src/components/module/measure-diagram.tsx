@@ -5,9 +5,10 @@ import {
   buildLocalBox,
   buildLocalCylinder,
   cylinderBboxPoints,
-  depthRatioFrom,
   fitWithCeiling,
   formatMetric,
+  numOrDefault,
+  proportionalRatios,
   type Point,
 } from "@/lib/isometric-diagram";
 
@@ -206,23 +207,35 @@ function ValueChip({
   );
 }
 
-const PAD = 40;
-const VIEWBOX_W = 340;
-const MAX_HEIGHT = 260;
+// PAD chico + viewBox que se amolda al contenido en sus 2 ejes (ver
+// fitWithCeiling en isometric-diagram.ts) para que el sólido ocupe
+// siempre la misma fracción del panel sin importar su proporción — ver
+// conversación 2026-07-31 "el SVG debe ocupar 75-85% del panel, no un
+// dibujo chico centrado con espacio vacío alrededor". CONTENT_TARGET=180
+// + PAD=22 da 180/(180+44) ≈ 80% de ocupación en el eje más largo del
+// sólido, sea cual sea (antes solo el alto se amoldaba al contenido; el
+// ancho quedaba fijo en 340 y dejaba franjas vacías enormes para sólidos
+// angostos en pantalla).
+const PAD = 22;
+const CONTENT_TARGET = 180;
 const CHIP_SIZE: [number, number] = [72, 24];
-// Proporción real del usuario, acotada a un rango razonable — ver
-// docs/svg-diagram-system.md "nunca cambia el estilo, solo las
-// proporciones". El piso (0.38) es exageración deliberada de legibilidad
-// (misma idea que sugiere la propia spec: "profundidad=3 → el bloque se
-// ve más alto") — un prisma real casi plano (profundidad << largo/ancho,
-// el caso más común) se ve como una cuña delgada en vez de un bloque
-// reconocible si se dibuja a la proporción literal. No es un parche para
-// el bug de superposición (ese ya se resolvió cambiando qué polígono
-// forma la cara de arriba) ni para las flechas (esas ya no dependen del
-// largo de la arista, ver más abajo) — es puramente para que el sólido se
-// LEA como un bloque de un vistazo.
-const DEPTH_RATIO_BOUNDS = { min: 0.38, max: 0.65, fallback: 0.4 };
-const CYL_DEPTH_RATIO_BOUNDS = { min: 0.15, max: 1.4, fallback: 1.8 / 6 };
+// Piso de cada eje normalizado contra el mayor de los 3 (ver
+// proportionalRatios en isometric-diagram.ts) — evita que un eje mucho
+// más chico que los otros desaparezca visualmente (queda en ~15% del
+// tamaño del eje mayor, sigue leyéndose "chico" pero no colapsa a 0). NO
+// es un piso por eje fijo tipo DEPTH_RATIO_BOUNDS de antes: acá los 3 ejes
+// (largo, ancho, profundidad) se recalculan juntos desde las medidas
+// reales — ver conversación 2026-07-31, bug real: 4×4×5 y 10×2×1 se veían
+// casi iguales porque largo/ancho eran constantes fijas y solo la
+// profundidad variaba.
+const AXIS_RATIO_FLOOR = 0.15;
+// Valores genéricos mientras el usuario no ha escrito nada — misma
+// proporción "creíble" que tenía el diagrama antes de este ajuste.
+const DEFAULT_L = 4.5;
+const DEFAULT_W = 2.8;
+const DEFAULT_D = 1.2;
+const DEFAULT_DIAMETRO = 4;
+const DEFAULT_PROFUNDIDAD_CIL = 1.5;
 // Naranjo de marca (mismo #FF4E00 que los CTA) — reservado acá para la
 // flecha de doble punta de cada cota, nunca para el sólido en sí (ver
 // conversación 2026-07-30, rediseño de diagrama de volumen).
@@ -355,9 +368,19 @@ function IsometricBoxDiagram({
 }) {
   const rawId = useId();
   const markerId = `md-dim-arrow-${rawId.replace(/[^a-zA-Z0-9]/g, "")}`;
-  const depth = depthRatioFrom(primaryValue, depthValue, DEPTH_RATIO_BOUNDS);
-  const local = buildLocalBox(depth.ratio);
-  const fit = fitWithCeiling(Object.values(local), PAD, VIEWBOX_W, MAX_HEIGHT);
+  const largoNum = numOrDefault(primaryValue, DEFAULT_L);
+  const anchoNum = numOrDefault(secondaryValue, DEFAULT_W);
+  const depthNum = numOrDefault(depthValue, DEFAULT_D);
+  const [largoRatio, anchoRatio, depthRatio] = proportionalRatios([largoNum, anchoNum, depthNum], AXIS_RATIO_FLOOR);
+  const local = buildLocalBox(largoRatio, anchoRatio, depthRatio);
+  // Ojo: P3d (esquina lejana + profundidad) no forma parte de NINGUNA cara
+  // visible (ni el techo P0-P1-P3-P2 ni las 2 paredes) — si entra al bbox
+  // usado para escalar, el algoritmo reserva espacio para un punto que
+  // nunca se dibuja y el sólido real queda más chico que el 75-85% target
+  // (ver medición 2026-07-31: bbox con P3d daba ~78% de alto REAL cuando
+  // el cálculo apuntaba a 80%, hasta un 20pp más chico en casos extremos).
+  const visiblePoints = [local.P0, local.P1, local.P2, local.P3, local.P0d, local.P1d, local.P2d];
+  const fit = fitWithCeiling(visiblePoints, PAD, CONTENT_TARGET);
   const P = {
     P0: fit.project(local.P0),
     P1: fit.project(local.P1),
@@ -392,21 +415,21 @@ function IsometricBoxDiagram({
           caras rellenas, contorno azul grueso, sin caras ocultas, sin
           transparencias — el volumen se lee de un vistazo.
 
-          OJO: esta proyección (l, ancho y profundidad los 3 apuntando
-          "hacia abajo" en pantalla, no repartidos en 360°) NO arma un
-          hexágono sin superposición si la cara de arriba se dibuja como el
-          rombo completo P0-P1-P3-P2 — P0d cae DENTRO de ese rombo (no en
-          su borde), así que el rombo se comía visualmente las 2 caras
-          laterales. Usando el triángulo P2-P3-P1 (sin P0) para la cara de
-          arriba sí queda 100% afuera de ambas caras laterales — mismo
-          contorno real del sólido, sin parche ni superposición. */}
-      <polygon
-        points={poly([P.P2, P.P3, P.P1, P.P0])}
-        fill={TOP_FILL}
-        stroke={SOLID_STROKE}
-        strokeWidth="2.5"
-        strokeLinejoin="round"
-      />
+          OJO: esta proyección (largo, ancho y profundidad apuntando hacia
+          "abajo" en pantalla, no repartidos en 360°) hace que la
+          proyección 2D del rombo superior (P0-P1-P3-P2) y las paredes
+          laterales SIEMPRE se superpongan en algún grado (verificado
+          numéricamente para toda proporción, no es un caso borde) —
+          ninguna elección de polígono evita la superposición en 2D. La
+          solución correcta no es "evitar la superposición" sino pintar en
+          el orden Z real: el rombo superior es la cara más CERCANA al
+          espectador en esta cámara fija (el borde/reborde que se ve "por
+          encima" del hoyo/bloque), así que se dibuja AL FINAL, encima de
+          las paredes — el algoritmo del pintor resuelve la superposición
+          mostrando siempre la cara correcta, para cualquier profundidad
+          (ver conversación 2026-07-31, escalado proporcional real). Antes
+          se dibujaba el rombo/triángulo PRIMERO y las paredes después, por
+          lo que una profundidad grande tapaba la cara superior entera. */}
       <polygon
         points={poly([P.P0, P.P2, P.P2d, P.P0d])}
         fill={SIDE_FILL}
@@ -417,6 +440,13 @@ function IsometricBoxDiagram({
       <polygon
         points={poly([P.P0, P.P1, P.P1d, P.P0d])}
         fill={SIDE_FILL}
+        stroke={SOLID_STROKE}
+        strokeWidth="2.5"
+        strokeLinejoin="round"
+      />
+      <polygon
+        points={poly([P.P0, P.P1, P.P3, P.P2])}
+        fill={TOP_FILL}
         stroke={SOLID_STROKE}
         strokeWidth="2.5"
         strokeLinejoin="round"
@@ -505,9 +535,11 @@ function IsometricCylinderDiagram({
 }) {
   const rawId = useId();
   const markerId = `md-dim-arrow-${rawId.replace(/[^a-zA-Z0-9]/g, "")}`;
-  const depth = depthRatioFrom(primaryValue, depthValue, CYL_DEPTH_RATIO_BOUNDS);
-  const local = buildLocalCylinder(depth.ratio);
-  const fit = fitWithCeiling(cylinderBboxPoints(local), PAD, VIEWBOX_W, MAX_HEIGHT);
+  const diametroNum = numOrDefault(primaryValue, DEFAULT_DIAMETRO);
+  const depthNum = numOrDefault(depthValue, DEFAULT_PROFUNDIDAD_CIL);
+  const [diametroRatio, depthRatio] = proportionalRatios([diametroNum, depthNum], AXIS_RATIO_FLOOR);
+  const local = buildLocalCylinder(diametroRatio / 2, depthRatio);
+  const fit = fitWithCeiling(cylinderBboxPoints(local), PAD, CONTENT_TARGET);
 
   const topLeft = fit.project(local.topLeft);
   const topRight = fit.project(local.topRight);

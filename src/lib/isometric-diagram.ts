@@ -38,6 +38,28 @@ export function depthRatioFrom(
   return { ratio: clamp(raw, bounds.min, bounds.max), raw };
 }
 
+// Escalado PROPORCIONAL real entre 2 o 3 medidas (ver conversación
+// 2026-07-31 "el dibujo no comunica las proporciones reales" — antes
+// largo/ancho eran constantes fijas [1, 0.8] sin importar el valor
+// ingresado, solo la profundidad variaba, así que 4×4×5 y 10×2×1 se veían
+// prácticamente iguales). Cada medida se normaliza contra la MAYOR de
+// todas (queda en 1.0), preservando la proporción relativa real entre los
+// 3 ejes — nunca un valor fijo por eje. `floor` evita que un eje mucho más
+// chico que los otros desaparezca visualmente (sigue leyéndose "chico",
+// nunca 0) sin "aplanar" la diferencia con los demás.
+export function proportionalRatios(dims: number[], floor: number): number[] {
+  const maxDim = Math.max(...dims);
+  return dims.map((d) => clamp(d / maxDim, floor, 1));
+}
+
+// Toma el valor ingresado (string crudo, coma o punto) o un default
+// razonable si el campo todavía está vacío — para que el diagrama
+// muestre una proporción genérica creíble antes de que el usuario escriba
+// algo, en vez de una caja/cilindro degenerada.
+export function numOrDefault(raw: string | undefined, fallback: number): number {
+  return toNum(raw) ?? fallback;
+}
+
 export function formatMetric(raw: string | undefined, unit: string | undefined): string | null {
   const num = toNum(raw);
   if (num === null) return null;
@@ -79,11 +101,17 @@ export type Fit = {
   widthRatio: number;
 };
 
-// Ajusta un set de puntos (bbox) a un viewBox: escala uniforme apuntando
-// al techo del rango de ancho (92%) salvo que el techo de alto (maxHeight)
-// sea más restrictivo — en ese caso el alto manda y el ancho puede caer
-// bajo el piso (80%). Misma regla que fitWithCeiling en el prototipo.
-export function fitWithCeiling(points: Point[], pad: number, viewBoxW: number, maxHeight: number): Fit {
+// Ajusta un set de puntos (bbox) a un viewBox que se AMOLDA al contenido en
+// sus 2 ejes (ancho Y alto), no solo al alto — antes viewBoxW era un valor
+// fijo (340) y solo el alto se adaptaba al bbox; para un sólido angosto en
+// pantalla (p.ej. profundidad >> largo/ancho) eso dejaba franjas vacías
+// enormes a los costados, muy por debajo del 75-85% de ocupación del panel
+// que pide la spec (ver conversación 2026-07-31). Ahora el eje MÁS LARGO
+// del bbox (ancho o alto, el que sea) siempre se escala a CONTENT_TARGET
+// px, y el otro eje se escala en la misma proporción (preserva forma) —
+// así el sólido ocupa la misma fracción del panel sin importar si el
+// dibujo es más ancho que alto o al revés.
+export function fitWithCeiling(points: Point[], pad: number, contentTarget: number): Fit {
   const xs = points.map((p) => p[0]);
   const ys = points.map((p) => p[1]);
   const minX = Math.min(...xs);
@@ -92,18 +120,15 @@ export function fitWithCeiling(points: Point[], pad: number, viewBoxW: number, m
   const maxY = Math.max(...ys);
   const bboxW = maxX - minX;
   const bboxH = maxY - minY;
-  const intW = viewBoxW - 2 * pad;
-  const WIDTH_RATIO_HIGH = 0.92;
-  const kByWidthHigh = (WIDTH_RATIO_HIGH * intW) / bboxW;
-  const kByHeightCeiling = (maxHeight - 2 * pad) / bboxH;
-  const k = Math.min(kByWidthHigh, kByHeightCeiling);
+  const k = contentTarget / Math.max(bboxW, bboxH);
   const solidW = k * bboxW;
   const solidH = k * bboxH;
+  const viewBoxW = solidW + 2 * pad;
   const viewBoxH = solidH + 2 * pad;
-  const offX = pad + (intW - solidW) / 2 - k * minX;
+  const offX = pad - k * minX;
   const offY = pad - k * minY;
   const project = (p: Point): Point => [offX + k * p[0], offY + k * p[1]];
-  return { project, viewBoxW, viewBoxH: viewBoxH, k, widthRatio: solidW / intW };
+  return { project, viewBoxW, viewBoxH, k, widthRatio: solidW / viewBoxW };
 }
 
 export function centroidOf(points: Point[]): Point {
@@ -180,13 +205,14 @@ export type BoxPoints = {
   P3d: Point;
 };
 
-const UNIT_L = 1;
-const UNIT_W = 0.8;
-
-export function buildLocalBox(depthRatio: number): BoxPoints {
-  const l: Point = [COS30 * UNIT_L, SIN30 * UNIT_L];
-  const w: Point = [-COS30 * UNIT_W, SIN30 * UNIT_W];
-  const d: Point = [0, depthRatio * UNIT_L];
+// largoRatio/anchoRatio/depthRatio: los 3 ejes normalizados contra el
+// mayor de los 3 (ver proportionalRatios) — antes largo/ancho eran
+// constantes fijas [1, 0.8] y solo la profundidad variaba; ahora los 3
+// ejes reflejan la proporción real ingresada.
+export function buildLocalBox(largoRatio: number, anchoRatio: number, depthRatio: number): BoxPoints {
+  const l: Point = [COS30 * largoRatio, SIN30 * largoRatio];
+  const w: Point = [-COS30 * anchoRatio, SIN30 * anchoRatio];
+  const d: Point = [0, depthRatio];
   const P0: Point = [0, 0];
   const P1: Point = [l[0], l[1]];
   const P2: Point = [w[0], w[1]];
@@ -218,19 +244,21 @@ export type CylinderPoints = {
   ry: number;
 };
 
-const CYL_R = 0.5;
 export const ELLIPSE_RY_RATIO = 0.42;
 
-export function buildLocalCylinder(depthRatio: number): CylinderPoints {
-  const ry = CYL_R * ELLIPSE_RY_RATIO;
+// radiusRatio/depthRatio: normalizados contra el mayor de los 2 (diámetro
+// vs. profundidad, ver proportionalRatios) — antes el radio era una
+// constante fija (0.5) y solo la profundidad variaba.
+export function buildLocalCylinder(radiusRatio: number, depthRatio: number): CylinderPoints {
+  const ry = radiusRatio * ELLIPSE_RY_RATIO;
   return {
-    topLeft: [-CYL_R, 0],
-    topRight: [CYL_R, 0],
+    topLeft: [-radiusRatio, 0],
+    topRight: [radiusRatio, 0],
     topCenter: [0, 0],
-    bottomLeft: [-CYL_R, depthRatio],
-    bottomRight: [CYL_R, depthRatio],
+    bottomLeft: [-radiusRatio, depthRatio],
+    bottomRight: [radiusRatio, depthRatio],
     bottomCenter: [0, depthRatio],
-    rx: CYL_R,
+    rx: radiusRatio,
     ry,
   };
 }
