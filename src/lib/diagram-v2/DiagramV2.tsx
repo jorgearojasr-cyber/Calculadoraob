@@ -12,7 +12,7 @@ import { buildLane, outwardFromFace, type Lane } from "./layout/dimension-lane";
 import { buildDepthLane } from "./layout/depth-lane";
 import { BoxSolid, CylinderSolid } from "./render/solid-3d";
 import { Rect2D, Circle2D } from "./render/shape-2d";
-import { DimensionChip, CHIP_W, CHIP_H } from "./render/dimension-chip";
+import { DimensionChip, CHIP_H, estimateChipWidth } from "./render/dimension-chip";
 
 const PAD = 20;
 const CONTENT_TARGET = 205; // eje dominante ≈ 205/(205+40) ≈ 84% del panel
@@ -38,12 +38,39 @@ function fmt(n: number | undefined, unit: string): string {
 }
 
 // Las esquinas del chip (no solo su centro) son lo que realmente hay que
-// contener en el canvas final — ver finalizeCanvas.
-function chipCorners(lane: Lane): Vec2[] {
+// contener en el canvas final — ver finalizeCanvas. El ancho del chip
+// depende del texto (ver estimateChipWidth), así que este helper recibe
+// el label/value real en vez de un tamaño fijo.
+function chipCorners(lane: Lane, label: string, value: string): Vec2[] {
   const [cx, cy] = lane.chipCenter;
+  const w = estimateChipWidth(label, value);
   return [
-    [cx - CHIP_W / 2, cy - CHIP_H / 2],
-    [cx + CHIP_W / 2, cy + CHIP_H / 2],
+    [cx - w / 2, cy - CHIP_H / 2],
+    [cx + w / 2, cy + CHIP_H / 2],
+  ];
+}
+
+// Las aristas de largo y ancho comparten su vértice cercano (P0d) — ver
+// comentario de chipT en el caso "box" — así que para un objeto MUY
+// angosto en planta (ej. Pilar 0,30×0,30) sus 2 chips igual pueden quedar
+// lo bastante cerca como para superponerse, sobre todo ahora que el chip
+// es una fila horizontal (más ancho que el chip apilado de la primera
+// pasada de Fase 0). Si se superponen, se separan horizontalmente lo
+// justo para no tocarse — el carril (la línea + flecha) NO se mueve,
+// solo el chip que se dibuja sobre él, igual que el mockup real (los 2
+// chips de Pilar/columna quedan uno al lado del otro, con un pequeño
+// espacio entre ellos).
+function separateChips(laneLeft: Lane, textLeft: [string, string], laneRight: Lane, textRight: [string, string]): [Lane, Lane] {
+  const wLeft = estimateChipWidth(...textLeft);
+  const wRight = estimateChipWidth(...textRight);
+  const gap = 6;
+  const needed = wLeft / 2 + wRight / 2 + gap;
+  const dx = laneRight.chipCenter[0] - laneLeft.chipCenter[0];
+  if (dx >= needed) return [laneLeft, laneRight];
+  const push = (needed - dx) / 2;
+  return [
+    { ...laneLeft, chipCenter: [laneLeft.chipCenter[0] - push, laneLeft.chipCenter[1]] },
+    { ...laneRight, chipCenter: [laneRight.chipCenter[0] + push, laneRight.chipCenter[1]] },
   ];
 }
 
@@ -68,18 +95,32 @@ export function DiagramV2({ kind, largo, ancho, profundidad, diametro, labels, u
     };
     const faces = boxFaces(P);
 
-    // chipT=0.75: la arista de largo (P0d-P2d) y la de ancho (P0d-P1d)
-    // comparten el vértice P0d — ver comentario en buildLane, sesgamos el
-    // chip hacia el extremo lejano para que no se superpongan en objetos
-    // angostos en planta (ej. Pilar/columna).
-    const laneLargo = buildLane(P.P0d, P.P2d, outwardFromFace(P.P0d, P.P2d, faces.wallLeft), undefined, 0.95);
-    const laneAncho = buildLane(P.P0d, P.P1d, outwardFromFace(P.P0d, P.P1d, faces.wallRight), undefined, 0.95);
+    const largoText = fmt(largo, unit) || (labels.largo ?? "");
+    const anchoText = fmt(ancho, unit) || (labels.ancho ?? "");
+    const profundidadText = fmt(profundidad, unit) || (labels.profundidad ?? "");
+
+    // El eje "largo" (P1) queda del lado DERECHO de la cámara (AXIS_LARGO
+    // apunta abajo-derecha) y el eje "ancho" (P2) del lado IZQUIERDO — ver
+    // mockup real: Largo siempre a la derecha, Ancho siempre a la
+    // izquierda. La arista P0d-P1d es físicamente la de largo (pared
+    // "wallRight"); P0d-P2d es la de ancho (pared "wallLeft").
+    //
+    // chipT=0.95: ambas aristas comparten el vértice P0d — ver comentario
+    // en buildLane, sesgamos el chip hacia el extremo lejano para que no
+    // se superpongan en objetos angostos en planta (ej. Pilar/columna).
+    let laneAncho = buildLane(P.P0d, P.P2d, outwardFromFace(P.P0d, P.P2d, faces.wallLeft), undefined, 0.95);
+    let laneLargo = buildLane(P.P0d, P.P1d, outwardFromFace(P.P0d, P.P1d, faces.wallRight), undefined, 0.95);
     const laneProfundidad = buildDepthLane(P.P1, P.P1d);
+    [laneAncho, laneLargo] = separateChips(laneAncho, [labels.ancho ?? "Ancho", anchoText], laneLargo, [labels.largo ?? "Largo", largoText]);
 
     const canvas = finalizeCanvas(
       fit.viewBoxW,
       fit.viewBoxH,
-      [...chipCorners(laneLargo), ...chipCorners(laneAncho), ...chipCorners(laneProfundidad)],
+      [
+        ...chipCorners(laneLargo, labels.largo ?? "Largo", largoText),
+        ...chipCorners(laneAncho, labels.ancho ?? "Ancho", anchoText),
+        ...chipCorners(laneProfundidad, labels.profundidad ?? "Profundidad", profundidadText),
+      ],
       CANVAS_MARGIN
     );
 
@@ -87,14 +128,9 @@ export function DiagramV2({ kind, largo, ancho, profundidad, diametro, labels, u
       <svg viewBox={`0 0 ${canvas.viewBoxW} ${canvas.viewBoxH}`} {...svgProps} aria-label={`Diagrama de ${labels.largo}, ${labels.ancho} y ${labels.profundidad}`}>
         <g transform={`translate(${canvas.translate[0]},${canvas.translate[1]})`}>
           <BoxSolid wallLeft={faces.wallLeft} wallRight={faces.wallRight} top={faces.top} />
-          <DimensionChip lane={laneLargo} label={labels.largo ?? "Largo"} value={fmt(largo, unit) || (labels.largo ?? "")} active={activeField === "largo"} />
-          <DimensionChip lane={laneAncho} label={labels.ancho ?? "Ancho"} value={fmt(ancho, unit) || (labels.ancho ?? "")} active={activeField === "ancho"} />
-          <DimensionChip
-            lane={laneProfundidad}
-            label={labels.profundidad ?? "Profundidad"}
-            value={fmt(profundidad, unit) || (labels.profundidad ?? "")}
-            active={activeField === "profundidad"}
-          />
+          <DimensionChip lane={laneLargo} label={labels.largo ?? "Largo"} value={largoText} active={activeField === "largo"} />
+          <DimensionChip lane={laneAncho} label={labels.ancho ?? "Ancho"} value={anchoText} active={activeField === "ancho"} />
+          <DimensionChip lane={laneProfundidad} label={labels.profundidad ?? "Profundidad"} value={profundidadText} active={activeField === "profundidad"} />
         </g>
       </svg>
     );
@@ -120,22 +156,28 @@ export function DiagramV2({ kind, largo, ancho, profundidad, diametro, labels, u
     const diaA: Vec2 = [bottomLeft[0], diaArrowY];
     const diaB: Vec2 = [bottomRight[0], diaArrowY];
 
+    const diametroText = fmt(diametro, unit) || (labels.diametro ?? "");
+    const profundidadText = fmt(profundidad, unit) || (labels.profundidad ?? "");
+
     const laneDiametro = buildLane(diaA, diaB, [0, 1]);
     const laneProfundidad = buildDepthLane(topRight, bottomRight);
 
-    const canvas = finalizeCanvas(fit.viewBoxW, fit.viewBoxH, [...chipCorners(laneDiametro), ...chipCorners(laneProfundidad)], CANVAS_MARGIN);
+    const canvas = finalizeCanvas(
+      fit.viewBoxW,
+      fit.viewBoxH,
+      [
+        ...chipCorners(laneDiametro, labels.diametro ?? "Diámetro", diametroText),
+        ...chipCorners(laneProfundidad, labels.profundidad ?? "Profundidad", profundidadText),
+      ],
+      CANVAS_MARGIN
+    );
 
     return (
       <svg viewBox={`0 0 ${canvas.viewBoxW} ${canvas.viewBoxH}`} {...svgProps} aria-label={`Diagrama de ${labels.diametro} y ${labels.profundidad}`}>
         <g transform={`translate(${canvas.translate[0]},${canvas.translate[1]})`}>
           <CylinderSolid topLeft={topLeft} topRight={topRight} topCenter={topCenter} bottomLeft={bottomLeft} bottomRight={bottomRight} rx={rx} ry={ry} />
-          <DimensionChip lane={laneDiametro} label={labels.diametro ?? "Diámetro"} value={fmt(diametro, unit) || (labels.diametro ?? "")} active={activeField === "diametro"} />
-          <DimensionChip
-            lane={laneProfundidad}
-            label={labels.profundidad ?? "Profundidad"}
-            value={fmt(profundidad, unit) || (labels.profundidad ?? "")}
-            active={activeField === "profundidad"}
-          />
+          <DimensionChip lane={laneDiametro} label={labels.diametro ?? "Diámetro"} value={diametroText} active={activeField === "diametro"} />
+          <DimensionChip lane={laneProfundidad} label={labels.profundidad ?? "Profundidad"} value={profundidadText} active={activeField === "profundidad"} />
         </g>
       </svg>
     );
@@ -155,20 +197,32 @@ export function DiagramV2({ kind, largo, ancho, profundidad, diametro, labels, u
     );
     const TL = fit.project([0, 0]);
     const BR = fit.project([lR, aR]);
+    const TR: Vec2 = [BR[0], TL[1]];
+    const BL: Vec2 = [TL[0], BR[1]];
     const w = BR[0] - TL[0];
     const h = BR[1] - TL[1];
 
-    const laneLargo = buildLane([TL[0], BR[1]], BR, [0, 1]);
-    const laneAncho = buildLane(TL, [TL[0], BR[1]], [-1, 0]);
+    const largoText = fmt(largo, unit) || (labels.largo ?? "");
+    const anchoText = fmt(ancho, unit) || (labels.ancho ?? "");
 
-    const canvas = finalizeCanvas(fit.viewBoxW, fit.viewBoxH, [...chipCorners(laneLargo), ...chipCorners(laneAncho)], CANVAS_MARGIN);
+    // Regla explícita del mockup: "Largo abajo, ancho a la derecha,
+    // siempre" — ver Sistema 2D del PDF (Radier, Cerámica, Vereda).
+    const laneLargo = buildLane(BL, BR, [0, 1]);
+    const laneAncho = buildLane(TR, BR, [1, 0]);
+
+    const canvas = finalizeCanvas(
+      fit.viewBoxW,
+      fit.viewBoxH,
+      [...chipCorners(laneLargo, labels.largo ?? "Largo", largoText), ...chipCorners(laneAncho, labels.ancho ?? "Ancho", anchoText)],
+      CANVAS_MARGIN
+    );
 
     return (
       <svg viewBox={`0 0 ${canvas.viewBoxW} ${canvas.viewBoxH}`} {...svgProps} aria-label={`Diagrama de ${labels.largo} y ${labels.ancho}`}>
         <g transform={`translate(${canvas.translate[0]},${canvas.translate[1]})`}>
           <Rect2D x={TL[0]} y={TL[1]} width={w} height={h} />
-          <DimensionChip lane={laneLargo} label={labels.largo ?? "Largo"} value={fmt(largo, unit) || (labels.largo ?? "")} active={activeField === "largo"} />
-          <DimensionChip lane={laneAncho} label={labels.ancho ?? "Ancho"} value={fmt(ancho, unit) || (labels.ancho ?? "")} active={activeField === "ancho"} />
+          <DimensionChip lane={laneLargo} label={labels.largo ?? "Largo"} value={largoText} active={activeField === "largo"} />
+          <DimensionChip lane={laneAncho} label={labels.ancho ?? "Ancho"} value={anchoText} active={activeField === "ancho"} />
         </g>
       </svg>
     );
@@ -187,14 +241,15 @@ export function DiagramV2({ kind, largo, ancho, profundidad, diametro, labels, u
   const r = fit.k;
   const diaA: Vec2 = [center[0] - r, center[1] + r];
   const diaB: Vec2 = [center[0] + r, center[1] + r];
+  const diametroText = fmt(diametro, unit) || (labels.diametro ?? "");
   const laneDiametro = buildLane(diaA, diaB, [0, 1]);
-  const canvas = finalizeCanvas(fit.viewBoxW, fit.viewBoxH, chipCorners(laneDiametro), CANVAS_MARGIN);
+  const canvas = finalizeCanvas(fit.viewBoxW, fit.viewBoxH, chipCorners(laneDiametro, labels.diametro ?? "Diámetro", diametroText), CANVAS_MARGIN);
 
   return (
     <svg viewBox={`0 0 ${canvas.viewBoxW} ${canvas.viewBoxH}`} {...svgProps} aria-label={`Diagrama de ${labels.diametro}`}>
       <g transform={`translate(${canvas.translate[0]},${canvas.translate[1]})`}>
         <Circle2D cx={center[0]} cy={center[1]} r={r} />
-        <DimensionChip lane={laneDiametro} label={labels.diametro ?? "Diámetro"} value={fmt(diametro, unit) || (labels.diametro ?? "")} active={activeField === "diametro"} />
+        <DimensionChip lane={laneDiametro} label={labels.diametro ?? "Diámetro"} value={diametroText} active={activeField === "diametro"} />
       </g>
     </svg>
   );
