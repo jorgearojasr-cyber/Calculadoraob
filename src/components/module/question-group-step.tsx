@@ -474,7 +474,14 @@ function VolumeStep({
         <SubmitActions onSubmit={handleSubmit} onSaveForLater={onSaveForLater} />
       </div>
 
-      <div className="order-1 lg:order-2 mb-6 lg:mb-0">
+      <div className="order-1 lg:order-2 mb-6 lg:mb-0 rounded-2xl bg-[#F3F7FB] p-5 sm:p-6">
+        <div className="hidden lg:block mb-4">
+          <p className="font-semibold text-sm">Así se ve con tus medidas</p>
+          <p className="text-sm text-ink-muted mt-1">
+            Mismo diagrama y mismos valores: el {isCircular ? "diámetro" : "ancho"} extra va al dibujo, no a agrandar
+            el texto.
+          </p>
+        </div>
         <MeasureDiagram
           shape={diagram.shape}
           primaryLabel={diagram.primaryLabel}
@@ -488,12 +495,7 @@ function VolumeStep({
           depthUnit={depthQuestion.unit ?? undefined}
         />
         <div className="hidden lg:block mt-4">
-          <p className="font-semibold text-sm">Así se ve con tus medidas</p>
-          <p className="text-sm text-ink-muted mt-1">
-            Mismo diagrama y mismos valores: el {isCircular ? "diámetro" : "ancho"} extra va al dibujo, no a agrandar
-            el texto.
-          </p>
-          <Tip text={tip} className="mt-4" />
+          <Tip text={tip} />
         </div>
       </div>
     </div>

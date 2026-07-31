@@ -407,7 +407,7 @@ function IsometricBoxDiagram({
   return (
     <svg
       viewBox={`0 0 ${fit.viewBoxW} ${fit.viewBoxH}`}
-      className="w-full max-w-[460px] mx-auto"
+      className="w-full"
       role="img"
       aria-label={`Diagrama de ${primaryLabel}, ${secondaryLabel} y ${depthLabel}`}
     >
@@ -531,7 +531,7 @@ function IsometricCylinderDiagram({
   return (
     <svg
       viewBox={`0 0 ${fit.viewBoxW} ${fit.viewBoxH}`}
-      className="w-full max-w-[460px] mx-auto"
+      className="w-full"
       role="img"
       aria-label={`Diagrama de ${primaryLabel} y ${depthLabel}`}
     >
