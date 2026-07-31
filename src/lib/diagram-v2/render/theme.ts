@@ -34,9 +34,23 @@ export const theme = {
     // 3 caras") — cara superior más clara todavía, pared derecha (largo)
     // con más presencia/saturación, pared izquierda (ancho) claramente
     // más oscura — el volumen debe leerse antes de mirar las cotas.
+    // Valores usados como stop final de cada gradiente (ver `gradient`
+    // abajo) y como fallback si algún consumidor pintara sin degradado.
     top: "#F1F5FB",
     wallRight: "#A7B8D5",
     wallLeft: "#7F93BC",
+  },
+  // Degradado sutil DENTRO de cada cara (calibración 2026-08-02, "más
+  // sensación de volumen sin tocar geometría/cámara") — cada cara pasa de
+  // un tono más claro (borde superior, más cerca de la luz) al tono base
+  // ya calibrado en `fill` (borde inferior). Es la MISMA paleta de 3
+  // tonos, solo con un quiebre de luz adicional dentro de cada polígono
+  // — no un 4to color. El objetivo es "casi imperceptible en el código,
+  // evidente en el objeto": el rango entre stops es chico a propósito.
+  gradient: {
+    top: { from: "#FAFCFE", to: "#F1F5FB" },
+    wallRight: { from: "#B7C5DE", to: "#93A6C9" },
+    wallLeft: { from: "#8FA1C4", to: "#6D82AD" },
   },
   dimension: {
     active: BRAND_ORANGE, // SOLO la cota que se está escribiendo ahora mismo

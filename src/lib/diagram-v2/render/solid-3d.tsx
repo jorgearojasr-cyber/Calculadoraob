@@ -1,7 +1,17 @@
 // Render del sólido 3D — consume geometría YA proyectada (math/solids.ts
 // + math/scale-engine.ts), nunca calcula un punto por su cuenta. Solo
 // sabe de pintar: orden Z, colores del tema, grosor de contorno.
+//
+// Calibración 2026-08-02 ("más sensación de volumen sin tocar geometría/
+// cámara/proyección"): cada cara pasa de color plano a un degradado
+// sutil DENTRO del mismo polígono (ver theme.gradient) — ningún punto
+// nuevo, ningún cambio de forma, solo cómo se pinta el área ya
+// calculada. Vertical (de arriba hacia abajo del propio bbox de cada
+// cara, objectBoundingBox) porque la luz de la especificación viene de
+// arriba — no requiere saber el ángulo de cámara, así que sigue sin
+// acoplar render a math/.
 
+import { useId } from "react";
 import type { Vec2 } from "../math/vec2";
 import { theme } from "./theme";
 
@@ -9,26 +19,46 @@ function poly(pts: Vec2[]): string {
   return pts.map((p) => `${p[0]},${p[1]}`).join(" ");
 }
 
+function FaceGradient({ id, from, to }: { id: string; from: string; to: string }) {
+  return (
+    <linearGradient id={id} x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stopColor={from} />
+      <stop offset="100%" stopColor={to} />
+    </linearGradient>
+  );
+}
+
 export function BoxSolid({ wallLeft, wallRight, top }: { wallLeft: Vec2[]; wallRight: Vec2[]; top: Vec2[] }) {
+  const rawId = useId();
+  const gid = (name: string) => `dimv2-grad-${name}-${rawId.replace(/[^a-zA-Z0-9]/g, "")}`;
+  const idTop = gid("top");
+  const idRight = gid("right");
+  const idLeft = gid("left");
+
   return (
     <g>
+      <defs>
+        <FaceGradient id={idTop} from={theme.gradient.top.from} to={theme.gradient.top.to} />
+        <FaceGradient id={idRight} from={theme.gradient.wallRight.from} to={theme.gradient.wallRight.to} />
+        <FaceGradient id={idLeft} from={theme.gradient.wallLeft.from} to={theme.gradient.wallLeft.to} />
+      </defs>
       <polygon
         points={poly(wallLeft)}
-        fill={theme.fill.wallLeft}
+        fill={`url(#${idLeft})`}
         stroke={theme.stroke.solid}
         strokeWidth={theme.stroke.width}
         strokeLinejoin="round"
       />
       <polygon
         points={poly(wallRight)}
-        fill={theme.fill.wallRight}
+        fill={`url(#${idRight})`}
         stroke={theme.stroke.solid}
         strokeWidth={theme.stroke.width}
         strokeLinejoin="round"
       />
       <polygon
         points={poly(top)}
-        fill={theme.fill.top}
+        fill={`url(#${idTop})`}
         stroke={theme.stroke.solid}
         strokeWidth={theme.stroke.width}
         strokeLinejoin="round"
@@ -54,13 +84,22 @@ export function CylinderSolid({
   rx: number;
   ry: number;
 }) {
+  const rawId = useId();
+  const gid = (name: string) => `dimv2-grad-${name}-${rawId.replace(/[^a-zA-Z0-9]/g, "")}`;
+  const idBody = gid("body");
+  const idTop = gid("top");
+
   return (
     <g>
+      <defs>
+        <FaceGradient id={idBody} from={theme.gradient.wallRight.from} to={theme.gradient.wallRight.to} />
+        <FaceGradient id={idTop} from={theme.gradient.top.from} to={theme.gradient.top.to} />
+      </defs>
       {/* Cuerpo — un solo tono medio (un cilindro no tiene 2 caras planas
           distintas que diferenciar como la caja). */}
       <path
         d={`M ${topLeft[0]} ${topLeft[1]} A ${rx} ${ry} 0 0 1 ${topRight[0]} ${topRight[1]} L ${bottomRight[0]} ${bottomRight[1]} A ${rx} ${ry} 0 0 1 ${bottomLeft[0]} ${bottomLeft[1]} Z`}
-        fill={theme.fill.wallRight}
+        fill={`url(#${idBody})`}
         stroke={theme.stroke.solid}
         strokeWidth={theme.stroke.width}
         strokeLinejoin="round"
@@ -78,7 +117,7 @@ export function CylinderSolid({
         cy={topCenter[1]}
         rx={rx}
         ry={ry}
-        fill={theme.fill.top}
+        fill={`url(#${idTop})`}
         stroke={theme.stroke.solid}
         strokeWidth={theme.stroke.width}
       />
