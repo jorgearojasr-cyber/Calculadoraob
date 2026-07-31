@@ -38,18 +38,43 @@ export function depthRatioFrom(
   return { ratio: clamp(raw, bounds.min, bounds.max), raw };
 }
 
-// Escalado PROPORCIONAL real entre 2 o 3 medidas (ver conversación
-// 2026-07-31 "el dibujo no comunica las proporciones reales" — antes
-// largo/ancho eran constantes fijas [1, 0.8] sin importar el valor
-// ingresado, solo la profundidad variaba, así que 4×4×5 y 10×2×1 se veían
-// prácticamente iguales). Cada medida se normaliza contra la MAYOR de
-// todas (queda en 1.0), preservando la proporción relativa real entre los
-// 3 ejes — nunca un valor fijo por eje. `floor` evita que un eje mucho más
-// chico que los otros desaparezca visualmente (sigue leyéndose "chico",
-// nunca 0) sin "aplanar" la diferencia con los demás.
-export function proportionalRatios(dims: number[], floor: number): number[] {
+// Escalado proporcional CON COMPRESIÓN NO LINEAL (ver conversación
+// 2026-08-01, "Alternativa B — isométrico amortiguado", elegida tras
+// exploración visual formal). Antes (proportionalRatios) cada medida se
+// normalizaba de forma puramente lineal contra la mayor de todas — fiel a
+// la proporción real, pero para casos extremos (ej. largo=12, ancho=6,
+// profundidad=1,5 → ratio de profundidad = 0,125) el sólido colapsaba en
+// una franja diagonal casi ilegible.
+//
+// La compresión NO se aplica parejo a todos los ejes: el eje dominante
+// (ratio=1) nunca cambia, y los ejes que ya están razonablemente cerca
+// del dominante (ratio >= COMPRESSION_THRESHOLD — el caso típico: un
+// ancho suele ser 45-90% del largo) tampoco se tocan, así el caso normal
+// se ve prácticamente igual a la escala lineal de antes. Solo los ejes
+// MUY chicos en comparación (el caso típico: la profundidad de una
+// excavación/radier suele ser una fracción chica del largo) se empujan
+// hacia arriba con una potencia < 1 — cuanto más extremo el caso, mayor
+// el empujón relativo, pero SIEMPRE por debajo de COMPRESSION_THRESHOLD
+// (nunca "miente" haciendo que un eje chico se vea igual de grande que el
+// dominante). Calibrado y verificado con capturas reales sobre 4,5×2,8×1,2
+// (normal, cambio ~9% en profundidad — casi imperceptible), 8×4×2,
+// 6×6×1, 15×3×2 y 12×6×1,5 (extremo, cambio ~90% en el eje más chico —
+// nunca colapsa).
+const COMPRESSION_THRESHOLD = 0.3;
+const COMPRESSION_POWER = 0.25;
+
+function compressRatio(ratio: number): number {
+  if (ratio >= COMPRESSION_THRESHOLD) return ratio;
+  return COMPRESSION_THRESHOLD * Math.pow(ratio / COMPRESSION_THRESHOLD, COMPRESSION_POWER);
+}
+
+// `floor` sigue siendo una red de seguridad para entradas degeneradas
+// (ej. un valor casi 0) — con la compresión activa, en la práctica casi
+// nunca es la compresión la que determina el resultado final, así que se
+// baja de 0.15 a 0.12 (ver AXIS_RATIO_FLOOR en measure-diagram.tsx).
+export function compressedRatios(dims: number[], floor: number): number[] {
   const maxDim = Math.max(...dims);
-  return dims.map((d) => clamp(d / maxDim, floor, 1));
+  return dims.map((d) => clamp(compressRatio(d / maxDim), floor, 1));
 }
 
 // Toma el valor ingresado (string crudo, coma o punto) o un default
@@ -206,9 +231,10 @@ export type BoxPoints = {
 };
 
 // largoRatio/anchoRatio/depthRatio: los 3 ejes normalizados contra el
-// mayor de los 3 (ver proportionalRatios) — antes largo/ancho eran
-// constantes fijas [1, 0.8] y solo la profundidad variaba; ahora los 3
-// ejes reflejan la proporción real ingresada.
+// mayor de los 3, con compresión no lineal en los ejes chicos (ver
+// compressedRatios) — antes largo/ancho eran constantes fijas [1, 0.8] y
+// solo la profundidad variaba; ahora los 3 ejes reflejan la proporción
+// real ingresada.
 export function buildLocalBox(largoRatio: number, anchoRatio: number, depthRatio: number): BoxPoints {
   const l: Point = [COS30 * largoRatio, SIN30 * largoRatio];
   const w: Point = [-COS30 * anchoRatio, SIN30 * anchoRatio];
@@ -247,7 +273,7 @@ export type CylinderPoints = {
 export const ELLIPSE_RY_RATIO = 0.42;
 
 // radiusRatio/depthRatio: normalizados contra el mayor de los 2 (diámetro
-// vs. profundidad, ver proportionalRatios) — antes el radio era una
+// vs. profundidad, ver compressedRatios) — antes el radio era una
 // constante fija (0.5) y solo la profundidad variaba.
 export function buildLocalCylinder(radiusRatio: number, depthRatio: number): CylinderPoints {
   const ry = radiusRatio * ELLIPSE_RY_RATIO;
@@ -275,4 +301,51 @@ export function cylinderBboxPoints(c: CylinderPoints): Point[] {
     c.bottomRight,
     [c.bottomCenter[0], c.bottomCenter[1] + c.ry],
   ];
+}
+
+// ---- Superficie (m²) con espesor leve isométrico ----
+// Decisión de diseño 2026-08-01 (tras exploración visual formal, ver
+// docs/svg-diagram-system.md): un diagrama de ÁREA es ante todo una
+// vista superior — SIN el escorzo isométrico completo de largo/ancho, la
+// mejor lectura posible de "estas son las 2 medidas" — pero con un borde
+// delgado de espesor en 2 aristas (frente y lado derecho) para que se
+// sienta como una losa/radier físico, no un rectángulo abstracto. El
+// espesor es SIEMPRE la misma fracción del lado mayor (SLAB_SKIRT_RATIO)
+// — no representa ninguna medida real ingresada por el usuario, es
+// puramente un recurso visual, igual que el "leve" del nombre.
+export type SlabPoints = {
+  TL: Point;
+  TR: Point;
+  BL: Point;
+  BR: Point;
+  frontBL: Point;
+  frontBR: Point;
+  sideTR: Point;
+  sideBR: Point;
+};
+
+const SLAB_SKIRT_RATIO = 0.09;
+const SLAB_SIDE_SKEW_RATIO = 0.05;
+
+export function buildSlab(widthRatio: number, heightRatio: number): SlabPoints {
+  const TL: Point = [0, 0];
+  const TR: Point = [widthRatio, 0];
+  const BL: Point = [0, heightRatio];
+  const BR: Point = [widthRatio, heightRatio];
+  const skirtH = SLAB_SKIRT_RATIO;
+  const skew = SLAB_SIDE_SKEW_RATIO;
+  return {
+    TL,
+    TR,
+    BL,
+    BR,
+    frontBL: add(BL, [0, skirtH]),
+    frontBR: add(BR, [0, skirtH]),
+    sideTR: add(TR, [skew, skew * 0.6]),
+    sideBR: add(BR, [skew, skew * 0.6]),
+  };
+}
+
+export function slabBboxPoints(s: SlabPoints): Point[] {
+  return [s.TL, s.TR, s.BL, s.BR, s.frontBL, s.frontBR, s.sideTR, s.sideBR];
 }

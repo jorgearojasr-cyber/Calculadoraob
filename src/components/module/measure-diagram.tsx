@@ -4,11 +4,13 @@ import { useId } from "react";
 import {
   buildLocalBox,
   buildLocalCylinder,
+  buildSlab,
+  compressedRatios,
   cylinderBboxPoints,
   fitWithCeiling,
   formatMetric,
   numOrDefault,
-  proportionalRatios,
+  slabBboxPoints,
   type Point,
 } from "@/lib/isometric-diagram";
 
@@ -43,9 +45,6 @@ export function MeasureDiagram({
   secondaryUnit?: string;
   depthUnit?: string;
 }) {
-  const rawId = useId();
-  const markerId = `md-arrow-${rawId.replace(/[^a-zA-Z0-9]/g, "")}`;
-
   if (shape === "rectangle-with-depth" && depthLabel) {
     return (
       <IsometricBoxDiagram
@@ -75,92 +74,19 @@ export function MeasureDiagram({
     );
   }
 
-  // Mismo lenguaje visual que los diagramas 3D (ver docs/svg-diagram-system.md):
-  // relleno sólido gris muy claro (nunca rayado/semi-transparente), flechas
-  // naranjas. Etiquetas en texto simple junto a la flecha (ver ajuste
-  // 2026-07-31 "regla de las etiquetas": acá nunca se combina la palabra
-  // descriptiva + el valor en un mismo rótulo — es una u otra — así que
-  // nunca se justifica la cajita blanca/borde azul, solo texto de cotas
-  // estilo AutoCAD/Revit).
   if (shape === "circle") {
-    const cx = 110;
-    const cy = 66;
-    const r = 50;
-    const textPos: Point = [cx, cy + r + DIM_GAP + TEXT_GAP];
-    return (
-      <svg viewBox="0 0 220 158" className="w-full" role="img" aria-label={`Diagrama de ${primaryLabel}`}>
-        <defs>
-          <OrangeArrowMarker id={markerId} />
-        </defs>
-        <circle cx={cx} cy={cy} r={r} fill={TOP_FILL} stroke={SOLID_STROKE} strokeWidth="2.5" />
-        <line
-          x1={cx - r + 8}
-          y1={cy}
-          x2={cx + r - 8}
-          y2={cy}
-          stroke={DIM_ORANGE}
-          strokeWidth="1.6"
-          strokeLinecap="round"
-          markerStart={`url(#${markerId})`}
-          markerEnd={`url(#${markerId})`}
-        />
-        <line x1={cx} y1={cy + r} x2={cx} y2={cy + r + DIM_GAP} stroke="#8C8579" strokeWidth="1" />
-        <DimText center={textPos} text={dimText(primaryValue, primaryUnit, primaryLabel)} />
-      </svg>
-    );
+    return <AreaCircleDiagram primaryLabel={primaryLabel} primaryValue={primaryValue} primaryUnit={primaryUnit} />;
   }
 
-  const rx0 = 84;
-  const ry0 = 20;
-  const rw = 130;
-  const rh = 86;
-  const primaryTextPos: Point = [rx0 + rw / 2, ry0 + rh + DIM_GAP + TEXT_GAP];
-  const secondaryTextPos: Point = [rx0 - DIM_GAP - TEXT_GAP, ry0 + rh / 2];
-
   return (
-    <svg viewBox="0 0 300 158" className="w-full" role="img" aria-label={`Diagrama de ${primaryLabel}${secondaryLabel ? `, ${secondaryLabel}` : ""}`}>
-      <defs>
-        <OrangeArrowMarker id={markerId} />
-      </defs>
-
-      {/* Rectángulo principal (vista en planta) — sólido, mismo relleno
-          "cara superior" que la caja/cilindro isométricos. */}
-      <rect x={rx0} y={ry0} width={rw} height={rh} rx="2" fill={TOP_FILL} stroke={SOLID_STROKE} strokeWidth="2.5" />
-
-      {/* Flecha horizontal, sobre el borde inferior real */}
-      <line
-        x1={rx0 + 10}
-        y1={ry0 + rh}
-        x2={rx0 + rw - 10}
-        y2={ry0 + rh}
-        stroke={DIM_ORANGE}
-        strokeWidth="1.6"
-        strokeLinecap="round"
-        markerStart={`url(#${markerId})`}
-        markerEnd={`url(#${markerId})`}
-      />
-      <line x1={rx0 + rw / 2} y1={ry0 + rh} x2={rx0 + rw / 2} y2={ry0 + rh + DIM_GAP} stroke="#8C8579" strokeWidth="1" />
-      <DimText center={primaryTextPos} text={dimText(primaryValue, primaryUnit, primaryLabel)} />
-
-      {/* Flecha vertical, sobre el borde izquierdo real */}
-      {secondaryLabel && (
-        <>
-          <line
-            x1={rx0}
-            y1={ry0 + 10}
-            x2={rx0}
-            y2={ry0 + rh - 10}
-            stroke={DIM_ORANGE}
-            strokeWidth="1.6"
-            strokeLinecap="round"
-            markerStart={`url(#${markerId})`}
-            markerEnd={`url(#${markerId})`}
-          />
-          <line x1={rx0} y1={ry0 + rh / 2} x2={rx0 - DIM_GAP} y2={ry0 + rh / 2} stroke="#8C8579" strokeWidth="1" />
-          <DimText center={secondaryTextPos} text={dimText(secondaryValue, secondaryUnit, secondaryLabel)} />
-        </>
-      )}
-    </svg>
+    <AreaRectDiagram
+      primaryLabel={primaryLabel}
+      secondaryLabel={secondaryLabel}
+      primaryValue={primaryValue}
+      secondaryValue={secondaryValue}
+      primaryUnit={primaryUnit}
+      secondaryUnit={secondaryUnit}
+    />
   );
 }
 
@@ -232,16 +158,22 @@ const POINT_DIM_DIST = 36;
 // por tamaño real — solo un margen aproximado para texto de cota corto).
 const LABEL_MARGIN_X = 24;
 const LABEL_MARGIN_Y = 8;
-// Piso de cada eje normalizado contra el mayor de los 3 (ver
-// proportionalRatios en isometric-diagram.ts) — evita que un eje mucho
-// más chico que los otros desaparezca visualmente (queda en ~15% del
-// tamaño del eje mayor, sigue leyéndose "chico" pero no colapsa a 0). NO
-// es un piso por eje fijo tipo DEPTH_RATIO_BOUNDS de antes: acá los 3 ejes
-// (largo, ancho, profundidad) se recalculan juntos desde las medidas
-// reales — ver conversación 2026-07-31, bug real: 4×4×5 y 10×2×1 se veían
-// casi iguales porque largo/ancho eran constantes fijas y solo la
-// profundidad variaba.
-const AXIS_RATIO_FLOOR = 0.15;
+// Piso de cada eje normalizado contra el mayor de los 3, aplicado DESPUÉS
+// de la compresión no lineal (ver compressedRatios en isometric-diagram.ts)
+// — red de seguridad solo para entradas casi degeneradas, ya que en la
+// práctica es la compresión la que evita que un eje chico desaparezca
+// visualmente. Bajado de 0.15 a 0.12 porque la compresión ya hace ese
+// trabajo para el rango real de proporciones (ver conversación
+// 2026-08-01, "Alternativa B — isométrico amortiguado").
+const AXIS_RATIO_FLOOR = 0.12;
+// Espesor "leve" del zócalo isométrico de los diagramas de superficie
+// (m²) — SIEMPRE la misma fracción del lado mayor, nunca representa una
+// medida real (ver buildSlab en isometric-diagram.ts). Para el círculo
+// (sin segunda medida real con la que construir un zócalo rectangular) se
+// reusa el mismo cilindro isométrico del volumen, con una profundidad
+// FIJA chica en vez de un valor ingresado — mismo lenguaje, misma
+// sensación de espesor leve.
+const CIRCLE_SLAB_DEPTH_RATIO = 0.14;
 // Valores genéricos mientras el usuario no ha escrito nada — misma
 // proporción "creíble" que tenía el diagrama antes de este ajuste.
 const DEFAULT_L = 4.5;
@@ -361,19 +293,23 @@ function DimensionLine({
 
 // ---------------------------------------------------------------------
 // Cota "de punto" — flecha CORTA (no la arista completa) anclada a un
-// único punto, empujado `dist` derecho hacia abajo desde el punto medio
-// de la arista real — usada para largo/ancho/diámetro. Empuje fijo hacia
-// abajo (no perpendicular a la arista, ver comentario en DimensionLine)
-// porque a esta distancia SÍ alcanza a despejar la cara superior para
-// toda proporción, verificado con capturas reales (ver conversación
-// 2026-07-31). La flecha corta (no la arista entera) evita que una arista
-// larga (p.ej. largo=10m vs. ancho=2m) se lea como una línea cruzando
-// gran parte del diagrama.
+// único punto, empujado `dist` en `pushDir` desde el punto medio de la
+// arista real — usada para largo/ancho/diámetro. Empuje fijo en una
+// dirección constante (no perpendicular a la arista, ver comentario en
+// DimensionLine) porque a esta distancia SÍ alcanza a despejar el resto
+// del dibujo para toda proporción, verificado con capturas reales (ver
+// conversación 2026-07-31). La flecha corta (no la arista entera) evita
+// que una arista larga (p.ej. largo=10m vs. ancho=2m) se lea como una
+// línea cruzando gran parte del diagrama. `pushDir` default [0,1] (hacia
+// abajo) para los sólidos isométricos; los diagramas de superficie (ver
+// AreaRectDiagram) también empujan hacia la izquierda para la arista
+// vertical de "ancho", ya que ahí abajo no es "afuera" de la figura.
 // ---------------------------------------------------------------------
 function PointDimension({
   A,
   B,
   dist,
+  pushDir,
   markerId,
   text,
   viewBoxW,
@@ -382,18 +318,20 @@ function PointDimension({
   A: Point;
   B: Point;
   dist: number;
+  pushDir: Point;
   markerId: string;
   text: string;
   viewBoxW: number;
   viewBoxH: number;
 }) {
   const mid = mid2(A, B);
-  const target: Point = [mid[0], mid[1] + dist];
+  const n = norm2(pushDir);
+  const target: Point = [mid[0] + n[0] * dist, mid[1] + n[1] * dist];
   const textPos = clampLabelCenter(target, viewBoxW, viewBoxH);
-  const leaderStart: Point = [mid[0], mid[1] + dist * 0.4];
+  const leaderStart: Point = [mid[0] + n[0] * dist * 0.4, mid[1] + n[1] * dist * 0.4];
   const edgeDir = norm2(sub2(B, A));
   const arrowHalf = 12;
-  const at: Point = [textPos[0], textPos[1] - TEXT_GAP];
+  const at: Point = [textPos[0] - n[0] * TEXT_GAP, textPos[1] - n[1] * TEXT_GAP];
   const arrowA: Point = [at[0] - edgeDir[0] * arrowHalf, at[1] - edgeDir[1] * arrowHalf];
   const arrowB: Point = [at[0] + edgeDir[0] * arrowHalf, at[1] + edgeDir[1] * arrowHalf];
   return (
@@ -412,6 +350,187 @@ function PointDimension({
       />
       <DimText center={textPos} text={text} />
     </g>
+  );
+}
+
+// ---------------------------------------------------------------------
+// Superficie (m²) — rectángulo. Decisión de diseño 2026-08-01 (tras
+// exploración visual formal): vista superior SIN escorzo isométrico
+// (mejor lectura de largo×ancho que una perspectiva completa) + zócalo
+// de espesor leve en 2 aristas para que se sienta un objeto físico
+// (losa/radier), no un plano abstracto — ver buildSlab en
+// isometric-diagram.ts. Mismas cotas de punto que largo/ancho de la caja.
+// ---------------------------------------------------------------------
+function AreaRectDiagram({
+  primaryLabel,
+  secondaryLabel,
+  primaryValue,
+  secondaryValue,
+  primaryUnit,
+  secondaryUnit,
+}: {
+  primaryLabel: string;
+  secondaryLabel?: string;
+  primaryValue?: string;
+  secondaryValue?: string;
+  primaryUnit?: string;
+  secondaryUnit?: string;
+}) {
+  const rawId = useId();
+  const markerId = `md-area-arrow-${rawId.replace(/[^a-zA-Z0-9]/g, "")}`;
+  const largoNum = numOrDefault(primaryValue, DEFAULT_L);
+  const anchoNum = numOrDefault(secondaryValue, DEFAULT_W);
+  const [largoRatio, anchoRatio] = compressedRatios([largoNum, anchoNum], AXIS_RATIO_FLOOR);
+  const local = buildSlab(largoRatio, anchoRatio);
+  const fit = fitWithCeiling(slabBboxPoints(local), PAD, CONTENT_TARGET);
+  const S = {
+    TL: fit.project(local.TL),
+    TR: fit.project(local.TR),
+    BL: fit.project(local.BL),
+    BR: fit.project(local.BR),
+    frontBL: fit.project(local.frontBL),
+    frontBR: fit.project(local.frontBR),
+    sideTR: fit.project(local.sideTR),
+    sideBR: fit.project(local.sideBR),
+  };
+  const poly = (pts: Point[]) => pts.map((p) => `${p[0]},${p[1]}`).join(" ");
+
+  return (
+    <svg
+      viewBox={`0 0 ${fit.viewBoxW} ${fit.viewBoxH}`}
+      className="w-full"
+      role="img"
+      aria-label={`Diagrama de ${primaryLabel}${secondaryLabel ? `, ${secondaryLabel}` : ""}`}
+    >
+      <defs>
+        <OrangeArrowMarker id={markerId} />
+      </defs>
+
+      {/* Zócalo de espesor (lateral + frontal) primero, la vista superior
+          al final encima — mismo orden Z que el prisma isométrico (ver
+          comentario en IsometricBoxDiagram): la cara de arriba es la más
+          cercana al espectador en esta cámara. */}
+      <polygon
+        points={poly([S.TR, S.sideTR, S.sideBR, S.BR])}
+        fill={SIDE_FILL}
+        stroke={SOLID_STROKE}
+        strokeWidth="2.5"
+        strokeLinejoin="round"
+      />
+      <polygon
+        points={poly([S.BL, S.BR, S.frontBR, S.frontBL])}
+        fill={SIDE_FILL}
+        stroke={SOLID_STROKE}
+        strokeWidth="2.5"
+        strokeLinejoin="round"
+      />
+      <rect
+        x={S.TL[0]}
+        y={S.TL[1]}
+        width={S.TR[0] - S.TL[0]}
+        height={S.BL[1] - S.TL[1]}
+        fill={TOP_FILL}
+        stroke={SOLID_STROKE}
+        strokeWidth="2.5"
+        strokeLinejoin="round"
+      />
+
+      <PointDimension
+        A={S.frontBL}
+        B={S.frontBR}
+        dist={POINT_DIM_DIST * 0.6}
+        pushDir={[0, 1]}
+        markerId={markerId}
+        text={dimText(primaryValue, primaryUnit, primaryLabel)}
+        viewBoxW={fit.viewBoxW}
+        viewBoxH={fit.viewBoxH}
+      />
+      {secondaryLabel && (
+        <PointDimension
+          A={S.TL}
+          B={S.BL}
+          dist={POINT_DIM_DIST * 0.6}
+          pushDir={[-1, 0]}
+          markerId={markerId}
+          text={dimText(secondaryValue, secondaryUnit, secondaryLabel)}
+          viewBoxW={fit.viewBoxW}
+          viewBoxH={fit.viewBoxH}
+        />
+      )}
+    </svg>
+  );
+}
+
+// ---------------------------------------------------------------------
+// Superficie (m²) — círculo. Mismo criterio que AreaRectDiagram: se
+// reusa el cilindro isométrico del volumen (misma geometría, mismo
+// estilo) con una profundidad FIJA chica (CIRCLE_SLAB_DEPTH_RATIO) en
+// vez de un valor real ingresado — el círculo no tiene una segunda
+// medida con la que armar un zócalo, así que "tomar prestada" la
+// perspectiva del cilindro es más simple que inventar un tercer tipo de
+// zócalo, y mantiene el mismo lenguaje visual.
+// ---------------------------------------------------------------------
+function AreaCircleDiagram({
+  primaryLabel,
+  primaryValue,
+  primaryUnit,
+}: {
+  primaryLabel: string;
+  primaryValue?: string;
+  primaryUnit?: string;
+}) {
+  const rawId = useId();
+  const markerId = `md-area-arrow-${rawId.replace(/[^a-zA-Z0-9]/g, "")}`;
+  const local = buildLocalCylinder(1, CIRCLE_SLAB_DEPTH_RATIO);
+  const fit = fitWithCeiling(cylinderBboxPoints(local), PAD, CONTENT_TARGET);
+
+  const topLeft = fit.project(local.topLeft);
+  const topRight = fit.project(local.topRight);
+  const topCenter = fit.project(local.topCenter);
+  const bottomLeft = fit.project(local.bottomLeft);
+  const bottomRight = fit.project(local.bottomRight);
+  const rx = fit.k * local.rx;
+  const ry = fit.k * local.ry;
+  const diaArrowY = (bottomLeft[1] + bottomRight[1]) / 2 + ry;
+  const diaA: Point = [bottomLeft[0], diaArrowY];
+  const diaB: Point = [bottomRight[0], diaArrowY];
+
+  return (
+    <svg
+      viewBox={`0 0 ${fit.viewBoxW} ${fit.viewBoxH}`}
+      className="w-full"
+      role="img"
+      aria-label={`Diagrama de ${primaryLabel}`}
+    >
+      <defs>
+        <OrangeArrowMarker id={markerId} />
+      </defs>
+      <path
+        d={`M ${topLeft[0]} ${topLeft[1]} A ${rx} ${ry} 0 0 1 ${topRight[0]} ${topRight[1]} L ${bottomRight[0]} ${bottomRight[1]} A ${rx} ${ry} 0 0 1 ${bottomLeft[0]} ${bottomLeft[1]} Z`}
+        fill={SIDE_FILL}
+        stroke={SOLID_STROKE}
+        strokeWidth="2.5"
+        strokeLinejoin="round"
+      />
+      <path
+        d={`M ${bottomLeft[0]} ${bottomLeft[1]} A ${rx} ${ry} 0 0 0 ${bottomRight[0]} ${bottomRight[1]}`}
+        fill="none"
+        stroke={SOLID_STROKE}
+        strokeWidth="2.5"
+      />
+      <ellipse cx={topCenter[0]} cy={topCenter[1]} rx={rx} ry={ry} fill={TOP_FILL} stroke={SOLID_STROKE} strokeWidth="2.5" />
+
+      <PointDimension
+        A={diaA}
+        B={diaB}
+        dist={POINT_DIM_DIST * 0.6}
+        pushDir={[0, 1]}
+        markerId={markerId}
+        text={dimText(primaryValue, primaryUnit, primaryLabel)}
+        viewBoxW={fit.viewBoxW}
+        viewBoxH={fit.viewBoxH}
+      />
+    </svg>
   );
 }
 
@@ -444,7 +563,7 @@ function IsometricBoxDiagram({
   const largoNum = numOrDefault(primaryValue, DEFAULT_L);
   const anchoNum = numOrDefault(secondaryValue, DEFAULT_W);
   const depthNum = numOrDefault(depthValue, DEFAULT_D);
-  const [largoRatio, anchoRatio, depthRatio] = proportionalRatios([largoNum, anchoNum, depthNum], AXIS_RATIO_FLOOR);
+  const [largoRatio, anchoRatio, depthRatio] = compressedRatios([largoNum, anchoNum, depthNum], AXIS_RATIO_FLOOR);
   const local = buildLocalBox(largoRatio, anchoRatio, depthRatio);
   // Ojo: P3d (esquina lejana + profundidad) no forma parte de NINGUNA cara
   // visible (ni el techo P0-P1-P3-P2 ni las 2 paredes) — si entra al bbox
@@ -536,6 +655,7 @@ function IsometricBoxDiagram({
         A={P.P0d}
         B={P.P2d}
         dist={POINT_DIM_DIST}
+        pushDir={[0, 1]}
         markerId={markerId}
         text={dimText(primaryValue, primaryUnit, primaryLabel)}
         viewBoxW={fit.viewBoxW}
@@ -545,6 +665,7 @@ function IsometricBoxDiagram({
         A={P.P0d}
         B={P.P1d}
         dist={POINT_DIM_DIST}
+        pushDir={[0, 1]}
         markerId={markerId}
         text={dimText(secondaryValue, secondaryUnit, secondaryLabel)}
         viewBoxW={fit.viewBoxW}
@@ -579,7 +700,7 @@ function IsometricCylinderDiagram({
   const markerId = `md-dim-arrow-${rawId.replace(/[^a-zA-Z0-9]/g, "")}`;
   const diametroNum = numOrDefault(primaryValue, DEFAULT_DIAMETRO);
   const depthNum = numOrDefault(depthValue, DEFAULT_PROFUNDIDAD_CIL);
-  const [diametroRatio, depthRatio] = proportionalRatios([diametroNum, depthNum], AXIS_RATIO_FLOOR);
+  const [diametroRatio, depthRatio] = compressedRatios([diametroNum, depthNum], AXIS_RATIO_FLOOR);
   const local = buildLocalCylinder(diametroRatio / 2, depthRatio);
   const fit = fitWithCeiling(cylinderBboxPoints(local), PAD, CONTENT_TARGET);
 
@@ -655,6 +776,7 @@ function IsometricCylinderDiagram({
         A={diaA}
         B={diaB}
         dist={POINT_DIM_DIST}
+        pushDir={[0, 1]}
         markerId={markerId}
         text={dimText(primaryValue, primaryUnit, primaryLabel)}
         viewBoxW={fit.viewBoxW}
