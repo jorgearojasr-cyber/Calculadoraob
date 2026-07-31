@@ -8,7 +8,7 @@
 import { boxAllPoints, boxFaces, buildBox, buildCylinder, cylinderAllPoints, type BoxProjected } from "./math/solids";
 import { compressedRatios, finalizeCanvas, fitToSilhouette } from "./math/scale-engine";
 import type { Vec2 } from "./math/vec2";
-import { buildLane, outwardFromFace, type Lane } from "./layout/dimension-lane";
+import { buildLane, outwardFromFace, LANE_OFFSET, type Lane } from "./layout/dimension-lane";
 import { buildDepthLane } from "./layout/depth-lane";
 import { BoxSolid, CylinderSolid } from "./render/solid-3d";
 import { Rect2D, Circle2D } from "./render/shape-2d";
@@ -17,6 +17,14 @@ import { DimensionChip, CHIP_H, estimateChipWidth } from "./render/dimension-chi
 const PAD = 20;
 const CONTENT_TARGET = 205; // eje dominante ≈ 205/(205+40) ≈ 84% del panel
 const CANVAS_MARGIN = 6; // margen final entre el chip más lejano y el borde del panel
+// Calibración 2026-08-02 (punto 5, "alejar algunos píxeles los chips del
+// sólido") — NO se toca LANE_OFFSET (layout/dimension-lane.ts, valor
+// congelado); acá, en la capa de composición, se pasa un offset apenas
+// mayor al construir cada carril. CHIP_OFFSET_ANCHO_2D es un poco más
+// grande todavía — pedido explícito para el Ancho de los diagramas 2D
+// (Radier), que "necesita respirar un poco más del dibujo".
+const CHIP_OFFSET = LANE_OFFSET + 4;
+const CHIP_OFFSET_ANCHO_2D = LANE_OFFSET + 12;
 
 type Field = "largo" | "ancho" | "profundidad" | "diametro";
 
@@ -108,9 +116,9 @@ export function DiagramV2({ kind, largo, ancho, profundidad, diametro, labels, u
     // chipT=0.95: ambas aristas comparten el vértice P0d — ver comentario
     // en buildLane, sesgamos el chip hacia el extremo lejano para que no
     // se superpongan en objetos angostos en planta (ej. Pilar/columna).
-    let laneAncho = buildLane(P.P0d, P.P2d, outwardFromFace(P.P0d, P.P2d, faces.wallLeft), undefined, 0.95);
-    let laneLargo = buildLane(P.P0d, P.P1d, outwardFromFace(P.P0d, P.P1d, faces.wallRight), undefined, 0.95);
-    const laneProfundidad = buildDepthLane(P.P1, P.P1d);
+    let laneAncho = buildLane(P.P0d, P.P2d, outwardFromFace(P.P0d, P.P2d, faces.wallLeft), CHIP_OFFSET, 0.95);
+    let laneLargo = buildLane(P.P0d, P.P1d, outwardFromFace(P.P0d, P.P1d, faces.wallRight), CHIP_OFFSET, 0.95);
+    const laneProfundidad = buildDepthLane(P.P1, P.P1d, CHIP_OFFSET);
     [laneAncho, laneLargo] = separateChips(laneAncho, [labels.ancho ?? "Ancho", anchoText], laneLargo, [labels.largo ?? "Largo", largoText]);
 
     const canvas = finalizeCanvas(
@@ -159,8 +167,8 @@ export function DiagramV2({ kind, largo, ancho, profundidad, diametro, labels, u
     const diametroText = fmt(diametro, unit) || (labels.diametro ?? "");
     const profundidadText = fmt(profundidad, unit) || (labels.profundidad ?? "");
 
-    const laneDiametro = buildLane(diaA, diaB, [0, 1]);
-    const laneProfundidad = buildDepthLane(topRight, bottomRight);
+    const laneDiametro = buildLane(diaA, diaB, [0, 1], CHIP_OFFSET);
+    const laneProfundidad = buildDepthLane(topRight, bottomRight, CHIP_OFFSET);
 
     const canvas = finalizeCanvas(
       fit.viewBoxW,
@@ -206,9 +214,11 @@ export function DiagramV2({ kind, largo, ancho, profundidad, diametro, labels, u
     const anchoText = fmt(ancho, unit) || (labels.ancho ?? "");
 
     // Regla explícita del mockup: "Largo abajo, ancho a la derecha,
-    // siempre" — ver Sistema 2D del PDF (Radier, Cerámica, Vereda).
-    const laneLargo = buildLane(BL, BR, [0, 1]);
-    const laneAncho = buildLane(TR, BR, [1, 0]);
+    // siempre" — ver Sistema 2D del PDF (Radier, Cerámica, Vereda). Ancho
+    // usa CHIP_OFFSET_ANCHO_2D (más aire) — pedido explícito de esta
+    // calibración para la cota vertical de Radier.
+    const laneLargo = buildLane(BL, BR, [0, 1], CHIP_OFFSET);
+    const laneAncho = buildLane(TR, BR, [1, 0], CHIP_OFFSET_ANCHO_2D);
 
     const canvas = finalizeCanvas(
       fit.viewBoxW,
@@ -242,7 +252,7 @@ export function DiagramV2({ kind, largo, ancho, profundidad, diametro, labels, u
   const diaA: Vec2 = [center[0] - r, center[1] + r];
   const diaB: Vec2 = [center[0] + r, center[1] + r];
   const diametroText = fmt(diametro, unit) || (labels.diametro ?? "");
-  const laneDiametro = buildLane(diaA, diaB, [0, 1]);
+  const laneDiametro = buildLane(diaA, diaB, [0, 1], CHIP_OFFSET);
   const canvas = finalizeCanvas(fit.viewBoxW, fit.viewBoxH, chipCorners(laneDiametro, labels.diametro ?? "Diámetro", diametroText), CANVAS_MARGIN);
 
   return (

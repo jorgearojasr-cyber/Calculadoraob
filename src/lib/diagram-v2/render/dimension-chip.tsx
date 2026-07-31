@@ -16,16 +16,21 @@ import { useId } from "react";
 import type { Lane } from "../layout/dimension-lane";
 import { theme } from "./theme";
 
-export const CHIP_H = 30;
-const CHIP_PAD_X = 12;
-const CHIP_GAP = 6;
+// Segunda pasada de calibración 2026-08-02 (ver conversación) — chip
+// ~15% más chico en total, menos padding horizontal/vertical, más
+// espacio entre etiqueta y valor (CHIP_GAP sube aunque el resto baje) —
+// misma estructura visual (rótulo horizontal, borde fino), solo más
+// compacto y con mejor jerarquía interna.
+export const CHIP_H = 26; // antes 30 (~13% menos alto)
+const CHIP_PAD_X = 9; // antes 12
+const CHIP_GAP = 8; // antes 6 — más separación visual entre "Largo" y "4,50 m"
 // Estimador de ancho de texto — no hay medición real de texto disponible
-// server-side; estos anchos promedio por caracter para Figtree 10px
-// (label) e IBM Plex Mono 12px bold (value) se ajustaron a ojo contra el
+// server-side; estos anchos promedio por caracter para Figtree 9px
+// (label) e IBM Plex Mono 11px bold (value) se ajustaron a ojo contra el
 // mockup, que usa chips de distinto ancho según el contenido (ver
 // "Profundidad 1,20 m" vs. "Largo 4,50 m" en el PDF).
-const LABEL_CHAR_W = 5.6;
-const VALUE_CHAR_W = 7.6;
+const LABEL_CHAR_W = 4.9;
+const VALUE_CHAR_W = 6.7;
 
 export function estimateChipWidth(label: string, value: string): number {
   const labelW = label.length * LABEL_CHAR_W;
@@ -86,7 +91,7 @@ export function DimensionChip({ lane, label, value, active }: { lane: Lane; labe
         stroke={theme.chip.border}
         strokeWidth={theme.chip.borderWidth}
       />
-      <text x={cx - chipW / 2 + CHIP_PAD_X} y={cy} textAnchor="start" dominantBaseline="middle" fontFamily={theme.chip.fontLabel} fontSize={10} fontWeight={500} fill={theme.chip.labelColor}>
+      <text x={cx - chipW / 2 + CHIP_PAD_X} y={cy} textAnchor="start" dominantBaseline="middle" fontFamily={theme.chip.fontLabel} fontSize={9} fontWeight={500} fill={theme.chip.labelColor}>
         {label}
       </text>
       <text
@@ -95,7 +100,7 @@ export function DimensionChip({ lane, label, value, active }: { lane: Lane; labe
         textAnchor="end"
         dominantBaseline="middle"
         fontFamily={theme.chip.fontValue}
-        fontSize={12.5}
+        fontSize={11}
         fontWeight={600}
         fill={active ? theme.chip.valueColorActive : theme.chip.valueColor}
       >
