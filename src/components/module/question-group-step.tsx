@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ArrowRight, Info } from "lucide-react";
+import { ArrowRight, ArrowLeftRight, ArrowUpDown, Info, Lightbulb } from "lucide-react";
 import type { WizardQuestion } from "./types";
 import { checkRangeWarning, parseTypicalRange } from "@/lib/range-hint";
 import { formatQuantity } from "@/lib/format-number";
@@ -14,13 +14,11 @@ import { AreaInputToggle } from "./area-input-toggle";
 // (proyecto aparte de rediseño de layout), igual que los pares que no son
 // geométricamente una medida ancho/largo (ej. dos espesores distintos, o
 // una cantidad + una medida).
-const DIMENSION_DIAGRAMS: Record<
-  string,
-  {
-    shape: "rectangle" | "rectangle-with-depth" | "circle" | "circle-with-depth";
-    primaryLabel: string;
-    secondaryLabel?: string;
-    depthLabel?: string;
+type DiagramConfig = {
+  shape: "rectangle" | "rectangle-with-depth" | "circle" | "circle-with-depth";
+  primaryLabel: string;
+  secondaryLabel?: string;
+  depthLabel?: string;
     // Habilita el toggle largo×ancho / m² directo (AreaInputToggle) en vez
     // del grid de 2 campos fijo — solo para pares donde NINGUNA otra
     // fórmula del módulo usa largo/ancho por separado (perímetro, volumen,
@@ -33,8 +31,23 @@ const DIMENSION_DIAGRAMS: Record<
     // ventanas) del área bruta en modo largo×ancho — ver AreaInputToggle.
     enableDeduction?: boolean;
     deductionLabel?: string;
-  }
-> = {
+    // Sub-etiqueta corta bajo cada label de campo (ej. "El lado más largo")
+    // — solo usada por los grupos con depthLabel (volumen), ver
+    // conversación 2026-07-30, rediseño del diagrama de volumen. El resto
+    // de los grupos (área) no la necesita — su patrón de campo no cambió.
+    primarySubLabel?: string;
+    secondarySubLabel?: string;
+    depthSubLabel?: string;
+    // Label del resultado en vivo (ej. "Volumen a excavar") — solo para
+    // grupos con depthLabel.
+    volumeResultLabel?: string;
+    // Título + bajada del paso — solo para grupos con depthLabel (los de
+    // área no tienen heading propio, cada campo lleva su propio label).
+    groupLabel?: string;
+    groupHelpText?: string;
+};
+
+const DIMENSION_DIAGRAMS: Record<string, DiagramConfig> = {
   "ducha-dims": { shape: "rectangle", primaryLabel: "ancho", secondaryLabel: "profundidad" },
   "sendero-dims": { shape: "rectangle", primaryLabel: "largo", secondaryLabel: "ancho", allowAreaToggle: true },
   cmrs94tlf000n2kseduz98jwf: { shape: "rectangle", primaryLabel: "largo", secondaryLabel: "ancho" }, // Radier
@@ -57,7 +70,16 @@ const DIMENSION_DIAGRAMS: Record<
   cmrtxip5u0002nwsec9f37ved: { shape: "rectangle", primaryLabel: "ancho", secondaryLabel: "alto" }, // Cadena
   cmrtxmp220003dgsew3pzeapk: { shape: "rectangle", primaryLabel: "ancho", secondaryLabel: "alto" }, // Viga
   cmrtxpdrt00021ose5gav5sc5: { shape: "rectangle", primaryLabel: "largo", secondaryLabel: "ancho" }, // Losa
-  cmrtycwly00013ssecmdopk1c: { shape: "circle-with-depth", primaryLabel: "diámetro", depthLabel: "profundidad" }, // Piscina circular
+  cmrtycwly00013ssecmdopk1c: {
+    shape: "circle-with-depth",
+    primaryLabel: "diámetro",
+    depthLabel: "profundidad",
+    primarySubLabel: "De borde a borde",
+    depthSubLabel: "Del fondo al borde",
+    volumeResultLabel: "Volumen de hormigón",
+    groupLabel: "¿Qué medidas tiene la piscina?",
+    groupHelpText: "Medida interior del espejo de agua, de borde a borde.",
+  }, // Piscina circular
   cmru1qiwi00025csexc68m1cg: { shape: "rectangle", primaryLabel: "largo", secondaryLabel: "alto" }, // Tabiquería en madera
   cmru1qkjd000n5csewzys8ivv: { shape: "rectangle", primaryLabel: "largo", secondaryLabel: "alto" }, // Tabique en Metalcon
   cmru3eoou00010oseh4l9ac15: { shape: "rectangle", primaryLabel: "largo", secondaryLabel: "ancho" }, // Piso y Terraza en madera — largo-m/ancho-m también calculan vigas
@@ -72,8 +94,28 @@ const DIMENSION_DIAGRAMS: Record<
   // comparten un solo paso — antes el ancho quedaba en un paso aparte, sin
   // relación visual con largo/alto. depthLabel="ancho" es la profundidad
   // de la jardinera (front-to-back), mismo patrón que Piscina rectangular.
-  "jardinera-muro-dims": { shape: "rectangle-with-depth", primaryLabel: "largo", secondaryLabel: "alto", depthLabel: "ancho" }, // Jardinera de albañilería — largo/alto/ancho también calculan el volumen de tierra
-  "excavacion-circular-dims": { shape: "circle-with-depth", primaryLabel: "diámetro", depthLabel: "profundidad" }, // Excavación circular — mismo shape que Piscina circular
+  "jardinera-muro-dims": {
+    shape: "rectangle-with-depth",
+    primaryLabel: "largo",
+    secondaryLabel: "alto",
+    depthLabel: "ancho",
+    primarySubLabel: "Largo del muro",
+    secondarySubLabel: "Altura del muro",
+    depthSubLabel: "Profundidad de tierra",
+    volumeResultLabel: "Volumen de tierra",
+    groupLabel: "¿Qué medidas tiene la jardinera?",
+    groupHelpText: "Largo y alto del muro, más qué tan ancha (de profundidad) va la tierra.",
+  }, // Jardinera de albañilería — largo/alto/ancho también calculan el volumen de tierra
+  "excavacion-circular-dims": {
+    shape: "circle-with-depth",
+    primaryLabel: "diámetro",
+    depthLabel: "profundidad",
+    primarySubLabel: "De borde a borde",
+    depthSubLabel: "Del suelo hasta el fondo",
+    volumeResultLabel: "Volumen a excavar",
+    groupLabel: "¿Qué medidas tiene la excavación?",
+    groupHelpText: "Mide el hoyo terminado, no la marca en el suelo. La profundidad se mide desde el nivel del terreno hasta el fondo.",
+  }, // Excavación circular — mismo shape que Piscina circular
   "cielo-metalcon-dims": { shape: "rectangle", primaryLabel: "largo", secondaryLabel: "ancho" }, // Cielo raso en Metalcon
   // Techo (cubierta): antes 2 pasos sin agrupar ni diagrama. allowAreaToggle
   // desactivado a propósito — desde que zinc/acero usa cálculo por grilla
@@ -133,9 +175,42 @@ const DIMENSION_DIAGRAMS: Record<
   // llenaba el viewport de 375px sin margen. Habilitados tras el rediseño
   // de layout compacto (labels chicos, helpText colapsado tras el ícono
   // (i), 2 columnas en desktop) — ver `compact` más abajo.
-  cmrsikxe00001wssef5v6idtl: { shape: "rectangle-with-depth", primaryLabel: "largo", secondaryLabel: "ancho", depthLabel: "profundidad" }, // Piscina rectangular
-  cmrsc8n1d000mdwse1soq1ay1: { shape: "rectangle-with-depth", primaryLabel: "largo", secondaryLabel: "ancho", depthLabel: "profundidad" }, // Excavación
-  cmrtx07qt0002zsseetlhr5x5: { shape: "rectangle-with-depth", primaryLabel: "ancho", secondaryLabel: "alto", depthLabel: "profundidad" }, // Pilar / columna
+  cmrsikxe00001wssef5v6idtl: {
+    shape: "rectangle-with-depth",
+    primaryLabel: "largo",
+    secondaryLabel: "ancho",
+    depthLabel: "profundidad",
+    primarySubLabel: "El lado más largo",
+    secondarySubLabel: "El lado más corto",
+    depthSubLabel: "Del fondo al borde",
+    volumeResultLabel: "Volumen de hormigón",
+    groupLabel: "¿Qué medidas tiene la piscina?",
+    groupHelpText: "Medida interior del espejo de agua, de borde a borde.",
+  }, // Piscina rectangular
+  cmrsc8n1d000mdwse1soq1ay1: {
+    shape: "rectangle-with-depth",
+    primaryLabel: "largo",
+    secondaryLabel: "ancho",
+    depthLabel: "profundidad",
+    primarySubLabel: "El lado más largo",
+    secondarySubLabel: "El lado más corto",
+    depthSubLabel: "Del suelo hasta el fondo",
+    volumeResultLabel: "Volumen a excavar",
+    groupLabel: "¿Qué medidas tiene la excavación?",
+    groupHelpText: "Mide el hoyo terminado, no la marca en el suelo. La profundidad se mide desde el nivel del terreno hasta el fondo.",
+  }, // Excavación
+  cmrtx07qt0002zsseetlhr5x5: {
+    shape: "rectangle-with-depth",
+    primaryLabel: "ancho",
+    secondaryLabel: "alto",
+    depthLabel: "profundidad",
+    primarySubLabel: "Ancho de la sección",
+    secondarySubLabel: "Alto del pilar",
+    depthSubLabel: "Profundidad de la sección",
+    volumeResultLabel: "Volumen de hormigón",
+    groupLabel: "¿Qué medidas tiene el pilar?",
+    groupHelpText: "Sección transversal (ancho × alto) y profundidad de la excavación o molde.",
+  }, // Pilar / columna
   cmrtxsb9800042wse1m5gzn6c: { shape: "rectangle", primaryLabel: "huella", secondaryLabel: "contrahuella" }, // Escalera
 
   // Excluidos deliberadamente (quedan documentados para no volver a auditarlos):
@@ -225,6 +300,202 @@ function SubmitActions({
           Guardar y seguir después
         </button>
       )}
+    </div>
+  );
+}
+
+// Fila de campo de VolumeStep (ícono de eje + label + sublabel + input) —
+// componente de NIVEL SUPERIOR a propósito: definirlo dentro de VolumeStep
+// lo recreaba como un tipo de componente nuevo en cada tecla (cada
+// setValue re-renderiza VolumeStep), lo que a su vez desmontaba y volvía a
+// montar los 3 inputs en cada letra — el usuario perdía foco/cursor a
+// mitad de escribir. Bug real encontrado al verificar "actualización en
+// vivo" en el navegador (2026-07-30), no solo un detalle de estilo.
+function FieldRow({
+  icon,
+  label,
+  subLabel,
+  value,
+  unit,
+  autoFocus,
+  onChange,
+  onEnter,
+  rangeWarning,
+}: {
+  icon: "horizontal" | "vertical";
+  label: string;
+  subLabel?: string;
+  value: string;
+  unit: string | null;
+  autoFocus?: boolean;
+  onChange: (value: string) => void;
+  onEnter: () => void;
+  rangeWarning?: string | null;
+}) {
+  return (
+    <div>
+      <div className="flex items-center gap-3 mb-2">
+        <span className="w-8 h-8 rounded-full bg-concrete flex items-center justify-center flex-shrink-0 text-ink-muted">
+          {icon === "horizontal" ? <ArrowLeftRight className="w-4 h-4" /> : <ArrowUpDown className="w-4 h-4" />}
+        </span>
+        <div>
+          <p className="font-semibold text-[15px] leading-tight">{label}</p>
+          {subLabel && <p className="text-xs text-ink-muted leading-tight">{subLabel}</p>}
+        </div>
+      </div>
+      <div className="flex items-center gap-3 rounded-2xl bg-white border-[1.5px] border-ink px-4 py-3">
+        <input
+          type="text"
+          inputMode="decimal"
+          autoFocus={autoFocus}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && onEnter()}
+          placeholder="0"
+          className="w-full bg-transparent outline-none font-display text-xl placeholder:text-ink-faint"
+        />
+        {unit && <span className="font-mono text-sm text-ink-muted">{unit}</span>}
+      </div>
+      {rangeWarning && <p className="mt-2 text-sm text-amber-600">{rangeWarning}</p>}
+    </div>
+  );
+}
+
+// Mismo motivo que FieldRow: nivel superior para no recrear el tipo de
+// componente en cada render de VolumeStep.
+function Tip({ text, className = "" }: { text: string | null | undefined; className?: string }) {
+  if (!text) return null;
+  return (
+    <div className={`flex items-start gap-2.5 rounded-xl px-4 py-3 bg-concrete ${className}`}>
+      <Lightbulb className="w-4 h-4 text-ink-muted flex-shrink-0 mt-0.5" />
+      <p className="text-sm text-ink-muted">{text}</p>
+    </div>
+  );
+}
+
+// Paso de VOLUMEN (diagrama caja/cilindro con profundidad) — ver
+// conversación 2026-07-30. Mismo patrón de campo en mobile y desktop
+// (ícono de eje + label + sublabel, input a la derecha); en desktop el
+// diagrama va en su propia columna con subtítulo + tip debajo. Volumen en
+// vivo = largo×ancho×profundidad (caja) o π×(diámetro/2)²×profundidad
+// (cilindro) — solo una vista previa mientras el usuario escribe, el
+// cálculo real (con pérdidas, esponjamiento, etc.) lo hace el resultado
+// final del wizard como siempre.
+function VolumeStep({
+  questions,
+  diagram,
+  values,
+  setValue,
+  error,
+  rangeWarnings,
+  handleSubmit,
+  onSaveForLater,
+}: {
+  questions: WizardQuestion[];
+  diagram: DiagramConfig;
+  values: Record<string, string>;
+  setValue: (key: string, value: string) => void;
+  error: string | null;
+  rangeWarnings: Record<string, string | null>;
+  handleSubmit: () => void;
+  onSaveForLater?: () => void;
+}) {
+  const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+  const toNum = (raw: string | undefined) => {
+    const n = Number((raw ?? "").replace(",", "."));
+    return Number.isFinite(n) && n > 0 ? n : null;
+  };
+
+  const isCircular = diagram.shape === "circle-with-depth";
+  const secondaryQuestion = diagram.secondaryLabel ? questions[1] : undefined;
+  const depthQuestion = questions[diagram.secondaryLabel ? 2 : 1];
+
+  const fields = [
+    { question: questions[0], label: diagram.primaryLabel, subLabel: diagram.primarySubLabel, axis: "h" as const },
+    ...(secondaryQuestion
+      ? [{ question: secondaryQuestion, label: diagram.secondaryLabel!, subLabel: diagram.secondarySubLabel, axis: "h" as const }]
+      : []),
+    { question: depthQuestion, label: diagram.depthLabel!, subLabel: diagram.depthSubLabel, axis: "v" as const },
+  ];
+
+  const nums = fields.map((f) => toNum(values[f.question.key]));
+  const allValid = nums.every((n) => n !== null);
+  const volume = !allValid
+    ? null
+    : isCircular
+      ? Math.PI * (nums[0]! / 2) ** 2 * nums[nums.length - 1]!
+      : nums.reduce((acc, n) => acc * n!, 1);
+  const formulaText = allValid
+    ? `${nums.map((n) => formatQuantity(n!)).join(" × ")} ${questions[0].unit ?? "m"}`
+    : null;
+
+  // El tip reutiliza el helpText que ya tenga alguna pregunta del grupo
+  // (dato específico del módulo, ya cargado en la DB) — no se hardcodea
+  // texto nuevo por módulo acá.
+  const tip = fields.map((f) => f.question.helpText).find(Boolean);
+
+  return (
+    <div className="bg-white rounded-2xl border border-border shadow-sm p-5 sm:p-8 grid lg:grid-cols-[1fr_1.15fr] lg:gap-10 lg:items-start">
+      <div className="order-2 lg:order-1">
+        {diagram.groupLabel && (
+          <h2 className="font-display text-xl md:text-2xl font-semibold tracking-tight mb-2">{diagram.groupLabel}</h2>
+        )}
+        {diagram.groupHelpText && <p className="text-sm text-ink-muted mb-5">{diagram.groupHelpText}</p>}
+
+        <div className="grid gap-4">
+          {fields.map((f, i) => (
+            <FieldRow
+              key={f.question.id}
+              icon={f.axis === "h" ? "horizontal" : "vertical"}
+              label={capitalize(f.label)}
+              subLabel={f.subLabel}
+              value={values[f.question.key]}
+              unit={f.question.unit}
+              autoFocus={i === 0}
+              onChange={(v) => setValue(f.question.key, v)}
+              onEnter={handleSubmit}
+              rangeWarning={rangeWarnings[f.question.key]}
+            />
+          ))}
+        </div>
+
+        <div className="mt-4 rounded-2xl bg-concrete px-5 py-4">
+          <p className="text-sm text-ink-muted">{diagram.volumeResultLabel ?? "Volumen"}</p>
+          <p className="font-display text-2xl font-semibold text-ink">
+            {volume !== null ? `${formatQuantity(volume)} m³` : "—"}
+          </p>
+          {formulaText && <p className="mt-1 text-xs text-ink-muted">{formulaText}</p>}
+        </div>
+
+        <Tip text={tip} className="mt-4 lg:hidden" />
+
+        {error && <p className="mt-4 text-sm text-safety">{error}</p>}
+
+        <SubmitActions onSubmit={handleSubmit} onSaveForLater={onSaveForLater} />
+      </div>
+
+      <div className="order-1 lg:order-2 mb-6 lg:mb-0">
+        <MeasureDiagram
+          shape={diagram.shape}
+          primaryLabel={diagram.primaryLabel}
+          secondaryLabel={diagram.secondaryLabel}
+          depthLabel={diagram.depthLabel}
+          primaryValue={values[questions[0].key]}
+          primaryUnit={questions[0].unit ?? undefined}
+          secondaryValue={secondaryQuestion ? values[secondaryQuestion.key] : undefined}
+          secondaryUnit={secondaryQuestion?.unit ?? undefined}
+          depthValue={values[depthQuestion.key]}
+          depthUnit={depthQuestion.unit ?? undefined}
+        />
+        <div className="hidden lg:block mt-4">
+          <p className="font-semibold text-sm">Así se ve con tus medidas</p>
+          <p className="text-sm text-ink-muted mt-1">
+            Mismo diagrama y mismos valores: el {isCircular ? "diámetro" : "ancho"} extra va al dibujo, no a agrandar
+            el texto.
+          </p>
+          <Tip text={tip} className="mt-4" />
+        </div>
+      </div>
     </div>
   );
 }
@@ -399,6 +670,28 @@ export function QuestionGroupStep({
     setValues({ [questions[0].key]: side, [questions[1].key]: side });
   };
 
+  // Pasos de VOLUMEN (diagrama con profundidad: caja o cilindro) — layout
+  // propio (ícono+label+sublabel+input por campo, resultado en vivo, tip),
+  // el mismo en mobile y desktop (ver conversación 2026-07-30). Tiene
+  // prioridad sobre `combined`: antes Piscina rectangular/Jardinera
+  // combinaban largo+ancho con un cuadro de ÁREA en vivo — ahora, como
+  // cualquier otro módulo de volumen, muestran los 3 campos por separado
+  // con un cuadro de VOLUMEN en vivo (coherente con Excavación/Pilar).
+  if (diagram?.depthLabel) {
+    return (
+      <VolumeStep
+        questions={questions}
+        diagram={diagram}
+        values={values}
+        setValue={setValue}
+        error={error}
+        rangeWarnings={rangeWarnings}
+        handleSubmit={handleSubmit}
+        onSaveForLater={onSaveForLater}
+      />
+    );
+  }
+
   if (useAreaToggle) {
     return (
       <div>
@@ -450,7 +743,7 @@ export function QuestionGroupStep({
     <div
       className={
         diagram
-          ? "bg-white rounded-2xl border border-border shadow-sm p-5 sm:p-8 lg:grid lg:grid-cols-[1fr_1.15fr] lg:gap-10 lg:items-center"
+          ? "bg-white rounded-2xl border border-border shadow-sm p-5 sm:p-8 grid lg:grid-cols-[1fr_1.15fr] lg:gap-10 lg:items-center"
           : undefined
       }
     >
