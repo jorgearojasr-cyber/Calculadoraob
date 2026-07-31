@@ -2,8 +2,8 @@
 
 import { useMemo, useState } from "react";
 import type { ReactNode } from "react";
-import { ArrowRight, ArrowUp, Building2, Car, Check, ExternalLink, Home, TreePine, Warehouse } from "lucide-react";
-import type { WizardQuestion } from "./types";
+import { ArrowRight, ArrowUp, Building2, Car, Check, ExternalLink, Home, Sparkles, TreePine, Warehouse } from "lucide-react";
+import type { WizardAnswers, WizardQuestion } from "./types";
 import { checkRangeWarning, parseTypicalRange } from "@/lib/range-hint";
 import { GasConfirmationGate } from "./gas-confirmation-gate";
 import { CollapsibleHelp } from "./collapsible-help";
@@ -62,6 +62,8 @@ export function QuestionStep({
   onAnswer,
   onSkip,
   moduleSlug,
+  allQuestions,
+  answers,
 }: {
   question: WizardQuestion;
   initialValue: string | number | undefined;
@@ -71,6 +73,12 @@ export function QuestionStep({
   // respuesta, en vez de exigir un número > 0 como Siguiente.
   onSkip?: () => void;
   moduleSlug?: string;
+  // Todas las preguntas del módulo + respuestas dadas hasta ahora — solo
+  // se usan para armar el banner "Te recomendamos X" de una pregunta
+  // NUMBER con defaultSource LOOKUP (ver más abajo). Opcionales porque la
+  // mayoría de las preguntas no las necesita.
+  allQuestions?: WizardQuestion[];
+  answers?: WizardAnswers;
 }) {
   const [textValue, setTextValue] = useState(
     initialValue !== undefined ? String(initialValue) : ""
@@ -78,6 +86,26 @@ export function QuestionStep({
   const [error, setError] = useState<string | null>(null);
 
   const isNumber = question.type === "NUMBER";
+
+  // Recomendación editable (ver conversación 2026-07-30, caso Radier/
+  // espesor): si esta pregunta NUMBER tiene un valor sugerido según otra
+  // respuesta ya dada (defaultSource LOOKUP), arma "Te recomendamos X cm
+  // para [opción elegida]" en vez de mostrar un campo en blanco sin
+  // contexto. Genérico para cualquier módulo que use el mismo patrón, no
+  // solo Radier. Se calcula una sola vez al valor sugerido original —no
+  // cambia si el usuario edita el campo después.
+  const recommendation = useMemo(() => {
+    if (!isNumber || question.defaultSource?.type !== "LOOKUP" || !allQuestions || !answers) return null;
+    const { questionKey, table } = question.defaultSource;
+    const dependencyAnswer = answers[questionKey];
+    if (dependencyAnswer === undefined) return null;
+    const suggestedValue = table[String(dependencyAnswer)];
+    if (suggestedValue === undefined) return null;
+    const dependencyQuestion = allQuestions.find((q) => q.key === questionKey);
+    const dependencyLabel =
+      dependencyQuestion?.options.find((o) => o.key === dependencyAnswer)?.label ?? String(dependencyAnswer);
+    return { value: suggestedValue, dependencyLabel };
+  }, [isNumber, question.defaultSource, allQuestions, answers]);
 
   const typicalRange = useMemo(
     () => (isNumber ? parseTypicalRange(question.helpText, question.key) : null),
@@ -220,6 +248,16 @@ export function QuestionStep({
         {question.label}
       </h2>
       {question.helpText && <p className="text-sm text-ink-muted mb-6">{question.helpText}</p>}
+      {recommendation && (
+        <div className="mt-3 flex items-start gap-2 rounded-xl px-4 py-3 bg-safety-tint border border-safety/30">
+          <Sparkles className="w-4 h-4 text-safety flex-shrink-0 mt-0.5" />
+          <p className="text-sm text-ink-muted">
+            Te recomendamos <span className="font-semibold text-ink">{recommendation.value} {question.unit}</span>{" "}
+            para <span className="font-semibold text-ink">{recommendation.dependencyLabel}</span> — puedes
+            ajustarlo si tienes otra especificación.
+          </p>
+        </div>
+      )}
       <div className="mt-6 flex items-center gap-3 rounded-2xl px-5 py-4 bg-white border-[1.5px] border-ink">
         <input
           type="text"

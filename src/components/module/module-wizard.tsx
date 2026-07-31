@@ -377,6 +377,8 @@ export function ModuleWizard({
                   : undefined
               }
               moduleSlug={moduleSlug}
+              allQuestions={questions}
+              answers={answers}
             />
           )}
 
