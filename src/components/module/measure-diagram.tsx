@@ -4,13 +4,11 @@ import { useId } from "react";
 import {
   buildLocalBox,
   buildLocalCylinder,
-  buildSlab,
   compressedRatios,
   cylinderBboxPoints,
   fitWithCeiling,
   formatMetric,
   numOrDefault,
-  slabBboxPoints,
   type Point,
 } from "@/lib/isometric-diagram";
 
@@ -166,14 +164,6 @@ const LABEL_MARGIN_Y = 8;
 // trabajo para el rango real de proporciones (ver conversación
 // 2026-08-01, "Alternativa B — isométrico amortiguado").
 const AXIS_RATIO_FLOOR = 0.12;
-// Espesor "leve" del zócalo isométrico de los diagramas de superficie
-// (m²) — SIEMPRE la misma fracción del lado mayor, nunca representa una
-// medida real (ver buildSlab en isometric-diagram.ts). Para el círculo
-// (sin segunda medida real con la que construir un zócalo rectangular) se
-// reusa el mismo cilindro isométrico del volumen, con una profundidad
-// FIJA chica en vez de un valor ingresado — mismo lenguaje, misma
-// sensación de espesor leve.
-const CIRCLE_SLAB_DEPTH_RATIO = 0.14;
 // Valores genéricos mientras el usuario no ha escrito nada — misma
 // proporción "creíble" que tenía el diagrama antes de este ajuste.
 const DEFAULT_L = 4.5;
@@ -354,12 +344,13 @@ function PointDimension({
 }
 
 // ---------------------------------------------------------------------
-// Superficie (m²) — rectángulo. Decisión de diseño 2026-08-01 (tras
-// exploración visual formal): vista superior SIN escorzo isométrico
-// (mejor lectura de largo×ancho que una perspectiva completa) + zócalo
-// de espesor leve en 2 aristas para que se sienta un objeto físico
-// (losa/radier), no un plano abstracto — ver buildSlab en
-// isometric-diagram.ts. Mismas cotas de punto que largo/ancho de la caja.
+// Superficie (m²) — rectángulo. ESTÁNDAR OFICIAL v1 (ver
+// docs/svg-diagram-system.md, 2026-08-01): vista ORTOGONAL frontal —
+// nunca perspectiva isométrica, nunca profundidad — para que la lectura
+// de largo×ancho sea inmediata. Esto reemplaza la decisión de "espesor
+// leve isométrico" de la vuelta anterior: la especificación final
+// definió los diagramas de superficie como estrictamente ortogonales, sin
+// ningún indicio de volumen (eso es exclusivo de los diagramas 3D).
 // ---------------------------------------------------------------------
 function AreaRectDiagram({
   primaryLabel,
@@ -381,19 +372,18 @@ function AreaRectDiagram({
   const largoNum = numOrDefault(primaryValue, DEFAULT_L);
   const anchoNum = numOrDefault(secondaryValue, DEFAULT_W);
   const [largoRatio, anchoRatio] = compressedRatios([largoNum, anchoNum], AXIS_RATIO_FLOOR);
-  const local = buildSlab(largoRatio, anchoRatio);
-  const fit = fitWithCeiling(slabBboxPoints(local), PAD, CONTENT_TARGET);
-  const S = {
-    TL: fit.project(local.TL),
-    TR: fit.project(local.TR),
-    BL: fit.project(local.BL),
-    BR: fit.project(local.BR),
-    frontBL: fit.project(local.frontBL),
-    frontBR: fit.project(local.frontBR),
-    sideTR: fit.project(local.sideTR),
-    sideBR: fit.project(local.sideBR),
-  };
-  const poly = (pts: Point[]) => pts.map((p) => `${p[0]},${p[1]}`).join(" ");
+  const fit = fitWithCeiling(
+    [
+      [0, 0],
+      [largoRatio, anchoRatio],
+    ],
+    PAD,
+    CONTENT_TARGET
+  );
+  const TL = fit.project([0, 0]);
+  const BR = fit.project([largoRatio, anchoRatio]);
+  const rectW = BR[0] - TL[0];
+  const rectH = BR[1] - TL[1];
 
   return (
     <svg
@@ -406,38 +396,11 @@ function AreaRectDiagram({
         <OrangeArrowMarker id={markerId} />
       </defs>
 
-      {/* Zócalo de espesor (lateral + frontal) primero, la vista superior
-          al final encima — mismo orden Z que el prisma isométrico (ver
-          comentario en IsometricBoxDiagram): la cara de arriba es la más
-          cercana al espectador en esta cámara. */}
-      <polygon
-        points={poly([S.TR, S.sideTR, S.sideBR, S.BR])}
-        fill={SIDE_FILL}
-        stroke={SOLID_STROKE}
-        strokeWidth="2.5"
-        strokeLinejoin="round"
-      />
-      <polygon
-        points={poly([S.BL, S.BR, S.frontBR, S.frontBL])}
-        fill={SIDE_FILL}
-        stroke={SOLID_STROKE}
-        strokeWidth="2.5"
-        strokeLinejoin="round"
-      />
-      <rect
-        x={S.TL[0]}
-        y={S.TL[1]}
-        width={S.TR[0] - S.TL[0]}
-        height={S.BL[1] - S.TL[1]}
-        fill={TOP_FILL}
-        stroke={SOLID_STROKE}
-        strokeWidth="2.5"
-        strokeLinejoin="round"
-      />
+      <rect x={TL[0]} y={TL[1]} width={rectW} height={rectH} fill={TOP_FILL} stroke={SOLID_STROKE} strokeWidth="2.5" strokeLinejoin="round" />
 
       <PointDimension
-        A={S.frontBL}
-        B={S.frontBR}
+        A={[TL[0], TL[1] + rectH]}
+        B={[TL[0] + rectW, TL[1] + rectH]}
         dist={POINT_DIM_DIST * 0.6}
         pushDir={[0, 1]}
         markerId={markerId}
@@ -447,8 +410,8 @@ function AreaRectDiagram({
       />
       {secondaryLabel && (
         <PointDimension
-          A={S.TL}
-          B={S.BL}
+          A={TL}
+          B={[TL[0], TL[1] + rectH]}
           dist={POINT_DIM_DIST * 0.6}
           pushDir={[-1, 0]}
           markerId={markerId}
@@ -462,13 +425,9 @@ function AreaRectDiagram({
 }
 
 // ---------------------------------------------------------------------
-// Superficie (m²) — círculo. Mismo criterio que AreaRectDiagram: se
-// reusa el cilindro isométrico del volumen (misma geometría, mismo
-// estilo) con una profundidad FIJA chica (CIRCLE_SLAB_DEPTH_RATIO) en
-// vez de un valor real ingresado — el círculo no tiene una segunda
-// medida con la que armar un zócalo, así que "tomar prestada" la
-// perspectiva del cilindro es más simple que inventar un tercer tipo de
-// zócalo, y mantiene el mismo lenguaje visual.
+// Superficie (m²) — círculo. Mismo criterio que AreaRectDiagram: vista
+// ORTOGONAL, sin ningún indicio de profundidad — un círculo relleno
+// simple con su cota de diámetro.
 // ---------------------------------------------------------------------
 function AreaCircleDiagram({
   primaryLabel,
@@ -481,19 +440,18 @@ function AreaCircleDiagram({
 }) {
   const rawId = useId();
   const markerId = `md-area-arrow-${rawId.replace(/[^a-zA-Z0-9]/g, "")}`;
-  const local = buildLocalCylinder(1, CIRCLE_SLAB_DEPTH_RATIO);
-  const fit = fitWithCeiling(cylinderBboxPoints(local), PAD, CONTENT_TARGET);
-
-  const topLeft = fit.project(local.topLeft);
-  const topRight = fit.project(local.topRight);
-  const topCenter = fit.project(local.topCenter);
-  const bottomLeft = fit.project(local.bottomLeft);
-  const bottomRight = fit.project(local.bottomRight);
-  const rx = fit.k * local.rx;
-  const ry = fit.k * local.ry;
-  const diaArrowY = (bottomLeft[1] + bottomRight[1]) / 2 + ry;
-  const diaA: Point = [bottomLeft[0], diaArrowY];
-  const diaB: Point = [bottomRight[0], diaArrowY];
+  const fit = fitWithCeiling(
+    [
+      [-1, -1],
+      [1, 1],
+    ],
+    PAD,
+    CONTENT_TARGET
+  );
+  const center = fit.project([0, 0]);
+  const r = fit.k;
+  const diaA: Point = [center[0] - r, center[1] + r + 14];
+  const diaB: Point = [center[0] + r, center[1] + r + 14];
 
   return (
     <svg
@@ -505,20 +463,7 @@ function AreaCircleDiagram({
       <defs>
         <OrangeArrowMarker id={markerId} />
       </defs>
-      <path
-        d={`M ${topLeft[0]} ${topLeft[1]} A ${rx} ${ry} 0 0 1 ${topRight[0]} ${topRight[1]} L ${bottomRight[0]} ${bottomRight[1]} A ${rx} ${ry} 0 0 1 ${bottomLeft[0]} ${bottomLeft[1]} Z`}
-        fill={SIDE_FILL}
-        stroke={SOLID_STROKE}
-        strokeWidth="2.5"
-        strokeLinejoin="round"
-      />
-      <path
-        d={`M ${bottomLeft[0]} ${bottomLeft[1]} A ${rx} ${ry} 0 0 0 ${bottomRight[0]} ${bottomRight[1]}`}
-        fill="none"
-        stroke={SOLID_STROKE}
-        strokeWidth="2.5"
-      />
-      <ellipse cx={topCenter[0]} cy={topCenter[1]} rx={rx} ry={ry} fill={TOP_FILL} stroke={SOLID_STROKE} strokeWidth="2.5" />
+      <circle cx={center[0]} cy={center[1]} r={r} fill={TOP_FILL} stroke={SOLID_STROKE} strokeWidth="2.5" />
 
       <PointDimension
         A={diaA}

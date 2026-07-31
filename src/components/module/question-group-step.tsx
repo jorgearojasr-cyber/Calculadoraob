@@ -51,13 +51,6 @@ const DIMENSION_DIAGRAMS: Record<string, DiagramConfig> = {
   "ducha-dims": { shape: "rectangle", primaryLabel: "ancho", secondaryLabel: "profundidad" },
   "sendero-dims": { shape: "rectangle", primaryLabel: "largo", secondaryLabel: "ancho", allowAreaToggle: true },
   cmrs94tlf000n2kseduz98jwf: { shape: "rectangle", primaryLabel: "largo", secondaryLabel: "ancho" }, // Radier
-  "pintura-muro-dims": { shape: "rectangle", primaryLabel: "largo", secondaryLabel: "alto" },
-  "pintura-puerta-1": { shape: "rectangle", primaryLabel: "ancho", secondaryLabel: "alto" },
-  "pintura-puerta-2": { shape: "rectangle", primaryLabel: "ancho", secondaryLabel: "alto" },
-  "pintura-puerta-3": { shape: "rectangle", primaryLabel: "ancho", secondaryLabel: "alto" },
-  "pintura-ventana-1": { shape: "rectangle", primaryLabel: "ancho", secondaryLabel: "alto" },
-  "pintura-ventana-2": { shape: "rectangle", primaryLabel: "ancho", secondaryLabel: "alto" },
-  "pintura-ventana-3": { shape: "rectangle", primaryLabel: "ancho", secondaryLabel: "alto" },
   cmru6tntl00000kseunldpq7g: { shape: "rectangle", primaryLabel: "largo", secondaryLabel: "ancho", allowAreaToggle: true }, // Cerámica (pisos)
   cmrtvl3aw000fmcsezs6inad3: { shape: "rectangle", primaryLabel: "largo", secondaryLabel: "ancho", allowAreaToggle: true }, // Tabiques y cielos
   cmrtvl24q000amcse8s2dj1ex: { shape: "rectangle", primaryLabel: "largo", secondaryLabel: "ancho", allowAreaToggle: true }, // Pasto en rollos
@@ -134,7 +127,6 @@ const DIMENSION_DIAGRAMS: Record<string, DiagramConfig> = {
   // toggle también aplica cuando el módulo solo pedía m² directo — ver
   // hasAreaToggle() y su uso en ModuleWizard para rutear estos casos por
   // QuestionGroupStep aunque el "grupo" tenga un solo elemento.
-  "malla-area-directa": { shape: "rectangle", primaryLabel: "largo", secondaryLabel: "ancho", allowAreaToggle: true }, // Malla electrosoldada
   "pastelones-area-directa": { shape: "rectangle", primaryLabel: "largo", secondaryLabel: "ancho", allowAreaToggle: true }, // Pastelones prefabricados
   "siembra-area-directa": { shape: "rectangle", primaryLabel: "largo", secondaryLabel: "ancho", allowAreaToggle: true }, // Siembra por semilla (césped)
   "estuco-area-directa": { shape: "rectangle", primaryLabel: "largo", secondaryLabel: "alto", allowAreaToggle: true }, // Preparar y estucar un muro antes de pintar
@@ -222,6 +214,25 @@ const DIMENSION_DIAGRAMS: Record<string, DiagramConfig> = {
   // - Cercha de techo, grupo "cuántas cerchas x largo de cada cercha":
   //   el primer campo es una cantidad, no una medida — no es una pareja
   //   espacial representable en este diagrama.
+  //
+  // Auditoría 2026-08-01 (ver docs/svg-diagram-system.md, estándar
+  // oficial 2D/3D) — módulos cuyo RESULTADO final es m³ pero la 3ra
+  // dimensión (espesor, largo o cantidad de escalones) se pide en un
+  // paso SEPARADO, no wireado a este diagrama, así que hoy quedan en
+  // "rectangle" (2D) mostrando solo 2 de las 3 medidas reales:
+  //   Losa (cmrtxpdrt00021ose5gav5sc5), Muro de hormigón armado
+  //   (cmrtwxnbu0001zgsee2b5ehv0), Radier (cmrs94tlf000n2kseduz98jwf,
+  //   espesor en el stepGroup separado "radier-espesor-step"), Fundación
+  //   — base y cuello (cmrvizbv10000csse7oy2pha3,
+  //   cmrvizc2d0002csseiddijwkl), Cadena (cmrtxip5u0002nwsec9f37ved),
+  //   Viga (cmrtxmp220003dgsew3pzeapk), Escalera
+  //   (cmrtxsb9800042wse1m5gzn6c, depende además de "ancho" y
+  //   "escalones", preguntas propias sin stepGroup).
+  // DECISIÓN (confirmada con Jorge): no tocar — pasarlos a
+  // "rectangle-with-depth" real requeriría fusionar esos pasos
+  // separados en uno solo (mismo patrón que Piscina/Excavación), un
+  // cambio de flujo de preguntas distinto a este trabajo de estilo
+  // visual. Se evalúa aparte si vale la pena unificarlos.
 };
 
 // Los 9 módulos migrados al layout combinado (ver commit que agrega
