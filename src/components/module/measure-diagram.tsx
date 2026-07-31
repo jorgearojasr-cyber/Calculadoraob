@@ -77,17 +77,18 @@ export function MeasureDiagram({
 
   // Mismo lenguaje visual que los diagramas 3D (ver docs/svg-diagram-system.md):
   // relleno sólido gris muy claro (nunca rayado/semi-transparente), flechas
-  // naranjas, etiquetas en chip blanco/borde azul fuera de la figura. Antes
-  // esta vista plana tenía su propio estilo (rayado azul translúcido,
-  // flechas azules, texto plano encima de la figura) — quedaba
-  // inconsistente con caja/cilindro.
+  // naranjas. Etiquetas en texto simple junto a la flecha (ver ajuste
+  // 2026-07-31 "regla de las etiquetas": acá nunca se combina la palabra
+  // descriptiva + el valor en un mismo rótulo — es una u otra — así que
+  // nunca se justifica la cajita blanca/borde azul, solo texto de cotas
+  // estilo AutoCAD/Revit).
   if (shape === "circle") {
     const cx = 110;
     const cy = 66;
     const r = 50;
-    const chipCenter: Point = [cx, cy + r + 30];
+    const textPos: Point = [cx, cy + r + DIM_GAP + TEXT_GAP];
     return (
-      <svg viewBox="0 0 220 172" className="w-full" role="img" aria-label={`Diagrama de ${primaryLabel}`}>
+      <svg viewBox="0 0 220 158" className="w-full" role="img" aria-label={`Diagrama de ${primaryLabel}`}>
         <defs>
           <OrangeArrowMarker id={markerId} />
         </defs>
@@ -98,13 +99,13 @@ export function MeasureDiagram({
           x2={cx + r - 8}
           y2={cy}
           stroke={DIM_ORANGE}
-          strokeWidth="2"
+          strokeWidth="1.6"
           strokeLinecap="round"
           markerStart={`url(#${markerId})`}
           markerEnd={`url(#${markerId})`}
         />
-        <line x1={cx} y1={cy + r} x2={chipCenter[0]} y2={chipCenter[1] - CHIP_SIZE[1] / 2} stroke="#8C8579" strokeWidth="1.3" />
-        <ValueChip center={chipCenter} size={CHIP_SIZE} label={primaryLabel} raw={primaryValue} unit={primaryUnit} />
+        <line x1={cx} y1={cy + r} x2={cx} y2={cy + r + DIM_GAP} stroke="#8C8579" strokeWidth="1" />
+        <DimText center={textPos} text={dimText(primaryValue, primaryUnit, primaryLabel)} />
       </svg>
     );
   }
@@ -113,11 +114,11 @@ export function MeasureDiagram({
   const ry0 = 20;
   const rw = 130;
   const rh = 86;
-  const primaryChip: Point = [rx0 + rw / 2, ry0 + rh + 30];
-  const secondaryChip: Point = [rx0 - 46, ry0 + rh / 2];
+  const primaryTextPos: Point = [rx0 + rw / 2, ry0 + rh + DIM_GAP + TEXT_GAP];
+  const secondaryTextPos: Point = [rx0 - DIM_GAP - TEXT_GAP, ry0 + rh / 2];
 
   return (
-    <svg viewBox="0 0 300 172" className="w-full" role="img" aria-label={`Diagrama de ${primaryLabel}${secondaryLabel ? `, ${secondaryLabel}` : ""}`}>
+    <svg viewBox="0 0 300 158" className="w-full" role="img" aria-label={`Diagrama de ${primaryLabel}${secondaryLabel ? `, ${secondaryLabel}` : ""}`}>
       <defs>
         <OrangeArrowMarker id={markerId} />
       </defs>
@@ -133,20 +134,13 @@ export function MeasureDiagram({
         x2={rx0 + rw - 10}
         y2={ry0 + rh}
         stroke={DIM_ORANGE}
-        strokeWidth="2"
+        strokeWidth="1.6"
         strokeLinecap="round"
         markerStart={`url(#${markerId})`}
         markerEnd={`url(#${markerId})`}
       />
-      <line
-        x1={rx0 + rw / 2}
-        y1={ry0 + rh}
-        x2={primaryChip[0]}
-        y2={primaryChip[1] - CHIP_SIZE[1] / 2}
-        stroke="#8C8579"
-        strokeWidth="1.3"
-      />
-      <ValueChip center={primaryChip} size={CHIP_SIZE} label={primaryLabel} raw={primaryValue} unit={primaryUnit} />
+      <line x1={rx0 + rw / 2} y1={ry0 + rh} x2={rx0 + rw / 2} y2={ry0 + rh + DIM_GAP} stroke="#8C8579" strokeWidth="1" />
+      <DimText center={primaryTextPos} text={dimText(primaryValue, primaryUnit, primaryLabel)} />
 
       {/* Flecha vertical, sobre el borde izquierdo real */}
       {secondaryLabel && (
@@ -157,20 +151,13 @@ export function MeasureDiagram({
             x2={rx0}
             y2={ry0 + rh - 10}
             stroke={DIM_ORANGE}
-            strokeWidth="2"
+            strokeWidth="1.6"
             strokeLinecap="round"
             markerStart={`url(#${markerId})`}
             markerEnd={`url(#${markerId})`}
           />
-          <line
-            x1={rx0}
-            y1={ry0 + rh / 2}
-            x2={secondaryChip[0] + CHIP_SIZE[0] / 2}
-            y2={secondaryChip[1]}
-            stroke="#8C8579"
-            strokeWidth="1.3"
-          />
-          <ValueChip center={secondaryChip} size={CHIP_SIZE} label={secondaryLabel} raw={secondaryValue} unit={secondaryUnit} />
+          <line x1={rx0} y1={ry0 + rh / 2} x2={rx0 - DIM_GAP} y2={ry0 + rh / 2} stroke="#8C8579" strokeWidth="1" />
+          <DimText center={secondaryTextPos} text={dimText(secondaryValue, secondaryUnit, secondaryLabel)} />
         </>
       )}
     </svg>
@@ -178,32 +165,33 @@ export function MeasureDiagram({
 }
 
 // ---------------------------------------------------------------------
-// Cajita de valor en vivo (foreignObject) — misma pieza para caja y
-// cilindro. Muestra el valor formateado + unidad; mientras no hay un
-// número válido, muestra la etiqueta genérica (ej. "Largo").
+// Texto de cota en vivo — reemplaza la antigua "cajita" (fondo blanco,
+// borde azul). Ver conversación 2026-07-31 "regla de las etiquetas": una
+// cajita SOLO se justifica cuando el rótulo combina una palabra
+// descriptiva + el valor (ej. "Largo" + "4,50 m" en 2 líneas); acá el
+// rótulo siempre es UNA cosa u otra — la etiqueta genérica ("Largo")
+// antes de escribir, o el valor ("4,50 m") después — nunca las 2 juntas,
+// así que la cajita nunca se justifica: siempre texto simple estilo cota
+// técnica (AutoCAD/Revit/SketchUp), pegado a su flecha.
 // ---------------------------------------------------------------------
-function ValueChip({
-  center,
-  size,
-  label,
-  raw,
-  unit,
-}: {
-  center: Point;
-  size: [number, number];
-  label: string;
-  raw: string | undefined;
-  unit: string | undefined;
-}) {
-  const formatted = formatMetric(raw, unit);
+function dimText(raw: string | undefined, unit: string | undefined, label: string): string {
+  return formatMetric(raw, unit) ?? label;
+}
+
+function DimText({ center, text }: { center: Point; text: string }) {
   return (
-    <foreignObject x={center[0] - size[0] / 2} y={center[1] - size[1] / 2} width={size[0]} height={size[1]}>
-      <div className="w-full h-full flex items-center justify-center rounded-md border-[1.5px] border-navy bg-white px-1">
-        <span className="font-mono text-[10px] font-semibold text-navy whitespace-nowrap leading-none">
-          {formatted ?? label}
-        </span>
-      </div>
-    </foreignObject>
+    <text
+      x={center[0]}
+      y={center[1]}
+      textAnchor="middle"
+      dominantBaseline="middle"
+      fontSize={LABEL_FONT_SIZE}
+      fontWeight="600"
+      fontFamily="monospace"
+      fill={SOLID_STROKE}
+    >
+      {text}
+    </text>
   );
 }
 
@@ -211,14 +199,39 @@ function ValueChip({
 // fitWithCeiling en isometric-diagram.ts) para que el sólido ocupe
 // siempre la misma fracción del panel sin importar su proporción — ver
 // conversación 2026-07-31 "el SVG debe ocupar 75-85% del panel, no un
-// dibujo chico centrado con espacio vacío alrededor". CONTENT_TARGET=180
-// + PAD=22 da 180/(180+44) ≈ 80% de ocupación en el eje más largo del
-// sólido, sea cual sea (antes solo el alto se amoldaba al contenido; el
-// ancho quedaba fijo en 340 y dejaba franjas vacías enormes para sólidos
-// angostos en pantalla).
-const PAD = 22;
-const CONTENT_TARGET = 180;
-const CHIP_SIZE: [number, number] = [72, 24];
+// dibujo chico centrado con espacio vacío alrededor". CONTENT_TARGET=205
+// + PAD=20 da 205/(205+40) ≈ 84% de ocupación en el eje más largo del
+// sólido — más grande que antes (80%) porque las etiquetas ya no
+// necesitan una cajita de 72×24 + 50px de separación: texto chico pegado
+// a la flecha libera espacio que ahora va al sólido (ver conversación
+// 2026-07-31, "acorta flechas/etiquetas, agranda el prisma"). El eje NO
+// dominante (bbox más chico de los 2) queda algo por debajo de esa
+// fracción según la proporción real del sólido — es inherente a
+// preservar la proporción real (ver escalado proporcional): un
+// largo=4,5/ancho=2,8 real nunca es cuadrado, así que forzar los 2 ejes
+// al mismo % simultáneamente deformaría la proporción, justo lo que se
+// corrigió en la vuelta anterior.
+const PAD = 20;
+const CONTENT_TARGET = 205;
+// Tamaño de letra de las cotas — ~35% más chico que la cajita anterior
+// (10px) para que el usuario reconozca la FORMA primero y lea las
+// medidas después, no al revés (ver conversación 2026-07-31).
+const LABEL_FONT_SIZE = 6.5;
+// Separación arista→línea de cota (antes 18-50px según la cota, con
+// cajitas "flotando" lejos de su flecha) y línea de cota→texto — ambas
+// chicas a propósito para que la etiqueta quede pegada a su flecha.
+const DIM_GAP = 11;
+const TEXT_GAP = 7;
+// Distancia de empuje para PointDimension (largo/ancho/diámetro) — antes
+// 50px con cajita; se acorta a 36 (~28% menos) para que la etiqueta quede
+// más pegada al sólido, manteniendo el margen suficiente para despejar la
+// cara superior en toda proporción (ver comentario en DimensionLine).
+const POINT_DIM_DIST = 36;
+// Margen de seguridad para no recortar el texto contra el borde del
+// viewBox (reemplaza el antiguo CHIP_SIZE, ya no hay cajita que clampear
+// por tamaño real — solo un margen aproximado para texto de cota corto).
+const LABEL_MARGIN_X = 24;
+const LABEL_MARGIN_Y = 8;
 // Piso de cada eje normalizado contra el mayor de los 3 (ver
 // proportionalRatios en isometric-diagram.ts) — evita que un eje mucho
 // más chico que los otros desaparezca visualmente (queda en ~15% del
@@ -262,82 +275,142 @@ function norm2(a: Point): Point {
   const l = len2(a);
   return [a[0] / l, a[1] / l];
 }
-function clampChipCenter(center: Point, size: [number, number], viewBoxW: number, viewBoxH: number): Point {
-  const halfW = size[0] / 2;
-  const halfH = size[1] / 2;
+function clampLabelCenter(center: Point, viewBoxW: number, viewBoxH: number): Point {
   let [x, y] = center;
-  if (x - halfW < 2) x = 2 + halfW;
-  if (x + halfW > viewBoxW - 2) x = viewBoxW - 2 - halfW;
-  if (y - halfH < 2) y = 2 + halfH;
-  if (y + halfH > viewBoxH - 2) y = viewBoxH - 2 - halfH;
+  if (x - LABEL_MARGIN_X < 0) x = LABEL_MARGIN_X;
+  if (x + LABEL_MARGIN_X > viewBoxW) x = viewBoxW - LABEL_MARGIN_X;
+  if (y - LABEL_MARGIN_Y < 0) y = LABEL_MARGIN_Y;
+  if (y + LABEL_MARGIN_Y > viewBoxH) y = viewBoxH - LABEL_MARGIN_Y;
   return [x, y];
 }
 
-// Cota "debajo": mismo espíritu que placeFrontCota, pero siempre empuja la
-// cajita derecho hacia ABAJO (no perpendicular a la arista) — para cajas
-// poco profundas, la arista inferior de una cara puede quedar muy cerca de
-// la arista superior (profundidad chica vs. ancho del sólido), y una
-// normal perpendicular a esa arista casi no aleja la cajita del dibujo.
-// "Debajo, siempre" es más predecible y deja la cajita clara del sólido.
-function placeBelowCota(
-  A: Point,
-  B: Point,
-  dist: number,
-  chipSize: [number, number],
-  viewBoxW: number,
-  viewBoxH: number
-): { M: Point; extEnd: Point; chipCenter: Point } {
-  const M = mid2(A, B);
-  const extEnd: Point = [M[0], M[1] + dist * 0.4];
-  const chipCenter = clampChipCenter([M[0], M[1] + dist], chipSize, viewBoxW, viewBoxH);
-  return { M, extEnd, chipCenter };
-}
-
-// Definición del marker de flecha naranja, compartida por caja y cilindro.
+// Definición del marker de flecha naranja, compartida por todas las cotas.
 function OrangeArrowMarker({ id }: { id: string }) {
   return (
-    <marker id={id} viewBox="0 0 10 10" refX="5" refY="5" markerWidth="4.5" markerHeight="4.5" orient="auto-start-reverse">
+    <marker id={id} viewBox="0 0 10 10" refX="5" refY="5" markerWidth="4" markerHeight="4" orient="auto-start-reverse">
       <path d="M0,0 L10,5 L0,10 Z" fill={DIM_ORANGE} />
     </marker>
   );
 }
 
-// Cota lateral "estándar" (extensión + flecha vertical/horizontal entre
-// esos extremos) — usada para profundidad, la única que pide explícitamente
-// esta convención ("como se mide con huincha") en vez del leader+cajita
-// simple de largo/ancho. Líneas de extensión SÓLIDAS (no punteadas, ver
-// ajuste 2026-07-30 "sin líneas punteadas").
-function LateralDimension({
+// ---------------------------------------------------------------------
+// Cota "de arista completa" — línea de cota paralela a la arista real
+// (desplazada `gap` hacia afuera, con 2 líneas de extensión finas desde
+// la arista), flecha de doble punta del largo EXACTO de la arista medida,
+// y el texto chico pegado justo afuera de la línea. Usada SOLO para
+// profundidad: esa arista siempre queda en el borde exterior de la
+// silueta completa (nunca bajo la cara superior), así que un `gap` chico
+// alcanza para despejarla. `outward` no necesita ser perpendicular a la
+// arista: como se aplica el MISMO vector a los 2 extremos, cualquier
+// dirección constante produce una copia paralela válida.
+//
+// OJO: largo/ancho (y diámetro) NO usan este componente — ver
+// PointDimension más abajo. La arista P0d-P2d/P0d-P1d de largo/ancho
+// queda a media altura de la silueta completa (P0d no es el punto más
+// bajo del sólido), y la cara superior se extiende diagonalmente mucho
+// más abajo que esa arista (hasta la esquina lejana P3) — un offset chico
+// desde esa arista, en CUALQUIER dirección perpendicular, sigue quedando
+// debajo de la cara superior para ciertas proporciones (ver conversación
+// 2026-07-31, verificado con capturas reales: la cota terminaba cruzando
+// por encima del prisma). PointDimension empuja un único punto bien lejos
+// del centro del dibujo en vez de una arista completa cerca del sólido.
+// ---------------------------------------------------------------------
+function DimensionLine({
   A,
   B,
   outward,
   gap,
   markerId,
+  text,
+  viewBoxW,
+  viewBoxH,
 }: {
   A: Point;
   B: Point;
   outward: Point;
   gap: number;
   markerId: string;
+  text: string;
+  viewBoxW: number;
+  viewBoxH: number;
 }) {
   const n = norm2(outward);
   const A2: Point = [A[0] + n[0] * gap, A[1] + n[1] * gap];
   const B2: Point = [B[0] + n[0] * gap, B[1] + n[1] * gap];
+  const mid = mid2(A2, B2);
+  const textPos = clampLabelCenter([mid[0] + n[0] * TEXT_GAP, mid[1] + n[1] * TEXT_GAP], viewBoxW, viewBoxH);
   return (
     <g>
-      <line x1={A[0]} y1={A[1]} x2={A2[0]} y2={A2[1]} stroke="#8C8579" strokeWidth="1.3" />
-      <line x1={B[0]} y1={B[1]} x2={B2[0]} y2={B2[1]} stroke="#8C8579" strokeWidth="1.3" />
+      <line x1={A[0]} y1={A[1]} x2={A2[0]} y2={A2[1]} stroke="#8C8579" strokeWidth="1" />
+      <line x1={B[0]} y1={B[1]} x2={B2[0]} y2={B2[1]} stroke="#8C8579" strokeWidth="1" />
       <line
         x1={A2[0]}
         y1={A2[1]}
         x2={B2[0]}
         y2={B2[1]}
         stroke={DIM_ORANGE}
-        strokeWidth="2"
+        strokeWidth="1.6"
         strokeLinecap="round"
         markerStart={`url(#${markerId})`}
         markerEnd={`url(#${markerId})`}
       />
+      <DimText center={textPos} text={text} />
+    </g>
+  );
+}
+
+// ---------------------------------------------------------------------
+// Cota "de punto" — flecha CORTA (no la arista completa) anclada a un
+// único punto, empujado `dist` derecho hacia abajo desde el punto medio
+// de la arista real — usada para largo/ancho/diámetro. Empuje fijo hacia
+// abajo (no perpendicular a la arista, ver comentario en DimensionLine)
+// porque a esta distancia SÍ alcanza a despejar la cara superior para
+// toda proporción, verificado con capturas reales (ver conversación
+// 2026-07-31). La flecha corta (no la arista entera) evita que una arista
+// larga (p.ej. largo=10m vs. ancho=2m) se lea como una línea cruzando
+// gran parte del diagrama.
+// ---------------------------------------------------------------------
+function PointDimension({
+  A,
+  B,
+  dist,
+  markerId,
+  text,
+  viewBoxW,
+  viewBoxH,
+}: {
+  A: Point;
+  B: Point;
+  dist: number;
+  markerId: string;
+  text: string;
+  viewBoxW: number;
+  viewBoxH: number;
+}) {
+  const mid = mid2(A, B);
+  const target: Point = [mid[0], mid[1] + dist];
+  const textPos = clampLabelCenter(target, viewBoxW, viewBoxH);
+  const leaderStart: Point = [mid[0], mid[1] + dist * 0.4];
+  const edgeDir = norm2(sub2(B, A));
+  const arrowHalf = 12;
+  const at: Point = [textPos[0], textPos[1] - TEXT_GAP];
+  const arrowA: Point = [at[0] - edgeDir[0] * arrowHalf, at[1] - edgeDir[1] * arrowHalf];
+  const arrowB: Point = [at[0] + edgeDir[0] * arrowHalf, at[1] + edgeDir[1] * arrowHalf];
+  return (
+    <g>
+      <line x1={leaderStart[0]} y1={leaderStart[1]} x2={textPos[0]} y2={textPos[1]} stroke="#8C8579" strokeWidth="1" />
+      <line
+        x1={arrowA[0]}
+        y1={arrowA[1]}
+        x2={arrowB[0]}
+        y2={arrowB[1]}
+        stroke={DIM_ORANGE}
+        strokeWidth="1.6"
+        strokeLinecap="round"
+        markerStart={`url(#${markerId})`}
+        markerEnd={`url(#${markerId})`}
+      />
+      <DimText center={textPos} text={text} />
     </g>
   );
 }
@@ -391,13 +464,6 @@ function IsometricBoxDiagram({
     P2d: fit.project(local.P2d),
     P3d: fit.project(local.P3d),
   };
-  // Largo → arista inferior de la cara IZQUIERDA (P0d-P2d), ancho → arista
-  // inferior de la cara DERECHA (P0d-P1d) — sobre las paredes del frente,
-  // no colgando del rombo superior. Profundidad se queda en la arista
-  // vertical derecha (P1-P1d), como cota lateral.
-  const cotaLargo = placeBelowCota(P.P0d, P.P2d, 50, CHIP_SIZE, fit.viewBoxW, fit.viewBoxH);
-  const cotaAncho = placeBelowCota(P.P0d, P.P1d, 50, CHIP_SIZE, fit.viewBoxW, fit.viewBoxH);
-
   const poly = (pts: Point[]) => pts.map((p) => `${p[0]},${p[1]}`).join(" ");
 
   return (
@@ -452,71 +518,47 @@ function IsometricBoxDiagram({
         strokeLinejoin="round"
       />
 
-      {/* Profundidad: cota lateral estándar (extensión + flecha vertical) */}
-      <LateralDimension A={P.P1} B={P.P1d} outward={sub2(P.P1, P.P0)} gap={18} markerId={markerId} />
-      {(() => {
-        const n = norm2(sub2(P.P1, P.P0));
-        const lineMid: Point = [(P.P1[0] + P.P1d[0]) / 2 + n[0] * 18, (P.P1[1] + P.P1d[1]) / 2 + n[1] * 18];
-        const chipCenter = clampChipCenter(
-          [lineMid[0] + n[0] * (CHIP_SIZE[0] / 2 + 4), lineMid[1]],
-          CHIP_SIZE,
-          fit.viewBoxW,
-          fit.viewBoxH
-        );
-        return <ValueChip center={chipCenter} size={CHIP_SIZE} label={depthLabel} raw={depthValue} unit={depthUnit} />;
-      })()}
+      {/* Profundidad: cota lateral sobre la arista vertical derecha */}
+      <DimensionLine
+        A={P.P1}
+        B={P.P1d}
+        outward={sub2(P.P1, P.P0)}
+        gap={DIM_GAP}
+        markerId={markerId}
+        text={dimText(depthValue, depthUnit, depthLabel)}
+        viewBoxW={fit.viewBoxW}
+        viewBoxH={fit.viewBoxH}
+      />
 
-      {/* Largo/ancho: flecha naranja corta, anclada a la cajita de valor
-          (crece/decrece con el diagrama entero vía CHIP_SIZE, nunca queda
-          flotando suelta — ver docs/svg-diagram-system.md), en vez de
-          abarcar la arista completa esquina-a-esquina: en un prisma ancho
-          y bajo (profundidad << largo/ancho, el caso real más común) esa
-          arista es casi tan larga como la diagonal del dibujo entero, y
-          una flecha de ese largo se lee como una línea cruzando todo el
-          diagrama en vez de una cota clara sobre "este borde". */}
-      {[
-        { c: cotaLargo, dir: sub2(P.P2d, P.P0d), label: primaryLabel, raw: primaryValue, unit: primaryUnit },
-        { c: cotaAncho, dir: sub2(P.P1d, P.P0d), label: secondaryLabel, raw: secondaryValue, unit: secondaryUnit },
-      ].map((item, i) => {
-        const d = norm2(item.dir);
-        const half = CHIP_SIZE[0] * 0.34;
-        const at: Point = [item.c.chipCenter[0], item.c.chipCenter[1] - (CHIP_SIZE[1] / 2 + 9)];
-        const arrowA: Point = [at[0] - d[0] * half, at[1] - d[1] * half];
-        const arrowB: Point = [at[0] + d[0] * half, at[1] + d[1] * half];
-        return (
-          <g key={i}>
-            <line
-              x1={arrowA[0]}
-              y1={arrowA[1]}
-              x2={arrowB[0]}
-              y2={arrowB[1]}
-              stroke={DIM_ORANGE}
-              strokeWidth="2"
-              strokeLinecap="round"
-              markerStart={`url(#${markerId})`}
-              markerEnd={`url(#${markerId})`}
-            />
-            <line
-              x1={item.c.extEnd[0]}
-              y1={item.c.extEnd[1]}
-              x2={item.c.chipCenter[0]}
-              y2={item.c.chipCenter[1]}
-              stroke="#8C8579"
-              strokeWidth="1.3"
-            />
-            <ValueChip center={item.c.chipCenter} size={CHIP_SIZE} label={item.label} raw={item.raw} unit={item.unit} />
-          </g>
-        );
-      })}
+      {/* Largo/ancho: cota de punto (ver PointDimension) anclada bajo el
+          punto medio de cada arista (P0d-P2d, P0d-P1d). */}
+      <PointDimension
+        A={P.P0d}
+        B={P.P2d}
+        dist={POINT_DIM_DIST}
+        markerId={markerId}
+        text={dimText(primaryValue, primaryUnit, primaryLabel)}
+        viewBoxW={fit.viewBoxW}
+        viewBoxH={fit.viewBoxH}
+      />
+      <PointDimension
+        A={P.P0d}
+        B={P.P1d}
+        dist={POINT_DIM_DIST}
+        markerId={markerId}
+        text={dimText(secondaryValue, secondaryUnit, secondaryLabel)}
+        viewBoxW={fit.viewBoxW}
+        viewBoxH={fit.viewBoxH}
+      />
     </svg>
   );
 }
 
 // ---------------------------------------------------------------------
 // Cilindro en perspectiva 3D — diámetro × profundidad. Mismo lenguaje
-// visual que la caja (perspectiva, cotas, cajitas de valor en vivo), pero
-// geométricamente un cilindro: elipse superior (planta) + extrusión
-// vertical, con el arco trasero de la elipse inferior punteado (oculto).
+// visual que la caja (perspectiva, cotas técnicas), pero geométricamente
+// un cilindro: elipse superior (planta) + extrusión vertical, con el
+// arco trasero de la elipse inferior punteado (oculto).
 // ---------------------------------------------------------------------
 function IsometricCylinderDiagram({
   primaryLabel,
@@ -559,10 +601,6 @@ function IsometricCylinderDiagram({
   const diaA: Point = [bottomLeft[0], diaArrowY];
   const diaB: Point = [bottomRight[0], diaArrowY];
 
-  // Diámetro → arista inferior (no la elipse de planta de arriba, mismo
-  // criterio que largo/ancho en la caja: no cuelga del plano superior).
-  const cotaDiametro = placeBelowCota(diaA, diaB, 50, CHIP_SIZE, fit.viewBoxW, fit.viewBoxH);
-
   return (
     <svg
       viewBox={`0 0 ${fit.viewBoxW} ${fit.viewBoxH}`}
@@ -598,43 +636,30 @@ function IsometricCylinderDiagram({
           arriba" que el top del prisma. */}
       <ellipse cx={topCenter[0]} cy={topCenter[1]} rx={rx} ry={ry} fill={TOP_FILL} stroke={SOLID_STROKE} strokeWidth="2.5" />
 
-      {/* Profundidad: cota lateral estándar (extensión + flecha vertical) */}
-      <LateralDimension A={topRight} B={bottomRight} outward={sub2(topRight, topCenter)} gap={18} markerId={markerId} />
-      {(() => {
-        const n = norm2(sub2(topRight, topCenter));
-        const lineMid: Point = [(topRight[0] + bottomRight[0]) / 2 + n[0] * 18, (topRight[1] + bottomRight[1]) / 2 + n[1] * 18];
-        const chipCenter = clampChipCenter(
-          [lineMid[0] + n[0] * (CHIP_SIZE[0] / 2 + 4), lineMid[1]],
-          CHIP_SIZE,
-          fit.viewBoxW,
-          fit.viewBoxH
-        );
-        return <ValueChip center={chipCenter} size={CHIP_SIZE} label={depthLabel} raw={depthValue} unit={depthUnit} />;
-      })()}
+      {/* Profundidad: cota lateral sobre la arista vertical derecha */}
+      <DimensionLine
+        A={topRight}
+        B={bottomRight}
+        outward={sub2(topRight, topCenter)}
+        gap={DIM_GAP}
+        markerId={markerId}
+        text={dimText(depthValue, depthUnit, depthLabel)}
+        viewBoxW={fit.viewBoxW}
+        viewBoxH={fit.viewBoxH}
+      />
 
-      {/* Diámetro: flecha naranja SOBRE el borde inferior real (el punto
-          más bajo del arco, no la línea de los tangentes) + leader fino a
-          la cajita, apoyada debajo. */}
-      <line
-        x1={diaA[0]}
-        y1={diaA[1]}
-        x2={diaB[0]}
-        y2={diaB[1]}
-        stroke={DIM_ORANGE}
-        strokeWidth="2"
-        strokeLinecap="round"
-        markerStart={`url(#${markerId})`}
-        markerEnd={`url(#${markerId})`}
+      {/* Diámetro: cota de punto (ver PointDimension) sobre el borde
+          inferior real (el punto más bajo del arco, no la línea de los
+          tangentes) — mismo lenguaje que largo/ancho de la caja. */}
+      <PointDimension
+        A={diaA}
+        B={diaB}
+        dist={POINT_DIM_DIST}
+        markerId={markerId}
+        text={dimText(primaryValue, primaryUnit, primaryLabel)}
+        viewBoxW={fit.viewBoxW}
+        viewBoxH={fit.viewBoxH}
       />
-      <line
-        x1={cotaDiametro.extEnd[0]}
-        y1={cotaDiametro.extEnd[1]}
-        x2={cotaDiametro.chipCenter[0]}
-        y2={cotaDiametro.chipCenter[1]}
-        stroke="#8C8579"
-        strokeWidth="1.3"
-      />
-      <ValueChip center={cotaDiametro.chipCenter} size={CHIP_SIZE} label={primaryLabel} raw={primaryValue} unit={primaryUnit} />
     </svg>
   );
 }
