@@ -516,10 +516,20 @@ function IsometricCylinderDiagram({
   const bottomRight = fit.project(local.bottomRight);
   const rx = fit.k * local.rx;
   const ry = fit.k * local.ry;
+  // bottomLeft/bottomRight son los puntos TANGENTES de la elipse inferior
+  // (más angostos), no su punto más bajo — el punto más bajo real del arco
+  // visible está `ry` más abajo, en (bottomCenter, bottomCenter.y+ry). Si
+  // la flecha del diámetro se dibuja en la línea de los tangentes, queda
+  // un hueco entre la flecha y el borde inferior real del cilindro (se ve
+  // flotando a media altura del cuerpo en vez de apoyada en el borde) —
+  // se baja la flecha a la altura del punto más bajo real, mismo ancho.
+  const diaArrowY = (bottomLeft[1] + bottomRight[1]) / 2 + ry;
+  const diaA: Point = [bottomLeft[0], diaArrowY];
+  const diaB: Point = [bottomRight[0], diaArrowY];
 
   // Diámetro → arista inferior (no la elipse de planta de arriba, mismo
   // criterio que largo/ancho en la caja: no cuelga del plano superior).
-  const cotaDiametro = placeBelowCota(bottomLeft, bottomRight, 50, CHIP_SIZE, fit.viewBoxW, fit.viewBoxH);
+  const cotaDiametro = placeBelowCota(diaA, diaB, 50, CHIP_SIZE, fit.viewBoxW, fit.viewBoxH);
 
   return (
     <svg
@@ -570,13 +580,14 @@ function IsometricCylinderDiagram({
         return <ValueChip center={chipCenter} size={CHIP_SIZE} label={depthLabel} raw={depthValue} unit={depthUnit} />;
       })()}
 
-      {/* Diámetro: flecha naranja SOBRE la arista inferior real + leader
-          fino a la cajita, apoyada debajo. */}
+      {/* Diámetro: flecha naranja SOBRE el borde inferior real (el punto
+          más bajo del arco, no la línea de los tangentes) + leader fino a
+          la cajita, apoyada debajo. */}
       <line
-        x1={bottomLeft[0]}
-        y1={bottomLeft[1]}
-        x2={bottomRight[0]}
-        y2={bottomRight[1]}
+        x1={diaA[0]}
+        y1={diaA[1]}
+        x2={diaB[0]}
+        y2={diaB[1]}
         stroke={DIM_ORANGE}
         strokeWidth="2"
         strokeLinecap="round"
