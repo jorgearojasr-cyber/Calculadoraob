@@ -196,6 +196,39 @@ const COMBINED_AREA_QUESTION: Record<string, { label: string; helpText: string; 
   }, // Pasto sintético
 };
 
+// Botón "Siguiente" (ancho completo, grande) + "Guardar y seguir después"
+// como link secundario debajo — solo para pasos con diagrama (ver
+// conversación 2026-07-30). Los grupos sin diagrama no reciben
+// onSaveForLater y siguen con el botón chico de siempre (ver más abajo).
+function SubmitActions({
+  onSubmit,
+  onSaveForLater,
+}: {
+  onSubmit: () => void;
+  onSaveForLater?: () => void;
+}) {
+  return (
+    <div className="mt-6">
+      <button
+        onClick={onSubmit}
+        className="w-full rounded-full px-6 py-4 text-base font-semibold text-white flex items-center justify-center gap-2 bg-action"
+      >
+        Siguiente
+        <ArrowRight className="w-4 h-4" />
+      </button>
+      {onSaveForLater && (
+        <button
+          type="button"
+          onClick={onSaveForLater}
+          className="mt-3 w-full text-center text-sm font-medium text-ink-muted hover:text-ink underline underline-offset-4"
+        >
+          Guardar y seguir después
+        </button>
+      )}
+    </div>
+  );
+}
+
 // Usado por ModuleWizard para decidir si un paso de UNA sola pregunta
 // (sin pareja) también debe rutearse por QuestionGroupStep en vez de
 // QuestionStep — caso de los módulos que antes solo pedían m² directo y
@@ -209,6 +242,7 @@ export function QuestionGroupStep({
   initialValues,
   onAnswer,
   forcedInitialArea,
+  onSaveForLater,
 }: {
   questions: WizardQuestion[];
   initialValues: Record<string, string | number | undefined>;
@@ -219,6 +253,10 @@ export function QuestionGroupStep({
   // para precargar el área del contorno ya calculada (ver plan/[slug]/page.tsx).
   // Sin esto, el comportamiento es idéntico al de siempre.
   forcedInitialArea?: number;
+  // Link secundario bajo "Siguiente", solo en pasos con diagrama (ver
+  // conversación 2026-07-30) — ausente en grupos sin diagrama, que
+  // conservan el botón de siempre.
+  onSaveForLater?: () => void;
 }) {
   const [values, setValues] = useState<Record<string, string>>(() =>
     Object.fromEntries(
@@ -395,21 +433,15 @@ export function QuestionGroupStep({
 
         {error && <p className="mt-4 text-sm text-safety">{error}</p>}
 
-        <button
-          onClick={handleSubmit}
-          className="mt-6 rounded-full px-6 py-3 text-sm font-semibold text-white flex items-center gap-2 bg-action"
-        >
-          Siguiente
-          <ArrowRight className="w-4 h-4" />
-        </button>
+        <SubmitActions onSubmit={handleSubmit} onSaveForLater={onSaveForLater} />
       </div>
     );
   }
 
   return (
-    <div>
+    <div className={diagram ? "lg:grid lg:grid-cols-2 lg:gap-8 lg:items-start" : undefined}>
       {diagram && (
-        <div className="mb-5 rounded-2xl p-4 bg-white border border-border">
+        <div className="order-1 lg:order-2 mb-5 lg:mb-0 rounded-2xl p-4 sm:p-6 bg-white border border-border shadow-sm">
           <MeasureDiagram
             shape={diagram.shape}
             primaryLabel={diagram.primaryLabel}
@@ -424,6 +456,7 @@ export function QuestionGroupStep({
           />
         </div>
       )}
+      <div className={diagram ? "order-2 lg:order-1" : undefined}>
       {combined && (
         <div className="mb-5">
           <h2 className="font-display text-xl md:text-2xl font-semibold tracking-tight">{combined.label}</h2>
@@ -530,13 +563,8 @@ export function QuestionGroupStep({
 
       {error && <p className="mt-4 text-sm text-safety">{error}</p>}
 
-      <button
-        onClick={handleSubmit}
-        className="mt-6 rounded-full px-6 py-3 text-sm font-semibold text-white flex items-center gap-2 bg-action"
-      >
-        Siguiente
-        <ArrowRight className="w-4 h-4" />
-      </button>
+      <SubmitActions onSubmit={handleSubmit} onSaveForLater={diagram ? onSaveForLater : undefined} />
+      </div>
     </div>
   );
 }

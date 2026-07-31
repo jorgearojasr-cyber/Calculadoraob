@@ -9,6 +9,7 @@ import { QuestionGroupStep, hasAreaToggle } from "./question-group-step";
 import { ConditionalRevealStep } from "./conditional-reveal-step";
 import { ApplianceConsumptionStep } from "./appliance-consumption-step";
 import { ResultScreen } from "./result-screen";
+import { WizardHeader } from "./wizard-header";
 import { pluralizeUnit } from "@/lib/pluralize";
 import type { WizardAnswers, WizardQuestion } from "./types";
 import type { ModuleGuideData } from "./guide-section";
@@ -158,6 +159,36 @@ export function ModuleWizard({
     setCanGoBack(window.history.length > 1);
   }, []);
 
+  // "Guardar y seguir después" (ver conversación 2026-07-30, rediseño de
+  // pasos con diagrama): persiste las respuestas dadas hasta ahora en
+  // localStorage y vuelve a Inicio. Al volver a este mismo módulo, se
+  // retoman una sola vez (se borra el guardado apenas se aplica) — no pisa
+  // un initialAnswers real (ej. ?tipo= o un prellenado de plan) si el
+  // usuario entra de nuevo por un link con datos propios.
+  useEffect(() => {
+    if (!moduleSlug) return;
+    const key = `obrabien:wizard-progress:${moduleSlug}`;
+    const raw = window.localStorage.getItem(key);
+    if (!raw) return;
+    window.localStorage.removeItem(key);
+    try {
+      const saved = JSON.parse(raw) as WizardAnswers;
+      setAnswers((prev) => ({ ...saved, ...prev }));
+    } catch {
+      // Guardado corrupto o de una versión anterior — se ignora.
+    }
+    // Solo al montar: initialAnswers/answers cambian con cada respuesta y
+    // no deben re-disparar esta lectura de localStorage.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [moduleSlug]);
+
+  const handleSaveForLater = moduleSlug
+    ? () => {
+        window.localStorage.setItem(`obrabien:wizard-progress:${moduleSlug}`, JSON.stringify(answers));
+        router.push("/");
+      }
+    : undefined;
+
   const steps = useMemo(() => buildSteps(questions, answers), [questions, answers]);
   const currentGroup = steps[stepIndex];
 
@@ -304,9 +335,10 @@ export function ModuleWizard({
         Inicio
       </Link>
 
-      <p className="font-mono text-xs uppercase tracking-wider mt-6 mb-2 text-safety">
-        {moduleName}
-      </p>
+      <WizardHeader
+        moduleName={moduleName}
+        step={!calculation ? { index: stepIndex, total: steps.length } : undefined}
+      />
 
       {isAdvancedMode && !calculation && stepIndex === 0 && (
         <div className="mb-6 rounded-2xl p-4 bg-danger-tint border-2 border-danger">
@@ -323,18 +355,6 @@ export function ModuleWizard({
 
       {!calculation && (
         <>
-          <div className="flex items-center gap-2 mb-8">
-            <span className="font-mono text-xs text-ink-faint">
-              {String(stepIndex + 1).padStart(2, "0")} / {String(steps.length).padStart(2, "0")}
-            </span>
-            <div className="h-1 flex-1 rounded-full bg-border overflow-hidden">
-              <div
-                className="h-full bg-safety transition-all"
-                style={{ width: `${((stepIndex + 1) / steps.length) * 100}%` }}
-              />
-            </div>
-          </div>
-
           {isConditionalReveal ? (
             <ConditionalRevealStep
               key={currentGroup.map((q) => q.id).join("-")}
@@ -364,6 +384,7 @@ export function ModuleWizard({
                   ? forcedInitialArea
                   : undefined
               }
+              onSaveForLater={handleSaveForLater}
             />
           ) : (
             <QuestionStep

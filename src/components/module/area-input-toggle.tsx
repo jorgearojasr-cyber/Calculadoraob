@@ -128,8 +128,8 @@ export function AreaInputToggle({
       </div>
 
       {mode === "dims" ? (
-        <>
-          <div className="mb-5 rounded-2xl p-4 bg-white border border-border">
+        <div className="lg:grid lg:grid-cols-2 lg:gap-8 lg:items-start">
+          <div className="order-1 lg:order-2 mb-5 lg:mb-0 rounded-2xl p-4 sm:p-6 bg-white border border-border shadow-sm">
             <MeasureDiagram
               shape="rectangle"
               primaryLabel={primaryLabel}
@@ -140,6 +140,7 @@ export function AreaInputToggle({
               secondaryUnit={unit}
             />
           </div>
+          <div className="order-2 lg:order-1">
           <div className="grid gap-3 sm:grid-cols-2">
             <label className="grid gap-1.5">
               <span className="text-sm font-medium capitalize">{primaryLabel}</span>
@@ -234,7 +235,8 @@ export function AreaInputToggle({
               </p>
             )}
           </div>
-        </>
+          </div>
+        </div>
       ) : (
         <label className="grid gap-1.5">
           <span className="text-sm font-medium">Superficie</span>
