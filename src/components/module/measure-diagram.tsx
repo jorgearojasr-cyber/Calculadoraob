@@ -110,7 +110,7 @@ export function MeasureDiagram({
 
   if (shape === "circle") {
     return (
-      <svg viewBox="0 0 220 140" className="w-full max-w-[220px] mx-auto" aria-hidden="true">
+      <svg viewBox="0 0 220 140" className="w-full max-w-[340px] mx-auto" aria-hidden="true">
         <defs>{fillDefs}</defs>
         <circle cx="110" cy="70" r="50" fill={`url(#${patternId})`} className="stroke-navy" strokeWidth="2" />
         <line
@@ -131,7 +131,7 @@ export function MeasureDiagram({
   }
 
   return (
-    <svg viewBox="0 0 220 150" className="w-full max-w-[240px] mx-auto" aria-hidden="true">
+    <svg viewBox="0 0 220 150" className="w-full max-w-[380px] mx-auto" aria-hidden="true">
       <defs>{fillDefs}</defs>
 
       {/* Rectángulo principal (vista en planta) */}
@@ -271,7 +271,7 @@ function IsometricBoxDiagram({
   return (
     <svg
       viewBox={`0 0 ${fit.viewBoxW} ${fit.viewBoxH}`}
-      className="w-full max-w-[320px] mx-auto"
+      className="w-full max-w-[460px] mx-auto"
       role="img"
       aria-label={`Diagrama de ${primaryLabel}, ${secondaryLabel} y ${depthLabel}`}
     >
@@ -367,7 +367,7 @@ function IsometricCylinderDiagram({
   return (
     <svg
       viewBox={`0 0 ${fit.viewBoxW} ${fit.viewBoxH}`}
-      className="w-full max-w-[320px] mx-auto"
+      className="w-full max-w-[460px] mx-auto"
       role="img"
       aria-label={`Diagrama de ${primaryLabel} y ${depthLabel}`}
     >

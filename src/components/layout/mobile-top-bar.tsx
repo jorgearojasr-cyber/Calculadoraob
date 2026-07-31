@@ -7,6 +7,7 @@ import { Menu, X } from "lucide-react";
 import { Logo } from "@/components/brand/logo";
 import { SignOutButton } from "@/components/auth/sign-out-button";
 import type { NavUser } from "./user-menu";
+import { isWizardRoute } from "@/lib/is-wizard-route";
 
 // Mismos 3 ítems que no caben en las 4 pestañas fijas del BottomNav
 // (Inicio/Proyectos/Mis proyectos/Perfil ya cubren lo demás) + los
@@ -23,6 +24,9 @@ export function MobileTopBar({ user }: { user: NavUser }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const isSimplified = SIMPLIFIED_ROUTES.has(pathname);
+
+  // Mismo criterio que TopNav (desktop): el wizard trae su propio header.
+  if (isWizardRoute(pathname)) return null;
 
   return (
     <>

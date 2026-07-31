@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { TopNav } from "./top-nav";
 import { MobileTopBar } from "./mobile-top-bar";
 import { BottomNav } from "./bottom-nav";
+import { MainContent } from "./main-content";
 import { AssistantWidget } from "@/components/assistant/assistant-widget";
 
 export async function AppShell({ children }: { children: React.ReactNode }) {
@@ -36,7 +37,7 @@ export async function AppShell({ children }: { children: React.ReactNode }) {
       <div className="hidden md:block fixed bottom-6 right-6 z-30">
         <AssistantWidget groups={assistantGroups} variant="fab-desktop" />
       </div>
-      <main className="pt-14 md:pt-16 pb-20 md:pb-0">{children}</main>
+      <MainContent>{children}</MainContent>
     </div>
   );
 }

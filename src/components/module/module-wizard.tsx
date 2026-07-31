@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, TriangleAlert } from "lucide-react";
 import { QuestionStep } from "./question-step";
-import { QuestionGroupStep, hasAreaToggle } from "./question-group-step";
+import { QuestionGroupStep, hasAreaToggle, hasDiagram } from "./question-group-step";
 import { ConditionalRevealStep } from "./conditional-reveal-step";
 import { ApplianceConsumptionStep } from "./appliance-consumption-step";
 import { ResultScreen } from "./result-screen";
@@ -319,8 +319,12 @@ export function ModuleWizard({
         }
       : undefined;
 
+  // Pasos con diagrama van a 2 columnas (ver QuestionGroupStep) — el ancho
+  // angosto de siempre (pensado para 1 sola columna) los dejaba apretados.
+  const isWideStep = !calculation && Boolean(currentGroup) && hasDiagram(currentGroup[0]?.stepGroup);
+
   return (
-    <div className="max-w-2xl mx-auto px-6 pt-8 pb-20">
+    <div className={`mx-auto px-6 pt-8 pb-20 ${isWideStep ? "max-w-4xl" : "max-w-2xl"}`}>
       {/* Antes apuntaba a /categorias/[categorySlug] (breadcrumb fijo a la
           categoría padre) — pero varias rutas llevan a un módulo sin pasar
           nunca por esa pantalla (buscador, /empezar, /guias, /plan,

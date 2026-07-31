@@ -237,6 +237,14 @@ export function hasAreaToggle(stepGroup: string | null | undefined): boolean {
   return Boolean(stepGroup && DIMENSION_DIAGRAMS[stepGroup]?.allowAreaToggle);
 }
 
+// Usado por ModuleWizard para ensanchar el contenedor del wizard solo en
+// pasos con diagrama (ver conversación 2026-07-30) — a 2 columnas, el
+// ancho angosto de siempre (max-w-2xl, pensado para 1 columna) dejaba el
+// diagrama y los inputs apretados.
+export function hasDiagram(stepGroup: string | null | undefined): boolean {
+  return Boolean(stepGroup && DIMENSION_DIAGRAMS[stepGroup]);
+}
+
 export function QuestionGroupStep({
   questions,
   initialValues,
@@ -439,9 +447,15 @@ export function QuestionGroupStep({
   }
 
   return (
-    <div className={diagram ? "lg:grid lg:grid-cols-2 lg:gap-8 lg:items-start" : undefined}>
+    <div
+      className={
+        diagram
+          ? "bg-white rounded-2xl border border-border shadow-sm p-5 sm:p-8 lg:grid lg:grid-cols-[1fr_1.15fr] lg:gap-10 lg:items-center"
+          : undefined
+      }
+    >
       {diagram && (
-        <div className="order-1 lg:order-2 mb-5 lg:mb-0 rounded-2xl p-4 sm:p-6 bg-white border border-border shadow-sm">
+        <div className="order-1 lg:order-2 mb-6 lg:mb-0">
           <MeasureDiagram
             shape={diagram.shape}
             primaryLabel={diagram.primaryLabel}

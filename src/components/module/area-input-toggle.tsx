@@ -128,8 +128,8 @@ export function AreaInputToggle({
       </div>
 
       {mode === "dims" ? (
-        <div className="lg:grid lg:grid-cols-2 lg:gap-8 lg:items-start">
-          <div className="order-1 lg:order-2 mb-5 lg:mb-0 rounded-2xl p-4 sm:p-6 bg-white border border-border shadow-sm">
+        <div className="bg-white rounded-2xl border border-border shadow-sm p-5 sm:p-8 lg:grid lg:grid-cols-[1fr_1.15fr] lg:gap-10 lg:items-center">
+          <div className="order-1 lg:order-2 mb-6 lg:mb-0">
             <MeasureDiagram
               shape="rectangle"
               primaryLabel={primaryLabel}
