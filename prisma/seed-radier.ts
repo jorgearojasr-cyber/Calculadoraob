@@ -66,7 +66,7 @@ export async function seedRadierModule(prisma: PrismaClient) {
     },
   });
 
-  const qUso = await prisma.question.create({
+  await prisma.question.create({
     data: {
       moduleId: mod.id,
       key: "uso",
