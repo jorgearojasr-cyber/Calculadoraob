@@ -189,7 +189,23 @@ export async function seedRegularizationDocuments(prisma: PrismaClient) {
       paraQueSirve: "Acredita qué parte de la propiedad ya cuenta con recepción, para regularizar solo lo nuevo",
       dondeSeObtiene: "DOM de la municipalidad correspondiente",
       obligatorio: false,
-      dependeDe: { op: "==", args: [{ var: "recepcionMunicipal" }, true] },
+      // El DSL de formula-engine no tiene un nodo de literal booleano
+      // (solo número y {str:...}) — {var:"recepcionMunicipal"} solo, sin
+      // comparar contra `true`, ya resuelve al valor booleano real, que
+      // es exactamente lo que "== true" intentaba expresar. Bug real
+      // encontrado en verificación end-to-end 2026-08-01 (ver también
+      // Reglas #2 y #4 en seedRegularizationRules).
+      //
+      // TODO(fase-2b): este dependeDe usa exactamente el mismo patrón que
+      // las Reglas #2/#4, que SÍ se verificaron en ejecución (wizard real,
+      // vía Puppeteer, 2026-08-01) — pero este dependeDe en sí todavía NO
+      // se ejercitó en tiempo de ejecución, porque la evaluación del
+      // checklist de documentos es Fase 2B, que aún no existe. No asumir
+      // que queda cubierto solo porque el patrón ya se validó en las
+      // reglas — verificar explícitamente cuando se construya el
+      // checklist (¿el documento se oculta/muestra correctamente según
+      // recepcionMunicipal true/false/null?).
+      dependeDe: { var: "recepcionMunicipal" },
     },
     {
       documento: "Informe de revisor independiente",
@@ -286,7 +302,10 @@ export async function seedRegularizationRules(prisma: PrismaClient) {
           { op: "defined", key: "anioConstruccion" },
           { op: "<", args: [{ var: "anioConstruccion" }, 2016] },
           { op: "defined", key: "recepcionMunicipal" },
-          { op: "==", args: [{ var: "recepcionMunicipal" }, false] },
+          // Sin literal booleano en el DSL (ver nota en Doc #9 arriba) —
+          // "not({var:...})" expresa "recepcionMunicipal == false" sin
+          // necesitar un nodo que el intérprete no soporta.
+          { op: "not", value: { var: "recepcionMunicipal" } },
         ],
       },
       message:
@@ -312,7 +331,10 @@ export async function seedRegularizationRules(prisma: PrismaClient) {
         op: "and",
         args: [
           { op: "defined", key: "recepcionMunicipal" },
-          { op: "==", args: [{ var: "recepcionMunicipal" }, true] },
+          // {var:"recepcionMunicipal"} solo ya resuelve al booleano real
+          // — equivalente a "== true" sin necesitar un literal booleano
+          // (ver nota en Doc #9).
+          { var: "recepcionMunicipal" },
         ],
       },
       message:
