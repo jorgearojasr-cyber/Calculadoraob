@@ -18,18 +18,21 @@ enum Role {
 }
 
 model User {
-  id           String   @id @default(cuid())
-  email        String   @unique
+  id           String  @id @default(cuid())
+  email        String  @unique
   name         String?
   image        String?
   passwordHash String?
-  role         Role     @default(user)
+  role         Role    @default(user)
 
-  savedProjects       SavedProject[]
-  shoppingListChecks  ShoppingListCheck[]
-  planPhaseCompletions ProjectPlanPhaseCompletion[]
-  projectPhotos       ProjectPhoto[]
-  projectShowcases    ProjectShowcase[]
+  savedProjects                 SavedProject[]
+  shoppingListChecks            ShoppingListCheck[]
+  planPhaseCompletions          ProjectPlanPhaseCompletion[]
+  projectPhotos                 ProjectPhoto[]
+  projectShowcases              ProjectShowcase[]
+  regularizationCases           RegularizationCase[]
+  regularizationStepCompletions RegularizationStepCompletion[]
+  regularizationDocumentChecks  RegularizationDocumentCheck[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -38,10 +41,10 @@ model User {
 }
 
 model SavedProject {
-  id       String @id @default(cuid())
-  user     User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id       String            @id @default(cuid())
+  user     User              @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId   String
-  module   Module @relation(fields: [moduleId], references: [id], onDelete: Restrict)
+  module   Module            @relation(fields: [moduleId], references: [id], onDelete: Restrict)
   moduleId String
   // Presentes solo si el proyecto se guardó desde una fase de /plan/[slug]
   // (ver ResultScreen.handleSaveProject) — permiten a una fase posterior del
@@ -59,11 +62,11 @@ model SavedProject {
   // el detalle del proyecto no recalcula contra el módulo actual.
   answers         Json
   result          Json
-  progressPercent Int    @default(0)
+  progressPercent Int     @default(0)
   // Incluido en /lista-compras (consolidación de materiales entre proyectos).
   inShoppingList  Boolean @default(false)
 
-  photos ProjectPhoto[]
+  photos    ProjectPhoto[]
   showcases ProjectShowcase[]
 
   createdAt DateTime @default(now())
@@ -80,12 +83,12 @@ model SavedProject {
 // snapshot de CalculationResult — no un Material.id, porque el nombre puede
 // venir de un materialLabelTemplate dinámico sin fila de Material fija.
 model ShoppingListCheck {
-  id           String   @id @default(cuid())
-  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id           String  @id @default(cuid())
+  user         User    @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId       String
   materialName String
   unit         String
-  checked      Boolean  @default(true)
+  checked      Boolean @default(true)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -111,32 +114,32 @@ model Category {
 }
 
 model Module {
-  id          String   @id @default(cuid())
-  slug        String   @unique
-  name        String
-  description String
+  id             String   @id @default(cuid())
+  slug           String   @unique
+  name           String
+  description    String
   // Texto libre opcional para mejorar el buscador de la Home sin depender
   // solo del nombre/descripción exactos (ej. "radier patio piso hormigón").
   searchKeywords String?
-  version     Int      @default(1)
-  published   Boolean  @default(false)
-  category    Category @relation(fields: [categoryId], references: [id], onDelete: Restrict)
-  categoryId  String
+  version        Int      @default(1)
+  published      Boolean  @default(false)
+  category       Category @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  categoryId     String
 
-  questions     Question[]
-  variables     Variable[]
-  formulas      Formula[]
-  lossFactors   LossFactor[]
-  savedProjects SavedProject[]
+  questions        Question[]
+  variables        Variable[]
+  formulas         Formula[]
+  lossFactors      LossFactor[]
+  savedProjects    SavedProject[]
   projectTaskLinks ProjectTaskModule[]
   planPhaseLinks   ProjectPlanPhaseModule[]
   photos           ProjectPhoto[]
   // Contenido "resultado enriquecido" opcional (piloto, ver ModuleGuide) —
   // hoy solo existe para Radier, no se genera en vivo por IA.
-  guide         ModuleGuide?
+  guide            ModuleGuide?
 
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([categoryId])
   @@map("modules")
@@ -151,18 +154,18 @@ model ModuleGuide {
   module   Module @relation(fields: [moduleId], references: [id], onDelete: Cascade)
   moduleId String @unique
 
-  summary                String
-  tools                  String[]
-  estimatedTime          String
-  difficulty             String
-  recommendedPeople      String
-  tipsBeforeStart        String[]
-  commonMistakes         String[]
-  safetyRecommendations  String[]
-  bestPractice           String
-  masterTip              String
-  faqs                   Json
-  stepByStepSummary      String[]
+  summary               String
+  tools                 String[]
+  estimatedTime         String
+  difficulty            String
+  recommendedPeople     String
+  tipsBeforeStart       String[]
+  commonMistakes        String[]
+  safetyRecommendations String[]
+  bestPractice          String
+  masterTip             String
+  faqs                  Json
+  stepByStepSummary     String[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -177,30 +180,30 @@ enum QuestionType {
 }
 
 model Question {
-  id       String       @id @default(cuid())
-  module   Module       @relation(fields: [moduleId], references: [id], onDelete: Cascade)
-  moduleId String
-  key      String
-  label    String
-  type     QuestionType
-  unit     String?
-  helpText String?
-  order    Int          @default(0)
+  id                   String       @id @default(cuid())
+  module               Module       @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  moduleId             String
+  key                  String
+  label                String
+  type                 QuestionType
+  unit                 String?
+  helpText             String?
+  order                Int          @default(0)
   // Preguntas del mismo módulo que comparten este valor se renderizan juntas
   // en un solo paso del wizard (ver docs/formula-dsl.md).
-  stepGroup String?
+  stepGroup            String?
   // Visibilidad condicional: si están seteados, esta pregunta solo se
   // muestra (y se pide) cuando la respuesta a la pregunta
   // visibleIfQuestionKey esté dentro de visibleIfValues. Sin admin UI
   // todavía — se configura por script (ver docs/formula-dsl.md).
   visibleIfQuestionKey String?
-  visibleIfValues      String[] @default([])
+  visibleIfValues      String[]     @default([])
   // Valor que se asigna automáticamente a esta pregunta cuando queda
   // oculta por visibleIf (no se le pregunta al usuario) — para que las
   // fórmulas/lookups que dependen de su respuesta sigan funcionando con
   // un valor por defecto en vez de quedar sin resolver. Ej.: "colocacion"
   // oculta cuando metodo_hormigon=manual asume "manual_carretilla".
-  hiddenDefaultValue String?
+  hiddenDefaultValue   String?
 
   // Valor sugerido (editable) para precargar el campo NUMBER, calculado por
   // LOOKUP contra la respuesta de otra pregunta ya contestada — ej. sugerir
@@ -220,12 +223,12 @@ model Question {
 }
 
 model QuestionOption {
-  id         String   @id @default(cuid())
-  question   Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
-  questionId String
-  key        String
-  label      String
-  order      Int      @default(0)
+  id          String   @id @default(cuid())
+  question    Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  questionId  String
+  key         String
+  label       String
+  order       Int      @default(0)
   // Descripción corta (1-2 líneas) opcional para la variante visual con
   // foto (ver ImageOptionCard) — sin admin UI todavía, se configura por
   // script. Si una opción no la tiene, esa pregunta cae al layout de lista
@@ -248,19 +251,19 @@ enum VariableValueType {
 
 // source: ver docs/formula-dsl.md
 model Variable {
-  id        String             @id @default(cuid())
-  module    Module             @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  id        String            @id @default(cuid())
+  module    Module            @relation(fields: [moduleId], references: [id], onDelete: Cascade)
   moduleId  String
   key       String
-  label     String             @default("")
+  label     String            @default("")
   valueType VariableValueType
   source    Json
   // Si es true, el valor resuelto de esta variable se muestra en el resultado
   // (ej: "Tipo de hormigón: G20"), no solo las cantidades de las fórmulas.
-  isResult  Boolean            @default(false)
-  norm      Norm?              @relation(fields: [normId], references: [id], onDelete: SetNull)
+  isResult  Boolean           @default(false)
+  norm      Norm?             @relation(fields: [normId], references: [id], onDelete: SetNull)
   normId    String?
-  order     Int                @default(0)
+  order     Int               @default(0)
 
   @@unique([moduleId, key])
   @@index([moduleId])
@@ -269,10 +272,10 @@ model Variable {
 
 // Catálogo global de materiales, reutilizable entre módulos.
 model Material {
-  id   String @id @default(cuid())
-  key  String @unique
-  name String
-  unit String
+  id                 String  @id @default(cuid())
+  key                String  @unique
+  name               String
+  unit               String
   // Precio de referencia aproximado en CLP por unidad (tabla estática,
   // actualizada a mano — NO precios en vivo). Se precarga como sugerencia
   // editable en el campo de precio del resultado, solo cuando la unidad
@@ -292,22 +295,22 @@ model Material {
 
 // expression / condition: ver docs/formula-dsl.md
 model Formula {
-  id         String    @id @default(cuid())
-  module     Module    @relation(fields: [moduleId], references: [id], onDelete: Cascade)
-  moduleId   String
-  key        String
-  label      String
-  unit       String
-  expression Json
-  condition  Json?
-  isResult   Boolean   @default(true)
+  id                    String    @id @default(cuid())
+  module                Module    @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  moduleId              String
+  key                   String
+  label                 String
+  unit                  String
+  expression            Json
+  condition             Json?
+  isResult              Boolean   @default(true)
   // Resultado secundario/de referencia (ej. "equivale a X sacos") — se
   // renderiza más chico, anidado dentro de la tarjeta del resultado
   // principal inmediatamente anterior, no como su propia tarjeta.
-  isSecondary Boolean  @default(false)
-  note       String?
-  material   Material? @relation(fields: [materialId], references: [id])
-  materialId String?
+  isSecondary           Boolean   @default(false)
+  note                  String?
+  material              Material? @relation(fields: [materialId], references: [id])
+  materialId            String?
   // Plantilla opcional para el nombre de material mostrado en el resultado,
   // con placeholders {variableKey} interpolados con los valores de variable
   // ya resueltos al momento del cálculo (ver docs/formula-dsl.md). Si está
@@ -315,9 +318,9 @@ model Formula {
   // varias variables de selección (medida, espesor, etc.) y crear un
   // Material por combinación sería inviable.
   materialLabelTemplate String?
-  norm       Norm?     @relation(fields: [normId], references: [id], onDelete: SetNull)
-  normId     String?
-  order      Int       @default(0)
+  norm                  Norm?     @relation(fields: [normId], references: [id], onDelete: SetNull)
+  normId                String?
+  order                 Int       @default(0)
 
   @@unique([moduleId, key])
   @@index([moduleId])
@@ -363,7 +366,19 @@ model Norm {
   // profesional habilitado (elemento estructural o instalación regulada:
   // Vigas, Losas, Fierros, Gas, etc.) — usado para agregar una advertencia
   // reforzada al prompt de IA generado desde el resultado.
-  reinforcedWarning Boolean @default(false)
+  reinforcedWarning  Boolean                @default(false)
+
+  // Valor de referencia administrable citado por esta norma (ej. la UF
+  // histórica a una fecha de corte legal) — nullable porque la mayoría de
+  // las normas técnicas citadas hoy no tienen un valor numérico propio,
+  // solo describen un criterio (ver Variable/Formula/LossFactor, que
+  // citan a Norm sin necesitar este campo). `valueUnit` documenta la
+  // unidad de `value` (ej. "CLP", "UF") — ambos nullable y aditivos,
+  // agregados para reutilizar este catálogo en vez de crear una tabla
+  // nueva para "valores de referencia con fuente citada" (ver decisión
+  // de arquitectura de Regularización, 2026-08-01).
+  value     Float?
+  valueUnit String?
 
   variables   Variable[]
   formulas    Formula[]
@@ -379,11 +394,11 @@ model Norm {
 // Category/Module (que no se tocan). Ver docs/fase2-home-por-proyecto.md
 // si se agrega más adelante.
 model ProjectGroup {
-  id    String @id @default(cuid())
-  slug  String @unique
+  id    String  @id @default(cuid())
+  slug  String  @unique
   name  String
   icon  String
-  order Int    @default(0)
+  order Int     @default(0)
   // Tono especial de presentación (ej. "avanzado" para "Herramientas
   // avanzadas" — tratamiento visual más discreto en la Home).
   tone  String?
@@ -397,12 +412,12 @@ model ProjectGroup {
 }
 
 model ProjectTask {
-  id      String       @id @default(cuid())
-  slug    String       @unique
-  name    String
-  order   Int          @default(0)
-  group   ProjectGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
-  groupId String
+  id          String       @id @default(cuid())
+  slug        String       @unique
+  name        String
+  order       Int          @default(0)
+  group       ProjectGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  groupId     String
   // Descripción corta (1-2 líneas) y foto opcionales para la variante
   // visual con foto en /grupos/[slug] (ver TaskPhotoCard) — sin admin UI
   // todavía, se configuran por script. Si la tarea tiene un solo
@@ -412,16 +427,16 @@ model ProjectTask {
   description String?
   imageUrl    String?
 
-  moduleLinks ProjectTaskModule[]
+  moduleLinks  ProjectTaskModule[]
   // Si está seteado, /empezar/[slug] redirige directo a /guias-rapidas/[quickGuide.slug]
   // en vez de resolver moduleLinks — una tarea usa moduleLinks O quickGuide, no ambos.
-  quickGuide   QuickGuide? @relation(fields: [quickGuideId], references: [id], onDelete: SetNull)
+  quickGuide   QuickGuide?         @relation(fields: [quickGuideId], references: [id], onDelete: SetNull)
   quickGuideId String?
   // Si está seteado, /empezar/[slug] redirige directo a /plan/[plan.slug] (piloto de
   // "Plan de fases" para proyectos compuestos) — una tarea usa moduleLinks O
   // quickGuide O plan, nunca más de uno a la vez.
-  plan   ProjectPlan? @relation(fields: [planId], references: [id], onDelete: SetNull)
-  planId String?
+  plan         ProjectPlan?        @relation(fields: [planId], references: [id], onDelete: SetNull)
+  planId       String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -434,26 +449,27 @@ model ProjectTask {
 // que cuantificar) — a diferencia de Module, no tiene preguntas ni
 // fórmulas. Ver /guias-rapidas/[slug].
 model QuickGuide {
-  id               String   @id @default(cuid())
-  slug             String   @unique
-  title            String
-  shortDescription String
-  tools            String[]
-  estimatedTime    String
-  difficulty       String
-  peopleNeeded     String
-  steps            String[]
-  tips             String[]
-  commonMistakes   String[]
-  masterTip        String
-  faqs             Json
+  id                    String   @id @default(cuid())
+  slug                  String   @unique
+  title                 String
+  shortDescription      String
+  tools                 String[]
+  estimatedTime         String
+  difficulty            String
+  peopleNeeded          String
+  steps                 String[]
+  tips                  String[]
+  commonMistakes        String[]
+  masterTip             String
+  faqs                  Json
   // Mismo patrón que Norm.reinforcedWarning — advertencia destacada para
   // trabajos que involucran electricidad viva o riesgo similar.
-  reinforcedWarning     Boolean @default(false)
+  reinforcedWarning     Boolean  @default(false)
   reinforcedWarningText String?
-  order                 Int     @default(0)
+  order                 Int      @default(0)
 
-  tasks ProjectTask[]
+  tasks               ProjectTask[]
+  regularizationSteps RegularizationStepGuide[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -465,17 +481,17 @@ model QuickGuide {
 // tiene 2+ links, la página /empezar/[taskSlug] muestra un selector; si
 // tiene 1 solo, redirige directo al módulo.
 model ProjectTaskModule {
-  id       String      @id @default(cuid())
-  task     ProjectTask @relation(fields: [taskId], references: [id], onDelete: Cascade)
-  taskId   String
-  module   Module      @relation(fields: [moduleId], references: [id], onDelete: Restrict)
-  moduleId String
+  id          String      @id @default(cuid())
+  task        ProjectTask @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  taskId      String
+  module      Module      @relation(fields: [moduleId], references: [id], onDelete: Restrict)
+  moduleId    String
   // Etiqueta para desambiguar cuando hay 2+ módulos (ej. "Rectangular").
-  label    String?
+  label       String?
   // Query string opcional a anexar al entrar al módulo (ej.
   // "tipo=bodega_industrial"), para preseleccionar la primera pregunta.
   presetQuery String?
-  order    Int @default(0)
+  order       Int         @default(0)
   // Descripción corta y foto opcionales para cuando ESTE link se muestra
   // como su propia tarjeta en /grupos/[slug] — solo aplica si la
   // ProjectTask tiene 2+ moduleLinks (ej. "Piscina rectangular" /
@@ -538,14 +554,14 @@ model ProjectPlanPhase {
 // fase futura lo necesitara (no se ejercita en el piloto actual, donde
 // las 3 fases mapean 1:1).
 model ProjectPlanPhaseModule {
-  id       String           @id @default(cuid())
-  phase    ProjectPlanPhase @relation(fields: [phaseId], references: [id], onDelete: Cascade)
-  phaseId  String
-  module   Module           @relation(fields: [moduleId], references: [id], onDelete: Restrict)
-  moduleId String
-  label    String?
+  id          String           @id @default(cuid())
+  phase       ProjectPlanPhase @relation(fields: [phaseId], references: [id], onDelete: Cascade)
+  phaseId     String
+  module      Module           @relation(fields: [moduleId], references: [id], onDelete: Restrict)
+  moduleId    String
+  label       String?
   presetQuery String?
-  order    Int @default(0)
+  order       Int              @default(0)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -585,15 +601,15 @@ enum ProjectPhotoStatus {
 // que un admin la aprueba desde /admin/fotos. Con el tiempo arma una
 // galería real por módulo que reemplaza fotos de stock.
 model ProjectPhoto {
-  id     String @id @default(cuid())
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId String
+  id             String        @id @default(cuid())
+  user           User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId         String
   // Proyecto desde el que se subió (para trazabilidad); si se borra el
   // proyecto la foto se conserva igual, solo pierde ese vínculo.
   savedProject   SavedProject? @relation(fields: [savedProjectId], references: [id], onDelete: SetNull)
   savedProjectId String?
-  module   Module @relation(fields: [moduleId], references: [id], onDelete: Cascade)
-  moduleId String
+  module         Module        @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  moduleId       String
 
   url    String
   status ProjectPhotoStatus @default(PENDING)
@@ -626,8 +642,8 @@ model ProjectShowcase {
   savedProject   SavedProject? @relation(fields: [savedProjectId], references: [id], onDelete: SetNull)
   savedProjectId String?
 
-  title  String
-  story  String
+  title String
+  story String
 
   photosBefore String[]
   photosAfter  String[]
@@ -640,4 +656,274 @@ model ProjectShowcase {
   @@index([status])
   @@index([userId])
   @@map("project_showcases")
+}
+
+// ============================================================
+// Regulariza tu Vivienda — arquitectura aprobada tras Fase 0
+// (auditoría de reutilización) y Fase 1 (arquitectura conceptual,
+// 3 rondas de decisiones documentadas). Ver docs/ para el detalle de
+// cada decisión si hace falta reconstruir el porqué de una forma.
+// ============================================================
+
+enum RegularizationConstructionType {
+  AMPLIACION
+  SEGUNDO_PISO
+  TERRAZA_CERRADA
+  QUINCHO
+  BODEGA
+  ESTACIONAMIENTO_TECHADO
+  VIVIENDA_COMPLETA
+  OTRO
+}
+
+enum RegularizationMaterial {
+  MADERA
+  ALBANILERIA
+  METALCON
+  HORMIGON
+  MIXTA
+  OTRO
+}
+
+enum RegularizationCaseStatus {
+  EN_PROGRESO
+  EVALUACION_LISTA
+  CARPETA_GENERADA
+}
+
+// Caso de regularización de un usuario — datos del wizard inicial +
+// snapshot de las respuestas del checklist inteligente. Un usuario puede
+// tener varios casos simultáneos (ver `name`, mismo patrón que
+// SavedProject.name).
+model RegularizationCase {
+  id     String @id @default(cuid())
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String
+
+  name String
+
+  tipoConstruccion   RegularizationConstructionType
+  // Nullable: "No lo sé" es una respuesta válida y distinta de un año real.
+  // Cualquier RegularizationRule.condition que compare este valor
+  // numéricamente debe usar {"op":"defined",...} como guard primero (mismo
+  // criterio ya documentado en docs/formula-dsl.md para valores ausentes).
+  anioConstruccion   Int?
+  recepcionMunicipal Boolean?
+  m2Estimados        Float
+  material           RegularizationMaterial
+  estadoProceso      RegularizationCaseStatus       @default(EN_PROGRESO)
+
+  // Avalúo fiscal en pesos — un solo campo, sin equivalente en UF ni
+  // campo de estado aparte (null ya representa "no lo sabe todavía", mismo
+  // criterio que anioConstruccion/recepcionMunicipal). Se captura mediante
+  // una pregunta de compuerta al inicio de la etapa de documentación, no
+  // en el wizard inicial — decisión de UI, no de schema. Si en el futuro
+  // se confirma que algún umbral legal requiere UF, se resuelve con un
+  // valor de referencia administrado en BD (mismo patrón que
+  // LossFactor.percentage), nunca con un segundo campo editable por el
+  // usuario ni con conversión en tiempo real.
+  avaluoFiscalPesos Float?
+
+  // Snapshot de las respuestas del checklist inteligente a nivel de caso
+  // (largo, ancho, altura, espesor de muro, techumbre, ventanas, puertas)
+  // — mismo patrón que SavedProject.answers: Json, no una columna por
+  // medida. Distinto de RegularizationRoom, que es la lista de recintos
+  // para la calculadora de superficie, no las medidas generales del caso.
+  medidas Json?
+
+  rooms      RegularizationRoom[]
+  photos     RegularizationPhoto[]
+  sketch     RegularizationSketch?
+  stepChecks RegularizationStepCompletion[]
+  docChecks  RegularizationDocumentCheck[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@map("regularization_cases")
+}
+
+enum RegularizationRoomType {
+  DORMITORIO
+  COCINA
+  BANO
+  LIVING_COMEDOR
+  LAVANDERIA
+  BODEGA
+  OTRO
+}
+
+// Recinto individual con sus medidas — alimenta la calculadora de
+// superficie (largo × ancho = m2Calculado). No confundir con
+// RegularizationCase.medidas (medidas generales del caso, no por recinto).
+model RegularizationRoom {
+  id     String             @id @default(cuid())
+  case   RegularizationCase @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  caseId String
+
+  roomType    RegularizationRoomType
+  label       String?
+  largo       Float
+  ancho       Float
+  m2Calculado Float
+  order       Int                    @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([caseId])
+  @@map("regularization_rooms")
+}
+
+enum RegularizationPhotoKind {
+  FACHADA
+  POSTERIOR
+  COSTADO
+  INTERIOR
+  TECHUMBRE
+  FUNDACION
+  OTRO
+}
+
+// Fotos de respaldo del caso (fachada, interior, techumbre, etc.) — solo
+// almacenamiento, sin análisis ni moderación (a diferencia de ProjectPhoto,
+// esta documentación es privada del propio caso del usuario). Reutiliza el
+// mecanismo de subida existente (Vercel Blob), no el modelo.
+model RegularizationPhoto {
+  id     String             @id @default(cuid())
+  case   RegularizationCase @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  caseId String
+
+  kind    RegularizationPhotoKind
+  url     String
+  caption String?
+  notes   String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([caseId])
+  @@map("regularization_photos")
+}
+
+// Estado de "paso completado" del checklist inteligente, por usuario y por
+// caso — mismo patrón que ProjectPlanPhaseCompletion (boolean manual, no
+// inferido), adaptado con caseId porque un usuario puede tener varios
+// casos a la vez (ProjectPlanPhase no lo necesita porque cada fase ya
+// pertenece a un único plan). stepKey es un identificador estable definido
+// en código, sin catálogo propio — mismo criterio que Question.stepGroup.
+model RegularizationStepCompletion {
+  id     String             @id @default(cuid())
+  user   User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String
+  case   RegularizationCase @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  caseId String
+
+  stepKey   String
+  completed Boolean @default(true)
+
+  @@unique([userId, caseId, stepKey])
+  @@map("regularization_step_completions")
+}
+
+enum RegularizationDocumentCategory {
+  MUNICIPAL
+  DOM
+  ARQUITECTO
+  NOTARIA_REGISTRO
+}
+
+// Catálogo de documentos requeridos para el trámite — contenido vive en
+// BD, no hardcodeado en componentes (principio Database First). `dependeDe`
+// usa el mismo formato de nodo DSL que RegularizationRule.condition.
+model RegularizationDocumentChecklist {
+  id             String                         @id @default(cuid())
+  documento      String
+  category       RegularizationDocumentCategory
+  paraQueSirve   String
+  dondeSeObtiene String
+  obligatorio    Boolean                        @default(true)
+  dependeDe      Json?
+  order          Int                            @default(0)
+
+  checks RegularizationDocumentCheck[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("regularization_document_checklist")
+}
+
+// Estado de "reunido/pendiente" por documento, usuario y caso. A
+// diferencia de ShoppingListCheck (clave natural, porque ahí no hay una
+// fila catálogo real), acá sí existe un catálogo con id propio
+// (RegularizationDocumentChecklist), así que se usa FK real — más fuerte
+// en integridad referencial.
+model RegularizationDocumentCheck {
+  id         String                          @id @default(cuid())
+  user       User                            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId     String
+  case       RegularizationCase              @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  caseId     String
+  document   RegularizationDocumentChecklist @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  documentId String
+
+  checked Boolean @default(false)
+
+  @@unique([userId, caseId, documentId])
+  @@map("regularization_document_checks")
+}
+
+// Datos del croquis — estructurado como JSON (muros, medidas, puertas,
+// ventanas), nunca una imagen renderizada del lado del servidor.
+model RegularizationSketch {
+  id     String             @id @default(cuid())
+  case   RegularizationCase @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  caseId String             @unique
+
+  dataJson Json
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("regularization_sketches")
+}
+
+// Vincula un paso del checklist inteligente a un QuickGuide existente
+// (tutorial "cómo medir un muro", etc.) sin tocar QuickGuide/ProjectTask —
+// tabla puente específica en vez de una relación polimórfica genérica (sin
+// precedente en este schema; ver decisión documentada de Fase 1).
+model RegularizationStepGuide {
+  id           String     @id @default(cuid())
+  stepKey      String
+  quickGuide   QuickGuide @relation(fields: [quickGuideId], references: [id], onDelete: Cascade)
+  quickGuideId String
+  order        Int        @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([stepKey])
+  @@map("regularization_step_guides")
+}
+
+// Motor de evaluación preliminar — reglas determinísticas (tabla de
+// condiciones → mensaje), NO IA. `condition` reutiliza el mismo formato de
+// nodo DSL y el mismo intérprete (evaluateCondition) que Formula.condition
+// — ver src/lib/formula-engine/evaluate.ts. `label` sigue la convención de
+// Formula/Variable/LossFactor (identificador legible para administración).
+model RegularizationRule {
+  id        String  @id @default(cuid())
+  label     String
+  priority  Int     @default(0)
+  enabled   Boolean @default(true)
+  condition Json
+  message   String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([enabled, priority])
+  @@map("regularization_rules")
 }
