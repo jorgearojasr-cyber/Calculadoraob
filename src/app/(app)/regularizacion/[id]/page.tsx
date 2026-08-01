@@ -5,6 +5,8 @@ import { getVisibleDocumentChecklist } from "@/lib/regularization-documents";
 import { RegularizationCaseView } from "@/components/regularization/regularization-case-view";
 import { RegularizationRoomList } from "@/components/regularization/regularization-room-list";
 import { RegularizationPhotoUpload } from "@/components/regularization/regularization-photo-upload";
+import { RegularizationSketchEditor } from "@/components/regularization/regularization-sketch-editor";
+import type { SketchData } from "@/lib/regularization-sketch";
 
 // Sin ningún link de navegación público todavía (Opción C, igual que
 // /regularizacion) — se llega acá solo desde el enlace que deja
@@ -21,12 +23,13 @@ export default async function RegularizationCasePage({ params }: { params: { id:
   const regCase = await prisma.regularizationCase.findUnique({ where: { id: params.id } });
   if (!regCase || regCase.userId !== session.user.id) return null;
 
-  const [initialDocuments, rooms, photos] = await Promise.all([
+  const [initialDocuments, rooms, photos, sketch] = await Promise.all([
     regCase.avaluoFiscalPesos !== null
       ? getVisibleDocumentChecklist(regCase.id, session.user.id)
       : Promise.resolve(null),
     prisma.regularizationRoom.findMany({ where: { caseId: regCase.id }, orderBy: { order: "asc" } }),
     prisma.regularizationPhoto.findMany({ where: { caseId: regCase.id }, orderBy: { createdAt: "asc" } }),
+    prisma.regularizationSketch.findUnique({ where: { caseId: regCase.id } }),
   ]);
 
   return (
@@ -44,6 +47,7 @@ export default async function RegularizationCasePage({ params }: { params: { id:
       <RegularizationCaseView caseId={regCase.id} initialDocuments={initialDocuments} />
       <RegularizationRoomList caseId={regCase.id} initialRooms={rooms} />
       <RegularizationPhotoUpload caseId={regCase.id} initialPhotos={photos} />
+      <RegularizationSketchEditor caseId={regCase.id} initialData={(sketch?.dataJson as unknown as SketchData) ?? null} />
     </div>
   );
 }

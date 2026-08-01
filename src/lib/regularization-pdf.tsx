@@ -1,6 +1,7 @@
-import { Document, Page, Text, View, StyleSheet, Image } from "@react-pdf/renderer";
+import { Document, Page, Text, View, StyleSheet, Image, Svg, Path } from "@react-pdf/renderer";
 import type { RegularizationRuleResult } from "@/lib/regularization-rules";
 import type { RegularizationDocumentItem } from "@/lib/regularization-documents";
+import { SKETCH_DISCLAIMER, elementsToPrimitives, computeViewBox, type SketchData } from "@/lib/regularization-sketch";
 
 // Fuente Helvetica por defecto de @react-pdf/renderer — probada con
 // texto real del módulo (tildes y ñ) antes de construir este documento,
@@ -104,7 +105,18 @@ const styles = StyleSheet.create({
   docObligatorio: { fontSize: 8, color: "#7a4b00" },
   photoImg: { width: 160, height: 120, marginBottom: 4, objectFit: "cover" },
   photoCaption: { fontSize: 8, color: "#666666", marginBottom: 10 },
+  sketchDisclaimer: {
+    fontSize: 9,
+    color: "#7a4b00",
+    backgroundColor: "#fff4e0",
+    padding: 8,
+    borderRadius: 4,
+    marginBottom: 12,
+  },
 });
+
+const SKETCH_MAX_WIDTH = 480; // pt
+const SKETCH_MAX_HEIGHT = 620; // pt
 
 export type RegularizationPdfCase = {
   name: string;
@@ -136,6 +148,7 @@ export type RegularizationPdfData = {
   rooms: RegularizationPdfRoom[];
   documents: RegularizationDocumentItem[];
   photos: RegularizationPdfPhoto[];
+  sketch: SketchData | null;
   generatedAt: Date;
 };
 
@@ -149,6 +162,7 @@ export function RegularizationCarpetaDocument({
   rooms,
   documents,
   photos,
+  sketch,
   generatedAt,
 }: RegularizationPdfData) {
   const groupedDocs = CATEGORY_ORDER.map((category) => ({
@@ -160,6 +174,20 @@ export function RegularizationCarpetaDocument({
     kind,
     items: photos.filter((p) => p.kind === kind),
   })).filter((g) => g.items.length > 0);
+
+  const sketchPrimitives = sketch && sketch.elements.length > 0 ? elementsToPrimitives(sketch.elements) : [];
+  const sketchViewBox = sketch && sketch.elements.length > 0 ? computeViewBox(sketch.elements) : null;
+  let sketchRenderWidth = 0;
+  let sketchRenderHeight = 0;
+  if (sketchViewBox) {
+    const aspect = sketchViewBox.width / sketchViewBox.height;
+    sketchRenderWidth = SKETCH_MAX_WIDTH;
+    sketchRenderHeight = sketchRenderWidth / aspect;
+    if (sketchRenderHeight > SKETCH_MAX_HEIGHT) {
+      sketchRenderHeight = SKETCH_MAX_HEIGHT;
+      sketchRenderWidth = sketchRenderHeight * aspect;
+    }
+  }
 
   return (
     <Document>
@@ -287,6 +315,53 @@ export function RegularizationCarpetaDocument({
               </View>
             </View>
           ))
+        )}
+      </Page>
+
+      <Page size="A4" style={styles.page}>
+        <Text style={styles.h2}>Croquis</Text>
+        <View style={styles.sketchDisclaimer}>
+          <Text>{SKETCH_DISCLAIMER}</Text>
+        </View>
+        {!sketchViewBox ? (
+          <Text style={styles.emptyNote}>Sin croquis cargado.</Text>
+        ) : (
+          <Svg
+            width={sketchRenderWidth}
+            height={sketchRenderHeight}
+            viewBox={`${sketchViewBox.minX} ${sketchViewBox.minY} ${sketchViewBox.width} ${sketchViewBox.height}`}
+          >
+            {sketchPrimitives.map((p) =>
+              p.kind === "path" ? (
+                <Path
+                  key={p.id}
+                  d={p.d}
+                  stroke={p.stroke}
+                  strokeWidth={p.strokeWidth}
+                  fill={p.fill ?? "none"}
+                  strokeDasharray={p.dashed ? "4,3" : undefined}
+                />
+              ) : (
+                // @ts-expect-error -- @react-pdf/renderer@4.5.1: SVGTextProps
+                // (node_modules/@react-pdf/types/svg.d.ts) no declara
+                // `fontSize`, pero el prop SÍ es soportado y aplicado en
+                // runtime por Text dentro de Svg — verificado explícitamente
+                // en la prueba de compatibilidad SVG↔PDF previa a esta
+                // implementación (2026-08-02): un <Text fontSize={14}> real
+                // se renderizó y su contenido se extrajo correctamente del
+                // PDF resultante. Esta supresión es deliberada, no un error
+                // accidental — no la elimines en una limpieza de TypeScript
+                // sin volver a intentar sin ella primero. Quítala cuando
+                // una versión futura de @react-pdf/renderer agregue
+                // `fontSize` a SVGTextProps (el build fallará solo si la
+                // supresión deja de ser necesaria, gracias a @ts-expect-error
+                // en vez de @ts-ignore).
+                <Text key={p.id} x={p.x} y={p.y} fontSize={p.fontSize}>
+                  {p.content}
+                </Text>
+              )
+            )}
+          </Svg>
         )}
       </Page>
     </Document>

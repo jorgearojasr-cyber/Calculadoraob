@@ -9,7 +9,9 @@ import { STALE_SESSION_ERROR, isStaleUserError } from "@/lib/stale-session";
 import { getVisibleDocumentChecklist, type RegularizationDocumentItem } from "@/lib/regularization-documents";
 import { MAX_PHOTO_SIZE_BYTES, isAllowedPhotoType } from "@/lib/project-photos";
 import { MAX_PHOTOS_PER_KIND } from "@/lib/regularization-photos";
+import { SKETCH_DATA_VERSION, SKETCH_GRID_SIZE, type SketchData } from "@/lib/regularization-sketch";
 import type { RegularizationRoomType, RegularizationPhotoKind } from "@/generated/prisma/client";
+import type { Prisma } from "@/generated/prisma/client";
 
 // Server Action nueva — no reutiliza createRegularizationCaseAction (esa
 // es de creación, con sus propios campos obligatorios). Mismo patrón de
@@ -276,6 +278,47 @@ export async function deleteRegularizationPhotoAction(
     await del(photo.url);
   } catch {
     // Blob eliminado o inalcanzable — no bloquea la operación.
+  }
+
+  revalidatePath(`/regularizacion/${caseId}`);
+  return {};
+}
+
+// --- Croquis (Fase 2D) ---
+//
+// Mismo patrón de ownership que el resto del módulo: sesión -> caso ->
+// regCase.userId === session.user.id -> recién ahí se lee/escribe el
+// RegularizationSketch (decisión de arquitectura confirmada
+// 2026-08-02, no solo una verificación de pruebas). caseId es @unique
+// en el modelo — un solo croquis por caso, upsert directo.
+
+export async function saveSketchAction(caseId: string, data: SketchData): Promise<{ error?: string }> {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.id) return { error: "No hay sesión activa." };
+
+  const regCase = await prisma.regularizationCase.findUnique({ where: { id: caseId } });
+  if (!regCase || regCase.userId !== session.user.id) return { error: "Caso no encontrado." };
+
+  // version/unit/grid del contrato de dataJson se fijan siempre acá, no
+  // se confía en que el cliente los haya enviado (ni en que los haya
+  // enviado correctos) — el versionado del formato es una garantía del
+  // servidor, no del cliente (decisión confirmada 2026-08-03).
+  const normalized: SketchData = {
+    version: SKETCH_DATA_VERSION,
+    unit: "cm",
+    grid: { size: SKETCH_GRID_SIZE },
+    elements: Array.isArray(data?.elements) ? data.elements : [],
+  };
+
+  try {
+    await prisma.regularizationSketch.upsert({
+      where: { caseId },
+      create: { caseId, dataJson: normalized as unknown as Prisma.InputJsonValue },
+      update: { dataJson: normalized as unknown as Prisma.InputJsonValue },
+    });
+  } catch (error) {
+    if (isStaleUserError(error)) return { error: STALE_SESSION_ERROR };
+    throw error;
   }
 
   revalidatePath(`/regularizacion/${caseId}`);
