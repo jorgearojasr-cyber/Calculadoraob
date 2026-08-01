@@ -5,8 +5,7 @@ import type { DslNode, DslValue } from "@/lib/formula-engine/types";
 // Contenido normativo pendiente de validación profesional — ver
 // prisma/seed-regularization.ts.
 //
-// Evalúa las RegularizationRule habilitadas contra un caso, en orden de
-// priority. Reutiliza el mismo intérprete de condiciones que Formula
+// Reutiliza el mismo intérprete de condiciones que Formula
 // (evaluateCondition) — ninguna regla nueva, ningún cambio al DSL. La
 // única pieza propia de este servicio es armar ctx.variables desde
 // RegularizationCase + el valor de referencia de Norm("uf-2016-02-04"),
@@ -25,9 +24,12 @@ export type RegularizationRuleResult = {
   message: string;
 };
 
-export async function evaluateRegularizationRules(
-  input: RegularizationRuleCaseInput
-): Promise<RegularizationRuleResult[]> {
+// Compartido entre evaluateRegularizationRules (reglas) y
+// getVisibleDocumentChecklist (dependeDe de documentos, Fase 2B) — mismo
+// ctx.variables para que ambos lean el caso de forma idéntica, sin
+// duplicar la construcción del contexto (ver decisión de arquitectura:
+// "reglas y checklist deben compartir la misma lógica de negocio").
+export async function buildRegularizationContext(input: RegularizationRuleCaseInput) {
   const ufNorm = await prisma.norm.findUnique({ where: { code: "uf-2016-02-04" } });
 
   const variables: Record<string, DslValue> = {
@@ -44,7 +46,13 @@ export async function evaluateRegularizationRules(
   if (input.recepcionMunicipal !== null) variables.recepcionMunicipal = input.recepcionMunicipal;
   if (input.avaluoFiscalPesos !== null) variables.avaluoFiscalPesos = input.avaluoFiscalPesos;
 
-  const ctx = { variables, formulaResults: {}, lossFactors: {} };
+  return { variables, formulaResults: {}, lossFactors: {} };
+}
+
+export async function evaluateRegularizationRules(
+  input: RegularizationRuleCaseInput
+): Promise<RegularizationRuleResult[]> {
+  const ctx = await buildRegularizationContext(input);
 
   const rules = await prisma.regularizationRule.findMany({
     where: { enabled: true },

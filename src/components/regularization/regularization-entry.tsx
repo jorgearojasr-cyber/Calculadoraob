@@ -1,14 +1,14 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { RegularizationWizard, type RegularizationWizardResult } from "./regularization-wizard";
 
-// Pantalla de resultados es deliberadamente mínima en 2A — solo muestra
-// los mensajes de las reglas que aplicaron. La pantalla real (checklist,
-// documentos, croquis) es 2B en adelante. Sin punto de entrada público
-// todavía (ver decisión de despliegue, Opción C, 2026-08-01) — esta ruta
-// existe mientras se construye el resto del módulo, sin ningún link desde
-// la navegación.
+// Pantalla de resultados de 2A + enlace a la compuerta de avalúo/checklist
+// de 2B (/regularizacion/[id]). Sin punto de entrada público todavía (ver
+// decisión de despliegue, Opción C, 2026-08-01) — esta ruta existe
+// mientras se construye el resto del módulo, sin ningún link desde la
+// navegación.
 export function RegularizationEntry() {
   const [result, setResult] = useState<RegularizationWizardResult | null>(null);
 
@@ -34,6 +34,12 @@ export function RegularizationEntry() {
             ))}
           </div>
         )}
+        <Link
+          href={`/regularizacion/${result.caseId}`}
+          className="mt-6 inline-flex rounded-full px-6 py-3 text-sm font-semibold text-white bg-action"
+        >
+          Continuar con los documentos
+        </Link>
       </div>
     );
   }
