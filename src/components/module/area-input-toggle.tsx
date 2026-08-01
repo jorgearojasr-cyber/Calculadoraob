@@ -65,6 +65,9 @@ export function AreaInputToggle({
   const [secondary, setSecondary] = useState(initialSecondary ?? "");
   const [area, setArea] = useState(initialArea ?? "");
   const [deductions, setDeductions] = useState<DeductionRow[]>([]);
+  // Campo activo del diagrama (ver `activeField`, spec aprobada) — solo
+  // "largo"/"ancho" existen acá, el modo "m² directo" no tiene diagrama.
+  const [activeInput, setActiveInput] = useState<"largo" | "ancho" | null>(null);
 
   const toNumber = (raw: string) => {
     const num = Number(raw.replace(",", "."));
@@ -137,6 +140,7 @@ export function AreaInputToggle({
               ancho={toNumber(secondary) ?? undefined}
               labels={{ largo: capitalize(primaryLabel), ancho: capitalize(secondaryLabel) }}
               unit={unit}
+              activeField={activeInput ?? undefined}
             />
           </div>
           <div className="order-2 lg:order-1">
@@ -149,6 +153,8 @@ export function AreaInputToggle({
                   inputMode="decimal"
                   value={primary}
                   onChange={(e) => setPrimary(e.target.value)}
+                  onFocus={() => setActiveInput("largo")}
+                  onBlur={() => setActiveInput((prev) => (prev === "largo" ? null : prev))}
                   placeholder="0"
                   className="w-full bg-transparent outline-none font-display text-xl placeholder:text-ink-faint"
                 />
@@ -163,6 +169,8 @@ export function AreaInputToggle({
                   inputMode="decimal"
                   value={secondary}
                   onChange={(e) => setSecondary(e.target.value)}
+                  onFocus={() => setActiveInput("ancho")}
+                  onBlur={() => setActiveInput((prev) => (prev === "ancho" ? null : prev))}
                   placeholder="0"
                   className="w-full bg-transparent outline-none font-display text-xl placeholder:text-ink-faint"
                 />

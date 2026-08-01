@@ -337,6 +337,8 @@ function FieldRow({
   autoFocus,
   onChange,
   onEnter,
+  onFocus,
+  onBlur,
   rangeWarning,
 }: {
   icon: "horizontal" | "vertical";
@@ -347,6 +349,8 @@ function FieldRow({
   autoFocus?: boolean;
   onChange: (value: string) => void;
   onEnter: () => void;
+  onFocus?: () => void;
+  onBlur?: () => void;
   rangeWarning?: string | null;
 }) {
   return (
@@ -368,6 +372,8 @@ function FieldRow({
           value={value}
           onChange={(e) => onChange(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && onEnter()}
+          onFocus={onFocus}
+          onBlur={onBlur}
           placeholder="0"
           className="w-full bg-transparent outline-none font-display text-xl placeholder:text-ink-faint"
         />
@@ -427,13 +433,20 @@ function VolumeStep({
   const secondaryQuestion = diagram.secondaryLabel ? questions[1] : undefined;
   const depthQuestion = questions[diagram.secondaryLabel ? 2 : 1];
 
+  // dimField vincula cada input con el campo de DiagramV2 que resalta en
+  // naranjo mientras se escribe (ver `activeField`, spec aprobada) — no
+  // es lo mismo que `label` (texto real, ej. "diámetro"), es el slot fijo
+  // que espera la API ("largo"/"ancho"/"profundidad"/"diametro").
   const fields = [
-    { question: questions[0], label: diagram.primaryLabel, subLabel: diagram.primarySubLabel, axis: "h" as const },
+    { question: questions[0], label: diagram.primaryLabel, subLabel: diagram.primarySubLabel, axis: "h" as const, dimField: isCircular ? ("diametro" as const) : ("largo" as const) },
     ...(secondaryQuestion
-      ? [{ question: secondaryQuestion, label: diagram.secondaryLabel!, subLabel: diagram.secondarySubLabel, axis: "h" as const }]
+      ? [{ question: secondaryQuestion, label: diagram.secondaryLabel!, subLabel: diagram.secondarySubLabel, axis: "h" as const, dimField: "ancho" as const }]
       : []),
-    { question: depthQuestion, label: diagram.depthLabel!, subLabel: diagram.depthSubLabel, axis: "v" as const },
+    { question: depthQuestion, label: diagram.depthLabel!, subLabel: diagram.depthSubLabel, axis: "v" as const, dimField: "profundidad" as const },
   ];
+
+  const [activeKey, setActiveKey] = useState<string | null>(null);
+  const activeField = fields.find((f) => f.question.key === activeKey)?.dimField;
 
   const nums = fields.map((f) => toNum(values[f.question.key]));
   const allValid = nums.every((n) => n !== null);
@@ -471,6 +484,8 @@ function VolumeStep({
               autoFocus={i === 0}
               onChange={(v) => setValue(f.question.key, v)}
               onEnter={handleSubmit}
+              onFocus={() => setActiveKey(f.question.key)}
+              onBlur={() => setActiveKey((prev) => (prev === f.question.key ? null : prev))}
               rangeWarning={rangeWarnings[f.question.key]}
             />
           ))}
@@ -509,6 +524,8 @@ function VolumeStep({
               profundidad: capitalize(diagram.depthLabel!),
             }}
             unit={questions[0].unit ?? "m"}
+            units={{ diametro: questions[0].unit ?? undefined, profundidad: depthQuestion.unit ?? undefined }}
+            activeField={activeField}
           />
         ) : (
           <DiagramV2
@@ -522,6 +539,12 @@ function VolumeStep({
               profundidad: capitalize(diagram.depthLabel!),
             }}
             unit={questions[0].unit ?? "m"}
+            units={{
+              largo: questions[0].unit ?? undefined,
+              ancho: secondaryQuestion?.unit ?? undefined,
+              profundidad: depthQuestion.unit ?? undefined,
+            }}
+            activeField={activeField}
           />
         )}
         <div className="hidden lg:block mt-4">
@@ -576,6 +599,10 @@ export function QuestionGroupStep({
   );
   const [error, setError] = useState<string | null>(null);
   const [openHelp, setOpenHelp] = useState<Record<string, boolean>>({});
+  // Campo activo (ver `activeField`, spec aprobada) — solo aplica al
+  // diagrama 2D (rect2d/circle2d) de este componente; VolumeStep tiene el
+  // suyo propio, aislado.
+  const [activeKey, setActiveKey] = useState<string | null>(null);
 
   const setValue = (key: string, value: string) => {
     setValues((prev) => ({ ...prev, [key]: value }));
@@ -659,6 +686,18 @@ export function QuestionGroupStep({
   // DIMENSION_DIAGRAMS. Los grupos con profundidad (depthLabel) nunca
   // llegan hasta acá: los renderiza VolumeStep más arriba.
   const diagramSecondaryQuestion = diagram?.secondaryLabel ? questions[1] : undefined;
+  // Campo activo del diagrama 2D (ver `activeField`, spec aprobada) —
+  // solo el primario/secundario existen acá (los grupos con profundidad
+  // van por VolumeStep, que tiene su propio activeField aislado).
+  const diagramActiveField: "largo" | "ancho" | "diametro" | undefined = !diagram
+    ? undefined
+    : activeKey === questions[0]?.key
+      ? diagram.shape === "circle"
+        ? "diametro"
+        : "largo"
+      : diagramSecondaryQuestion && activeKey === diagramSecondaryQuestion.key
+        ? "ancho"
+        : undefined;
 
   // AreaInputToggle reemplaza el grid de campos fijo cuando el stepGroup
   // está auditado como seguro para "m² directo" (ver allowAreaToggle
@@ -784,6 +823,7 @@ export function QuestionGroupStep({
               diametro={toNum(values[questions[0].key]) ?? undefined}
               labels={{ diametro: capitalize(diagram.primaryLabel) }}
               unit={questions[0].unit ?? "m"}
+              activeField={diagramActiveField}
             />
           ) : (
             <DiagramV2
@@ -795,6 +835,8 @@ export function QuestionGroupStep({
                 ancho: diagram.secondaryLabel ? capitalize(diagram.secondaryLabel) : undefined,
               }}
               unit={questions[0].unit ?? "m"}
+              units={{ largo: questions[0].unit ?? undefined, ancho: diagramSecondaryQuestion?.unit ?? undefined }}
+              activeField={diagramActiveField}
             />
           )}
         </div>
@@ -818,6 +860,8 @@ export function QuestionGroupStep({
                     value={values[question.key]}
                     onChange={(e) => setValue(question.key, e.target.value)}
                     onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
+                    onFocus={() => setActiveKey(question.key)}
+                    onBlur={() => setActiveKey((prev) => (prev === question.key ? null : prev))}
                     placeholder="0"
                     className="w-full bg-transparent outline-none font-display placeholder:text-ink-faint text-2xl"
                   />
@@ -888,6 +932,8 @@ export function QuestionGroupStep({
                   value={values[question.key]}
                   onChange={(e) => setValue(question.key, e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
+                  onFocus={() => setActiveKey(question.key)}
+                  onBlur={() => setActiveKey((prev) => (prev === question.key ? null : prev))}
                   placeholder="0"
                   className={`w-full bg-transparent outline-none font-display placeholder:text-ink-faint ${
                     compact ? "text-xl" : "text-2xl"

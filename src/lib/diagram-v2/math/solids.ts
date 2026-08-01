@@ -35,9 +35,8 @@ export function buildBox(largoR: number, anchoR: number, profundidadR: number): 
 // Caras visibles en orden Z correcto (las paredes primero, la cara
 // superior AL FINAL — es la más cercana a la cámara en esta proyección
 // fija, cubre correctamente a las paredes donde se superponen en 2D;
-// ver isometric-diagram.ts / measure-diagram.tsx, conversación
-// 2026-07-31, para la prueba de por qué este orden es el único robusto
-// para cualquier proporción).
+// este orden es el único robusto para cualquier proporción, lección
+// portada del sistema de diagramas anterior, ya retirado).
 export function boxFaces(b: BoxProjected) {
   return {
     wallLeft: [b.P0, b.P2, b.P2d, b.P0d] as Vec2[], // cara "ancho" — más oscura (menos luz)

@@ -35,7 +35,18 @@ export type DiagramV2Props = {
   profundidad?: number;
   diametro?: number;
   labels: Partial<Record<Field, string>>;
+  // Unidad global, usada cuando un campo no tiene su propia unidad en
+  // `units`. La mayoría de los módulos comparten una sola unidad para
+  // todos sus campos (ej. todo en metros) — `unit` cubre ese caso simple.
   unit?: string;
+  // Unidad por campo — necesario para módulos reales con unidades
+  // mixtas (ej. Pilar/columna: ancho y alto en cm, profundidad en m).
+  // Bug real encontrado en la revisión funcional 2026-08-02: sin esto,
+  // Pilar/columna mostraba "2,8 cm" para un valor que en realidad es
+  // "2,8 m" (se usaba una única unidad global para los 3 campos).
+  // `units` resuelve el caso mixto sin romper a los consumidores que
+  // solo pasan `unit`.
+  units?: Partial<Record<Field, string>>;
   activeField?: Field;
   className?: string;
 };
@@ -82,8 +93,9 @@ function separateChips(laneLeft: Lane, textLeft: [string, string], laneRight: La
   ];
 }
 
-export function DiagramV2({ kind, largo, ancho, profundidad, diametro, labels, unit = "m", activeField, className }: DiagramV2Props) {
+export function DiagramV2({ kind, largo, ancho, profundidad, diametro, labels, unit = "m", units, activeField, className }: DiagramV2Props) {
   const svgProps = { className: className ?? "w-full", role: "img" as const };
+  const u = (field: Field): string => units?.[field] ?? unit;
 
   if (kind === "box") {
     const L = largo ?? 4.5;
@@ -103,9 +115,9 @@ export function DiagramV2({ kind, largo, ancho, profundidad, diametro, labels, u
     };
     const faces = boxFaces(P);
 
-    const largoText = fmt(largo, unit) || (labels.largo ?? "");
-    const anchoText = fmt(ancho, unit) || (labels.ancho ?? "");
-    const profundidadText = fmt(profundidad, unit) || (labels.profundidad ?? "");
+    const largoText = fmt(largo, u("largo")) || (labels.largo ?? "");
+    const anchoText = fmt(ancho, u("ancho")) || (labels.ancho ?? "");
+    const profundidadText = fmt(profundidad, u("profundidad")) || (labels.profundidad ?? "");
 
     // El eje "largo" (P1) queda del lado DERECHO de la cámara (AXIS_LARGO
     // apunta abajo-derecha) y el eje "ancho" (P2) del lado IZQUIERDO — ver
@@ -164,8 +176,8 @@ export function DiagramV2({ kind, largo, ancho, profundidad, diametro, labels, u
     const diaA: Vec2 = [bottomLeft[0], diaArrowY];
     const diaB: Vec2 = [bottomRight[0], diaArrowY];
 
-    const diametroText = fmt(diametro, unit) || (labels.diametro ?? "");
-    const profundidadText = fmt(profundidad, unit) || (labels.profundidad ?? "");
+    const diametroText = fmt(diametro, u("diametro")) || (labels.diametro ?? "");
+    const profundidadText = fmt(profundidad, u("profundidad")) || (labels.profundidad ?? "");
 
     const laneDiametro = buildLane(diaA, diaB, [0, 1], CHIP_OFFSET);
     const laneProfundidad = buildDepthLane(topRight, bottomRight, CHIP_OFFSET);
@@ -210,15 +222,22 @@ export function DiagramV2({ kind, largo, ancho, profundidad, diametro, labels, u
     const w = BR[0] - TL[0];
     const h = BR[1] - TL[1];
 
-    const largoText = fmt(largo, unit) || (labels.largo ?? "");
-    const anchoText = fmt(ancho, unit) || (labels.ancho ?? "");
+    const largoText = fmt(largo, u("largo")) || (labels.largo ?? "");
+    const anchoText = fmt(ancho, u("ancho")) || (labels.ancho ?? "");
 
     // Regla explícita del mockup: "Largo abajo, ancho a la derecha,
     // siempre" — ver Sistema 2D del PDF (Radier, Cerámica, Vereda). Ancho
     // usa CHIP_OFFSET_ANCHO_2D (más aire) — pedido explícito de esta
     // calibración para la cota vertical de Radier.
-    const laneLargo = buildLane(BL, BR, [0, 1], CHIP_OFFSET);
-    const laneAncho = buildLane(TR, BR, [1, 0], CHIP_OFFSET_ANCHO_2D);
+    //
+    // Ambas aristas comparten el vértice BR — mismo caso que largo/ancho
+    // en "box" (ver comentario de separateChips): para un rectángulo
+    // cercano a cuadrado (ej. 0,15×0,15) los 2 chips pueden superponerse
+    // cerca de esa esquina. Bug real encontrado en la revisión funcional
+    // 2026-08-02 (antes separateChips solo se aplicaba en "box").
+    let laneLargo = buildLane(BL, BR, [0, 1], CHIP_OFFSET);
+    let laneAncho = buildLane(TR, BR, [1, 0], CHIP_OFFSET_ANCHO_2D);
+    [laneLargo, laneAncho] = separateChips(laneLargo, [labels.largo ?? "Largo", largoText], laneAncho, [labels.ancho ?? "Ancho", anchoText]);
 
     const canvas = finalizeCanvas(
       fit.viewBoxW,
@@ -251,7 +270,7 @@ export function DiagramV2({ kind, largo, ancho, profundidad, diametro, labels, u
   const r = fit.k;
   const diaA: Vec2 = [center[0] - r, center[1] + r];
   const diaB: Vec2 = [center[0] + r, center[1] + r];
-  const diametroText = fmt(diametro, unit) || (labels.diametro ?? "");
+  const diametroText = fmt(diametro, u("diametro")) || (labels.diametro ?? "");
   const laneDiametro = buildLane(diaA, diaB, [0, 1], CHIP_OFFSET);
   const canvas = finalizeCanvas(fit.viewBoxW, fit.viewBoxH, chipCorners(laneDiametro, labels.diametro ?? "Diámetro", diametroText), CANVAS_MARGIN);
 
