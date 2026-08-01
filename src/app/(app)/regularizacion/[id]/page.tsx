@@ -31,7 +31,16 @@ export default async function RegularizationCasePage({ params }: { params: { id:
 
   return (
     <div className="max-w-2xl mx-auto px-4 py-8 grid gap-6">
-      <h1 className="font-display text-xl font-semibold tracking-tight">{regCase.name}</h1>
+      <div className="flex items-center justify-between gap-4">
+        <h1 className="font-display text-xl font-semibold tracking-tight">{regCase.name}</h1>
+        <a
+          href={`/api/regularizacion/${regCase.id}/pdf`}
+          target="_blank"
+          className="rounded-full px-4 py-2 text-sm font-semibold text-white bg-ink flex-shrink-0"
+        >
+          Descargar carpeta PDF
+        </a>
+      </div>
       <RegularizationCaseView caseId={regCase.id} initialDocuments={initialDocuments} />
       <RegularizationRoomList caseId={regCase.id} initialRooms={rooms} />
       <RegularizationPhotoUpload caseId={regCase.id} initialPhotos={photos} />
