@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Plus, X } from "lucide-react";
-import { MeasureDiagram } from "./measure-diagram";
+import { DiagramV2 } from "@/lib/diagram-v2";
 import { formatQuantity } from "@/lib/format-number";
 
 export type AreaInputMode = "dims" | "area";
@@ -70,6 +70,7 @@ export function AreaInputToggle({
     const num = Number(raw.replace(",", "."));
     return Number.isFinite(num) && num > 0 ? num : null;
   };
+  const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
   const grossArea =
     mode === "dims"
@@ -130,14 +131,12 @@ export function AreaInputToggle({
       {mode === "dims" ? (
         <div className="bg-white rounded-2xl border border-border shadow-sm p-5 sm:p-8 grid lg:grid-cols-[1fr_1.15fr] lg:gap-10 lg:items-center">
           <div className="order-1 lg:order-2 mb-6 lg:mb-0">
-            <MeasureDiagram
-              shape="rectangle"
-              primaryLabel={primaryLabel}
-              secondaryLabel={secondaryLabel}
-              primaryValue={primary}
-              secondaryValue={secondary}
-              primaryUnit={unit}
-              secondaryUnit={unit}
+            <DiagramV2
+              kind="rect2d"
+              largo={toNumber(primary) ?? undefined}
+              ancho={toNumber(secondary) ?? undefined}
+              labels={{ largo: capitalize(primaryLabel), ancho: capitalize(secondaryLabel) }}
+              unit={unit}
             />
           </div>
           <div className="order-2 lg:order-1">

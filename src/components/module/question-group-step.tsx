@@ -5,17 +5,14 @@ import { ArrowRight, ArrowLeftRight, ArrowUpDown, Info, Lightbulb } from "lucide
 import type { WizardQuestion } from "./types";
 import { checkRangeWarning, parseTypicalRange } from "@/lib/range-hint";
 import { formatQuantity } from "@/lib/format-number";
-import { MeasureDiagram } from "./measure-diagram";
 import { AreaInputToggle } from "./area-input-toggle";
 import { DiagramV2 } from "@/lib/diagram-v2";
 
-// Fase 1 de la migración a Diagram System V2 (ver conversación
-// 2026-08-02) — SOLO estos 2 stepGroups renderizan con el sistema nuevo;
-// todo el resto de los ~44 módulos sigue con MeasureDiagram sin cambios.
-// El resto del archivo (preguntas, cálculos, validaciones) es idéntico
-// para ambos — únicamente cambia qué componente pinta el SVG.
-const EXCAVACION_RECT_STEP_GROUP = "cmrsc8n1d000mdwse1soq1ay1";
-const RADIER_STEP_GROUP = "cmrs94tlf000n2kseduz98jwf";
+// Migración completa a Diagram System V2 (ver conversación 2026-08-02) —
+// lenguaje visual congelado y aprobado; TODOS los módulos con diagrama
+// renderizan con este sistema. shape -> kind: "rectangle" -> "rect2d",
+// "rectangle-with-depth" -> "box", "circle" -> "circle2d",
+// "circle-with-depth" -> "cylinder".
 
 // Diagramas de medida — uno por cada stepGroup de exactamente 2 campos
 // NUMBER confirmado por auditoría real contra la base (ver resumen del
@@ -502,7 +499,18 @@ function VolumeStep({
             el texto.
           </p>
         </div>
-        {questions[0]?.stepGroup === EXCAVACION_RECT_STEP_GROUP ? (
+        {isCircular ? (
+          <DiagramV2
+            kind="cylinder"
+            diametro={toNum(values[questions[0].key]) ?? undefined}
+            profundidad={toNum(values[depthQuestion.key]) ?? undefined}
+            labels={{
+              diametro: capitalize(diagram.primaryLabel),
+              profundidad: capitalize(diagram.depthLabel!),
+            }}
+            unit={questions[0].unit ?? "m"}
+          />
+        ) : (
           <DiagramV2
             kind="box"
             largo={toNum(values[questions[0].key]) ?? undefined}
@@ -514,19 +522,6 @@ function VolumeStep({
               profundidad: capitalize(diagram.depthLabel!),
             }}
             unit={questions[0].unit ?? "m"}
-          />
-        ) : (
-          <MeasureDiagram
-            shape={diagram.shape}
-            primaryLabel={diagram.primaryLabel}
-            secondaryLabel={diagram.secondaryLabel}
-            depthLabel={diagram.depthLabel}
-            primaryValue={values[questions[0].key]}
-            primaryUnit={questions[0].unit ?? undefined}
-            secondaryValue={secondaryQuestion ? values[secondaryQuestion.key] : undefined}
-            secondaryUnit={secondaryQuestion?.unit ?? undefined}
-            depthValue={values[depthQuestion.key]}
-            depthUnit={depthQuestion.unit ?? undefined}
           />
         )}
         <div className="hidden lg:block mt-4">
@@ -659,14 +654,11 @@ export function QuestionGroupStep({
     onAnswer(parsed);
   };
 
-  // El diagrama vincula sus campos (primario/secundario/profundidad) con
-  // `questions` en ese mismo orden posicional — así fueron auditados al
-  // armar DIMENSION_DIAGRAMS (ej. circle-with-depth es [diámetro,
-  // profundidad], sin secundario, así que el segundo campo es profundidad).
+  // El diagrama vincula sus campos (primario/secundario) con `questions`
+  // en ese mismo orden posicional — así fueron auditados al armar
+  // DIMENSION_DIAGRAMS. Los grupos con profundidad (depthLabel) nunca
+  // llegan hasta acá: los renderiza VolumeStep más arriba.
   const diagramSecondaryQuestion = diagram?.secondaryLabel ? questions[1] : undefined;
-  const diagramDepthQuestion = diagram?.depthLabel
-    ? questions[diagram.secondaryLabel ? 2 : 1]
-    : undefined;
 
   // AreaInputToggle reemplaza el grid de campos fijo cuando el stepGroup
   // está auditado como seguro para "m² directo" (ver allowAreaToggle
@@ -786,7 +778,14 @@ export function QuestionGroupStep({
     >
       {diagram && (
         <div className="order-1 lg:order-2 mb-6 lg:mb-0">
-          {stepGroup === RADIER_STEP_GROUP ? (
+          {diagram.shape === "circle" ? (
+            <DiagramV2
+              kind="circle2d"
+              diametro={toNum(values[questions[0].key]) ?? undefined}
+              labels={{ diametro: capitalize(diagram.primaryLabel) }}
+              unit={questions[0].unit ?? "m"}
+            />
+          ) : (
             <DiagramV2
               kind="rect2d"
               largo={toNum(values[questions[0].key]) ?? undefined}
@@ -796,19 +795,6 @@ export function QuestionGroupStep({
                 ancho: diagram.secondaryLabel ? capitalize(diagram.secondaryLabel) : undefined,
               }}
               unit={questions[0].unit ?? "m"}
-            />
-          ) : (
-            <MeasureDiagram
-              shape={diagram.shape}
-              primaryLabel={diagram.primaryLabel}
-              secondaryLabel={diagram.secondaryLabel}
-              depthLabel={diagram.depthLabel}
-              primaryValue={values[questions[0].key]}
-              primaryUnit={questions[0].unit ?? undefined}
-              secondaryValue={diagramSecondaryQuestion ? values[diagramSecondaryQuestion.key] : undefined}
-              secondaryUnit={diagramSecondaryQuestion?.unit ?? undefined}
-              depthValue={diagramDepthQuestion ? values[diagramDepthQuestion.key] : undefined}
-              depthUnit={diagramDepthQuestion?.unit ?? undefined}
             />
           )}
         </div>
