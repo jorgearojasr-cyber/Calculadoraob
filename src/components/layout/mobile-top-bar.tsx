@@ -31,9 +31,7 @@ export function MobileTopBar({ user }: { user: NavUser }) {
   return (
     <>
       <header className="md:hidden fixed inset-x-0 top-0 h-14 z-30 flex items-center justify-between bg-white border-b border-border px-4">
-        <Link href="/">
-          <Logo />
-        </Link>
+        <Logo />
         {!isSimplified && (
           <button
             onClick={() => setOpen(true)}

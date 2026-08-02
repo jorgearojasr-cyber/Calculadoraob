@@ -8,6 +8,6 @@ import { isWizardRoute } from "@/lib/is-wizard-route";
 // así que ese padding dejaría un hueco vacío arriba si se mantuviera fijo.
 export function MainContent({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const topPadding = isWizardRoute(pathname) ? "" : "pt-14 md:pt-16";
+  const topPadding = isWizardRoute(pathname) ? "" : "pt-14 md:pt-[69px]";
   return <main className={`${topPadding} pb-20 md:pb-0`}>{children}</main>;
 }

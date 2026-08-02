@@ -5,30 +5,15 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getCategoryIcon } from "@/lib/category-icons";
 
+// Rediseño de Home (2026-08-01, aprobado): para un visitante sin sesión
+// esta sección ya no muestra nada — es contenido 100% para el usuario
+// recurrente, y un CTA de login acá competía con el buscador del Hero
+// justo frente al visitante que el rediseño prioriza (los "primeros 5
+// segundos"). "Iniciar sesión" ya existe en el nav.
 export async function RecentProjects() {
   const session = await getServerSession(authOptions);
 
-  if (!session?.user?.id) {
-    return (
-      <section className="max-w-6xl mx-auto px-6 py-16">
-        <p className="font-mono text-xs uppercase tracking-wider mb-2 text-safety">
-          Últimos proyectos
-        </p>
-        <div className="rounded-2xl p-8 bg-white border border-border flex items-center justify-between gap-4 flex-wrap">
-          <p className="text-sm text-ink-muted">
-            Inicia sesión para guardar tus cálculos y verlos aquí.
-          </p>
-          <Link
-            href="/login"
-            className="rounded-full px-5 py-2.5 text-sm font-semibold text-white bg-ink flex items-center gap-2 flex-shrink-0"
-          >
-            Ingresar
-            <ArrowRight className="w-4 h-4" />
-          </Link>
-        </div>
-      </section>
-    );
-  }
+  if (!session?.user?.id) return null;
 
   const projects = await prisma.savedProject.findMany({
     where: { userId: session.user.id },
@@ -38,20 +23,23 @@ export async function RecentProjects() {
   });
 
   return (
-    <section className="max-w-6xl mx-auto px-6 py-16">
-      <div className="flex items-end justify-between mb-8">
+    <section className="max-w-6xl mx-auto px-4 sm:px-10 py-10 sm:py-16">
+      <div className="flex items-end justify-between mb-6 sm:mb-8">
         <div>
-          <p className="font-mono text-xs uppercase tracking-wider mb-2 text-safety">
+          <p
+            className="font-mono text-[11px] uppercase mb-2 text-[#5B6577]"
+            style={{ letterSpacing: "0.08em" }}
+          >
             Últimos proyectos
           </p>
-          <h2 className="font-display text-3xl font-semibold tracking-tight">
+          <h2 className="font-display text-3xl font-bold text-[#10203A]" style={{ letterSpacing: "-0.02em" }}>
             {projects.length === 0 ? "Todavía no tienes nada guardado" : "Retoma donde quedaste"}
           </h2>
         </div>
         {projects.length > 0 && (
           <Link
             href="/proyectos"
-            className="text-sm font-medium text-ink-muted hover:text-ink inline-flex items-center gap-1.5 flex-shrink-0"
+            className="text-sm font-medium text-[#5B6577] hover:text-[#10203A] inline-flex items-center gap-1.5 flex-shrink-0"
           >
             Ver todos
             <ArrowRight className="w-3.5 h-3.5" />
@@ -60,8 +48,8 @@ export async function RecentProjects() {
       </div>
 
       {projects.length === 0 ? (
-        <div className="rounded-2xl p-8 bg-white border border-border">
-          <p className="text-sm text-ink-muted">
+        <div className="rounded-2xl p-8 bg-white border border-[#E4E8EF]">
+          <p className="text-sm text-[#5B6577]">
             Calcula algo y usa &quot;Guardar como proyecto&quot; en el resultado para verlo aquí.
           </p>
         </div>
@@ -73,13 +61,13 @@ export async function RecentProjects() {
               <Link
                 key={project.id}
                 href={`/proyectos/${project.id}`}
-                className="rounded-2xl p-5 bg-white border border-border hover:border-ink transition-colors"
+                className="rounded-2xl p-5 bg-white border border-[#E4E8EF] hover:border-[#002152]/30 transition-colors"
               >
                 <div className="w-11 h-11 rounded-xl flex items-center justify-center mb-4 bg-navy/[0.06]">
                   <Icon className="w-5 h-5 text-navy" />
                 </div>
-                <h3 className="font-semibold text-[15px] mb-1">{project.name}</h3>
-                <p className="text-xs text-ink-muted">
+                <h3 className="font-semibold text-[15px] mb-1 text-[#10203A]">{project.name}</h3>
+                <p className="text-xs text-[#5B6577]">
                   {project.module.category.name} · {project.module.name}
                 </p>
               </Link>

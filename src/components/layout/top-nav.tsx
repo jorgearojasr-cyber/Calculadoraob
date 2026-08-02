@@ -29,22 +29,24 @@ export function TopNav({ isAdmin, user }: { isAdmin: boolean; user: NavUser }) {
   if (isWizardRoute(pathname)) return null;
 
   return (
-    <header className="hidden md:flex fixed inset-x-0 top-0 h-16 z-30 items-center bg-white border-b border-border px-6">
-      <Link href="/" className="flex-shrink-0">
+    <header className="hidden md:flex fixed inset-x-0 top-0 z-30 items-center bg-white border-b border-border py-3.5 px-10">
+      <div className="flex-shrink-0">
         <Logo />
-      </Link>
+      </div>
 
       {!isSimplified && (
         <>
-          <nav className="flex items-center gap-1 ml-10">
+          <nav className="flex items-center gap-7 ml-[34px]">
             {NAV_ITEMS.map((item) => {
               const active = item.match(pathname);
               return (
                 <Link
                   key={item.href}
                   href={item.href}
-                  className={`px-3 py-2 text-sm font-medium border-b-2 transition-colors ${
-                    active ? "border-safety text-ink" : "border-transparent text-ink-muted hover:text-ink"
+                  className={`pb-[3px] text-[15px] border-b-2 transition-colors ${
+                    active
+                      ? "border-action text-action font-bold"
+                      : "border-transparent text-ink-muted font-medium hover:text-ink"
                   }`}
                 >
                   {item.label}
@@ -60,13 +62,13 @@ export function TopNav({ isAdmin, user }: { isAdmin: boolean; user: NavUser }) {
               <>
                 <Link
                   href="/login"
-                  className="rounded-full px-4 py-2 text-sm font-medium border border-border text-ink hover:border-ink transition-colors"
+                  className="rounded-[10px] px-[18px] py-2.5 text-[15px] font-semibold text-safety border border-border hover:border-ink transition-colors"
                 >
                   Iniciar sesión
                 </Link>
                 <Link
                   href="/registro"
-                  className="rounded-full px-4 py-2 text-sm font-semibold text-white bg-action"
+                  className="rounded-[10px] px-5 py-[11px] text-[15px] font-bold text-white bg-action hover:bg-action-hover transition-colors"
                 >
                   Comenzar gratis
                 </Link>

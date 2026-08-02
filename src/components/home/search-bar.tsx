@@ -6,7 +6,17 @@ import { ArrowRight, Calculator, Layers, LayoutGrid, Search } from "lucide-react
 import { searchSuggestionsAction } from "./search-actions";
 import type { SearchResult } from "@/lib/search";
 
-export function SearchBar() {
+// Restyle fiel a la especificación de UI de Home (2026-08-05) — dos
+// variantes exactas (mobile/desktop) en vez de una sola clase
+// responsive, porque padding/radio/sombra/tamaño de ícono cambian todos
+// juntos entre ambas, no solo el tamaño de texto.
+export function SearchBar({
+  placeholder = "¿Qué proyecto quieres hacer?",
+  size = "desktop",
+}: {
+  placeholder?: string;
+  size?: "mobile" | "desktop";
+}) {
   const router = useRouter();
   const containerRef = useRef<HTMLDivElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -84,10 +94,25 @@ export function SearchBar() {
     }
   }
 
+  const isMobile = size === "mobile";
+
   return (
-    <div className="mt-8 relative" ref={containerRef}>
-      <div className="flex items-center gap-3 rounded-2xl px-5 py-4 shadow-sm bg-white border-[1.5px] border-ink">
-        <Search className="w-5 h-5 flex-shrink-0 text-ink-muted" />
+    <div className="relative" ref={containerRef}>
+      <div
+        className={
+          isMobile
+            ? "flex items-center gap-[9px] rounded-[18px] pl-[18px] pr-[10px] py-[10px] bg-white border-[1.5px] border-[#D5DCE7]"
+            : "flex items-center gap-3 rounded-[24px] pl-7 pr-[17px] py-[17px] bg-white border-[1.5px] border-[#D5DCE7]"
+        }
+        style={{
+          boxShadow: isMobile ? "0 14px 30px rgba(0,33,82,.14)" : "0 20px 46px rgba(0,33,82,.16)",
+        }}
+      >
+        <Search
+          className="flex-shrink-0 text-[#5B6577]"
+          style={{ width: isMobile ? 19 : 22, height: isMobile ? 19 : 22 }}
+          strokeWidth={2}
+        />
         <input
           value={query}
           onChange={(e) => handleChange(e.target.value)}
@@ -95,16 +120,22 @@ export function SearchBar() {
           onFocus={() => {
             if (results.length > 0) setIsOpen(true);
           }}
-          placeholder="¿Qué proyecto quieres hacer?"
-          className="w-full bg-transparent outline-none text-base placeholder:text-ink-faint"
+          placeholder={placeholder}
+          className="w-full bg-transparent outline-none whitespace-nowrap text-[#10203A] placeholder:text-[#8A93A2]"
+          style={{ fontSize: isMobile ? 16 : 21 }}
           autoComplete="off"
         />
         <button
           onClick={submitSearch}
-          className="flex-shrink-0 rounded-xl px-4 py-2 text-sm font-medium text-white flex items-center gap-1.5 bg-action"
+          className={
+            isMobile
+              ? "flex-shrink-0 rounded-[12px] px-[22px] py-[14px] text-[16px] font-bold text-white flex items-center gap-2 bg-action"
+              : "flex-shrink-0 rounded-2xl px-[38px] py-[18px] text-[18px] font-bold text-white flex items-center gap-[9px] bg-action"
+          }
+          style={{ boxShadow: "0 10px 24px rgba(255,78,0,.32)" }}
         >
           Buscar
-          <ArrowRight className="w-3.5 h-3.5" />
+          <ArrowRight className="w-4 h-4" />
         </button>
       </div>
 
