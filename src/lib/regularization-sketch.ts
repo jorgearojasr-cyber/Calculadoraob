@@ -87,6 +87,13 @@ export type PathPrimitive = {
   strokeWidth: number;
   fill: string | null;
   dashed: boolean;
+  // "round" en muros — cada muro es un <path> M/L independiente, no una
+  // polilínea continua, así que sin esto dos muros gruesos que se
+  // encuentran en un ángulo (ej. al cerrar un contorno) dejan una cuña
+  // visible en el punto de unión (cap "butt" por defecto no la cubre).
+  // Puertas/ventanas/cotas no lo necesitan — sus trazos son delgados
+  // (strokeWidth: 2 o 1), donde ese artefacto no es perceptible.
+  linecap?: "round";
 };
 
 export type TextPrimitive = {
@@ -117,6 +124,7 @@ function wallPrimitive(el: WallElement): PathPrimitive {
     strokeWidth: el.thickness,
     fill: null,
     dashed: false,
+    linecap: "round",
   };
 }
 

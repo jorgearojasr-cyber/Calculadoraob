@@ -366,7 +366,7 @@ export async function seedRegularizationRules(prisma: PrismaClient) {
       priority: 10,
       condition: { op: "not", value: { op: "defined", key: "avaluoFiscalPesos" } },
       message:
-        "No indicaste el avalúo fiscal de la propiedad — este dato es necesario para evaluar tu elegibilidad preliminar por superficie y avalúo. Puedes completarlo más adelante, cuando tengas a mano tu Certificado de Avalúo Fiscal (disponible gratis en sii.cl con tu Clave Única o RUT) — mientras tanto, puedes seguir avanzando con el resto del proceso.",
+        "Más adelante, al reunir tus documentos, te pediremos tu avalúo fiscal — lo encuentras gratis en sii.cl con tu Clave Única o RUT. Por ahora puedes seguir avanzando sin él.",
     },
     {
       label: "Recepción municipal no informada",

@@ -2,6 +2,7 @@
 
 import { useTransition } from "react";
 import { ConditionalRevealStep } from "@/components/module/conditional-reveal-step";
+import { CollapsibleHelp } from "@/components/module/collapsible-help";
 import type { WizardQuestion } from "@/components/module/types";
 import { updateAvaluoFiscalAction, getDocumentChecklistAction } from "@/app/(app)/regularizacion/[id]/actions";
 import type { RegularizationDocumentItem } from "@/lib/regularization-documents";
@@ -72,6 +73,27 @@ export function AvaluoFiscalGate({
 
   return (
     <div className="bg-white rounded-2xl border border-border shadow-sm p-5 sm:p-8">
+      <div className="mb-6">
+        <CollapsibleHelp label="¿Qué es el avalúo fiscal?" ariaLabel="Qué es el avalúo fiscal y dónde encontrarlo">
+          <div className="grid gap-2 text-sm text-ink-muted">
+            <p>
+              Es el valor que el Servicio de Impuestos Internos (SII) le asigna a tu propiedad para
+              efectos de contribuciones — no es lo mismo que el valor comercial o de venta. Es el
+              avalúo que se usa para evaluar tu elegibilidad según la Ley 20.898.
+            </p>
+            <p>
+              Puedes obtenerlo gratis en{" "}
+              <a href="https://www.sii.cl" target="_blank" rel="noopener noreferrer" className="text-safety underline">
+                sii.cl
+              </a>
+              , con tu Clave Única o RUT: entra a &ldquo;Avalúos y Contribuciones de Bienes Raíces&rdquo; →
+              &ldquo;Consulta de Certificado de Avalúo Fiscal&rdquo; → busca tu propiedad por rol de avalúo o
+              dirección.
+            </p>
+            <p>Si no lo tienes a mano ahora, no hay problema — puedes continuar y completarlo más adelante.</p>
+          </div>
+        </CollapsibleHelp>
+      </div>
       <ConditionalRevealStep
         selectQuestion={SELECT_QUESTION}
         numberQuestion={NUMBER_QUESTION}

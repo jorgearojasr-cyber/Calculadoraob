@@ -2,6 +2,8 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getVisibleDocumentChecklist } from "@/lib/regularization-documents";
+import { evaluateRegularizationRules } from "@/lib/regularization-rules";
+import { RegularizationRulesView } from "@/components/regularization/regularization-rules-view";
 import { RegularizationCaseView } from "@/components/regularization/regularization-case-view";
 import { RegularizationRoomList } from "@/components/regularization/regularization-room-list";
 import { RegularizationPhotoUpload } from "@/components/regularization/regularization-photo-upload";
@@ -23,13 +25,21 @@ export default async function RegularizationCasePage({ params }: { params: { id:
   const regCase = await prisma.regularizationCase.findUnique({ where: { id: params.id } });
   if (!regCase || regCase.userId !== session.user.id) return null;
 
-  const [initialDocuments, rooms, photos, sketch] = await Promise.all([
+  const [initialDocuments, rooms, photos, sketch, rules] = await Promise.all([
     regCase.avaluoFiscalPesos !== null
       ? getVisibleDocumentChecklist(regCase.id, session.user.id)
       : Promise.resolve(null),
     prisma.regularizationRoom.findMany({ where: { caseId: regCase.id }, orderBy: { order: "asc" } }),
     prisma.regularizationPhoto.findMany({ where: { caseId: regCase.id }, orderBy: { createdAt: "asc" } }),
     prisma.regularizationSketch.findUnique({ where: { caseId: regCase.id } }),
+    evaluateRegularizationRules({
+      tipoConstruccion: regCase.tipoConstruccion,
+      anioConstruccion: regCase.anioConstruccion,
+      recepcionMunicipal: regCase.recepcionMunicipal,
+      m2Estimados: regCase.m2Estimados,
+      material: regCase.material,
+      avaluoFiscalPesos: regCase.avaluoFiscalPesos,
+    }),
   ]);
 
   return (
@@ -44,8 +54,19 @@ export default async function RegularizationCasePage({ params }: { params: { id:
           Descargar carpeta PDF
         </a>
       </div>
+      <RegularizationRulesView
+        caseId={regCase.id}
+        initialAnswers={{
+          tipoConstruccion: regCase.tipoConstruccion,
+          anioConstruccion: regCase.anioConstruccion,
+          recepcionMunicipal: regCase.recepcionMunicipal,
+          m2Estimados: regCase.m2Estimados,
+          material: regCase.material,
+        }}
+        initialRules={rules}
+      />
       <RegularizationCaseView caseId={regCase.id} initialDocuments={initialDocuments} />
-      <RegularizationRoomList caseId={regCase.id} initialRooms={rooms} />
+      <RegularizationRoomList caseId={regCase.id} initialRooms={rooms} m2Estimados={regCase.m2Estimados} />
       <RegularizationPhotoUpload caseId={regCase.id} initialPhotos={photos} />
       <RegularizationSketchEditor caseId={regCase.id} initialData={(sketch?.dataJson as unknown as SketchData) ?? null} />
     </div>

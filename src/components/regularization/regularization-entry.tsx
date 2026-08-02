@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { RegularizationWizard, type RegularizationWizardResult } from "./regularization-wizard";
+import { RegularizationRulesList } from "./regularization-rules-list";
 
 // Pantalla de resultados de 2A + enlace a la compuerta de avalúo/checklist
 // de 2B (/regularizacion/[id]). Sin punto de entrada público todavía (ver
@@ -22,18 +23,7 @@ export function RegularizationEntry() {
           Esta información es solo orientativa y no reemplaza la evaluación de un profesional ni de
           la Dirección de Obras Municipales.
         </p>
-        {result.rules.length === 0 ? (
-          <p className="text-sm text-ink-muted">No hay observaciones adicionales para este caso.</p>
-        ) : (
-          <div className="grid gap-3">
-            {result.rules.map((rule) => (
-              <div key={rule.label} className="rounded-xl px-4 py-3 bg-concrete">
-                <p className="text-sm font-semibold text-ink mb-1">{rule.label}</p>
-                <p className="text-sm text-ink-muted">{rule.message}</p>
-              </div>
-            ))}
-          </div>
-        )}
+        <RegularizationRulesList rules={result.rules} />
         <Link
           href={`/regularizacion/${result.caseId}`}
           className="mt-6 inline-flex rounded-full px-6 py-3 text-sm font-semibold text-white bg-action"

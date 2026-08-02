@@ -340,6 +340,7 @@ export function RegularizationCarpetaDocument({
                   strokeWidth={p.strokeWidth}
                   fill={p.fill ?? "none"}
                   strokeDasharray={p.dashed ? "4,3" : undefined}
+                  strokeLinecap={p.linecap}
                 />
               ) : (
                 // @ts-expect-error -- @react-pdf/renderer@4.5.1: SVGTextProps

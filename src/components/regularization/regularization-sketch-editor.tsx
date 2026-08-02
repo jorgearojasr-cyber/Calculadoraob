@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, useTransition } from "react";
+import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { saveSketchAction } from "@/app/(app)/regularizacion/[id]/actions";
 import { STALE_SESSION_ERROR, STALE_SESSION_MESSAGE } from "@/lib/stale-session";
@@ -98,7 +98,7 @@ export function RegularizationSketchEditor({
       if (pendingStart.x !== p.x || pendingStart.y !== p.y) {
         setElements((prev) => [
           ...prev,
-          { id: newId(), type: "wall", x1: pendingStart.x, y1: pendingStart.y, x2: p.x, y2: p.y, thickness: 15 },
+          { id: newId(), type: "wall", x1: pendingStart.x, y1: pendingStart.y, x2: p.x, y2: p.y, thickness: 8 },
         ]);
       }
       setPendingStart(p);
@@ -171,12 +171,43 @@ export function RegularizationSketchEditor({
 
   const handlePointerUp = () => setDragId(null);
 
-  const deleteSelected = () => {
+  const deleteSelected = useCallback(() => {
     if (!selectedId) return;
     setElements((prev) => prev.filter((el) => el.id !== selectedId && !el.id.startsWith(`${selectedId}-`)));
     setSelectedId(null);
     setSaved(false);
+  }, [selectedId]);
+
+  const clearAll = () => {
+    if (elements.length === 0) return;
+    if (!window.confirm("¿Borrar todo el croquis? Esta acción no se puede deshacer.")) return;
+    setElements([]);
+    setSelectedId(null);
+    setSaved(false);
   };
+
+  // Atajo de teclado Supr/Backspace (diseño aprobado 2026-08-04) — solo
+  // actúa en modo "Seleccionar" con un elemento elegido, y se desactiva
+  // por completo si el foco está en un input/textarea/campo editable de
+  // CUALQUIER parte de la página (no solo de este componente — la misma
+  // página del caso tiene formularios de recintos, avalúo, etc. donde
+  // Supr/Backspace debe borrar texto, no el elemento del croquis).
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== "Delete" && e.key !== "Backspace") return;
+      const active = document.activeElement;
+      const isEditableFocus =
+        active instanceof HTMLInputElement ||
+        active instanceof HTMLTextAreaElement ||
+        (active instanceof HTMLElement && active.isContentEditable);
+      if (isEditableFocus) return;
+      if (mode !== "select" || !selectedId) return;
+      e.preventDefault();
+      deleteSelected();
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [mode, selectedId, deleteSelected]);
 
   const handleSave = () => {
     const data: SketchData = { version: SKETCH_DATA_VERSION, unit: "cm", grid: { size: SKETCH_GRID_SIZE }, elements };
@@ -220,7 +251,15 @@ export function RegularizationSketchEditor({
         ))}
         {selectedId && mode === "select" && (
           <button onClick={deleteSelected} className="rounded-full px-4 py-1.5 text-sm font-medium bg-safety text-white">
-            Eliminar
+            Eliminar seleccionado
+          </button>
+        )}
+        {elements.length > 0 && (
+          <button
+            onClick={clearAll}
+            className="rounded-full px-4 py-1.5 text-sm font-medium bg-white text-safety border border-safety/40"
+          >
+            Limpiar croquis
           </button>
         )}
       </div>
@@ -256,6 +295,7 @@ export function RegularizationSketchEditor({
                 strokeWidth={p.strokeWidth}
                 fill={p.fill ?? "none"}
                 strokeDasharray={p.dashed ? "4,3" : undefined}
+                strokeLinecap={p.linecap}
                 onClick={(e) => handleElementClick(e, el?.id ?? p.id)}
                 onPointerDown={(e) => el && handlePointerDown(e, el)}
                 style={{ cursor: mode === "select" ? "pointer" : "crosshair" }}

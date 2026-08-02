@@ -37,12 +37,21 @@ function sumM2(rooms: RegularizationRoomItem[]): number {
   return Math.round(rooms.reduce((acc, r) => acc + r.m2Calculado, 0) * 100) / 100;
 }
 
+// Validación informativa de superficie (diseño aprobado 2026-08-04):
+// nunca bloquea agregar/editar/eliminar recintos — solo orienta,
+// comparando la suma real de recintos contra el estimado del wizard
+// inicial (m2Estimados). Margen de "coincide" definido en ±10% del
+// estimado, igual que sugirió el diseño.
+const MATCH_MARGIN_RATIO = 0.1;
+
 export function RegularizationRoomList({
   caseId,
   initialRooms,
+  m2Estimados,
 }: {
   caseId: string;
   initialRooms: RegularizationRoomItem[];
+  m2Estimados: number;
 }) {
   const [rooms, setRooms] = useState(initialRooms);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -128,12 +137,33 @@ export function RegularizationRoomList({
         </div>
       )}
 
-      {rooms.length > 0 && (
-        <div className="rounded-xl px-4 py-3 bg-concrete mb-4">
-          <p className="text-xs font-mono uppercase tracking-wider text-ink-muted mb-1">Superficie total</p>
-          <p className="text-2xl font-semibold text-ink">{sumM2(rooms)} m²</p>
-        </div>
-      )}
+      {(() => {
+        const sum = sumM2(rooms);
+        const diff = Math.round((m2Estimados - sum) * 100) / 100;
+        const withinMargin = Math.abs(diff) <= m2Estimados * MATCH_MARGIN_RATIO;
+
+        return (
+          <div className="rounded-xl px-4 py-3 bg-concrete mb-4">
+            <p className="text-xs font-mono uppercase tracking-wider text-ink-muted mb-1">Superficie total</p>
+            <p className="text-2xl font-semibold text-ink">
+              {sum} m² <span className="text-sm font-normal text-ink-muted">de {m2Estimados} m² estimados</span>
+            </p>
+            {withinMargin ? (
+              <p className="text-sm text-success mt-1">Tu suma de recintos coincide con lo estimado.</p>
+            ) : diff > 0 ? (
+              <p className="text-sm text-ink-muted mt-1">
+                Te faltan aproximadamente {diff} m² por distribuir — puedes seguir agregando recintos
+                cuando quieras.
+              </p>
+            ) : (
+              <p className="text-sm text-ink-muted mt-1">
+                Tienes {Math.abs(diff)} m² más que tu estimación inicial — no hay problema, solo revisa
+                que corresponda.
+              </p>
+            )}
+          </div>
+        );
+      })()}
 
       <div className="grid gap-3 mb-5">
         {rooms.map((room) => (
@@ -182,13 +212,16 @@ export function RegularizationRoomList({
             </option>
           ))}
         </select>
-        <input
-          type="text"
-          placeholder="Etiqueta (opcional)"
-          value={form.label}
-          onChange={(e) => setForm((f) => ({ ...f, label: e.target.value }))}
-          className="rounded-lg border border-border px-3 py-2 text-sm"
-        />
+        <div>
+          <label className="text-xs text-ink-muted block mb-1">Nombre del recinto (opcional)</label>
+          <input
+            type="text"
+            placeholder="Ej: Dormitorio principal"
+            value={form.label}
+            onChange={(e) => setForm((f) => ({ ...f, label: e.target.value }))}
+            className="rounded-lg border border-border px-3 py-2 text-sm w-full"
+          />
+        </div>
         <div className="flex gap-3">
           <input
             type="number"

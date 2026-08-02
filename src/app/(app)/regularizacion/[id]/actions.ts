@@ -7,6 +7,8 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { STALE_SESSION_ERROR, isStaleUserError } from "@/lib/stale-session";
 import { getVisibleDocumentChecklist, type RegularizationDocumentItem } from "@/lib/regularization-documents";
+import { evaluateRegularizationRules, type RegularizationRuleResult } from "@/lib/regularization-rules";
+import type { RegularizationWizardAnswers } from "@/components/regularization/types";
 import { MAX_PHOTO_SIZE_BYTES, isAllowedPhotoType } from "@/lib/project-photos";
 import { MAX_PHOTOS_PER_KIND } from "@/lib/regularization-photos";
 import { SKETCH_DATA_VERSION, SKETCH_GRID_SIZE, type SketchData } from "@/lib/regularization-sketch";
@@ -34,6 +36,48 @@ export async function updateAvaluoFiscalAction(
 
   revalidatePath(`/regularizacion/${caseId}`);
   return {};
+}
+
+// Edición del wizard inicial (diseño aprobado 2026-08-04) — a diferencia
+// de createRegularizationCaseAction, no crea nada: valida ownership,
+// actualiza los 5 campos y re-evalúa las reglas con el avalúo fiscal que
+// el caso YA tenía guardado (ese dato no pasa por el wizard, se pregunta
+// aparte en la compuerta de documentación — ver AvaluoFiscalGate). Mismo
+// shape de retorno que createRegularizationCaseAction para que
+// RegularizationWizard pueda llamar a cualquiera de las dos sin ramificar
+// el manejo del resultado.
+export async function updateRegularizationCaseAction(
+  caseId: string,
+  input: Required<RegularizationWizardAnswers>
+): Promise<{ caseId: string; rules: RegularizationRuleResult[]; error?: undefined } | { error: string; caseId?: undefined }> {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.id) return { error: "No hay sesión activa." };
+
+  const regCase = await prisma.regularizationCase.findUnique({ where: { id: caseId } });
+  if (!regCase || regCase.userId !== session.user.id) return { error: "Caso no encontrado." };
+
+  const updated = await prisma.regularizationCase.update({
+    where: { id: caseId },
+    data: {
+      tipoConstruccion: input.tipoConstruccion,
+      anioConstruccion: input.anioConstruccion,
+      recepcionMunicipal: input.recepcionMunicipal,
+      m2Estimados: input.m2Estimados,
+      material: input.material,
+    },
+  });
+
+  const rules = await evaluateRegularizationRules({
+    tipoConstruccion: updated.tipoConstruccion,
+    anioConstruccion: updated.anioConstruccion,
+    recepcionMunicipal: updated.recepcionMunicipal,
+    m2Estimados: updated.m2Estimados,
+    material: updated.material,
+    avaluoFiscalPesos: updated.avaluoFiscalPesos,
+  });
+
+  revalidatePath(`/regularizacion/${caseId}`);
+  return { caseId: updated.id, rules };
 }
 
 // Invocada por AvaluoFiscalGate justo después de guardar la respuesta —
