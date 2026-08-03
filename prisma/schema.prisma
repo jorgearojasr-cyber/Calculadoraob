@@ -223,22 +223,32 @@ model Question {
 }
 
 model QuestionOption {
-  id          String   @id @default(cuid())
-  question    Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
-  questionId  String
-  key         String
-  label       String
-  order       Int      @default(0)
+  id           String   @id @default(cuid())
+  question     Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  questionId   String
+  key          String
+  label        String
+  order        Int      @default(0)
   // Descripción corta (1-2 líneas) opcional para la variante visual con
   // foto (ver ImageOptionCard) — sin admin UI todavía, se configura por
   // script. Si una opción no la tiene, esa pregunta cae al layout de lista
   // de texto plano de siempre.
-  description String?
+  description  String?
   // URL de la foto opcional para la variante visual con foto. Cuando TODAS
   // las opciones de una pregunta SELECT tienen imageUrl, QuestionStep
   // renderiza ImageOptionCard en vez de la lista de botones de texto plano
   // — esto la hace opt-in por pregunta sin flag adicional.
-  imageUrl    String?
+  imageUrl     String?
+  // Valor numérico opcional que esta opción representa (ej. la opción
+  // "10cm" de una pregunta SELECT de espesor vale 0.1, en metros) — spec
+  // "ObraBien Calculadora - Flujo rediseñado" (Fase 4, 2026-08-02): permite
+  // que el motor de diagramas (DiagramV2) dibuje una dimensión que el
+  // usuario elige de una lista fija en vez de tipear un NUMBER libre (ej.
+  // Losa/Muro de hormigón armado, donde el espesor son opciones técnicas
+  // predefinidas, no un valor arbitrario). Puramente de presentación — el
+  // motor de fórmulas sigue resolviendo espesor_metros con su propio
+  // LOOKUP en la Variable, independiente de este campo.
+  numericValue Float?
 
   @@unique([questionId, key])
   @@map("question_options")
@@ -291,6 +301,32 @@ model Material {
   updatedAt DateTime @updatedAt
 
   @@map("materials")
+}
+
+// Catálogo de dosificación (proporción volumétrica cemento:arena:gravilla)
+// por grado de hormigón — spec "ObraBien Calculadora - Flujo rediseñado"
+// (2026-08-02, decisión de producto: "la dosificación pertenece al grado
+// del hormigón y no al módulo"). `gradeCode` es el MISMO string que ya
+// produce el LOOKUP2 de la Variable "tipo_hormigon" en cada módulo de
+// hormigón (ej. "G17-N (equivalente al H20 antiguo)") — así un módulo solo
+// necesita buscar por ese valor, sin ningún vínculo nuevo a Module. Mismo
+// patrón que Material.referencePrice: catálogo de referencia estático,
+// administrado a mano, no un cálculo del DSL — el motor de fórmulas no lo
+// toca. Pensado para reutilizarse en resultado, PDF, guía práctica y
+// futuras recomendaciones sin duplicar esta proporción por módulo.
+model ConcreteMixRatio {
+  id          String  @id @default(cuid())
+  gradeCode   String  @unique
+  cementParts Float
+  sandParts   Float
+  gravelParts Float
+  norm        Norm?   @relation(fields: [normId], references: [id])
+  normId      String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("concrete_mix_ratios")
 }
 
 // expression / condition: ver docs/formula-dsl.md
@@ -380,9 +416,10 @@ model Norm {
   value     Float?
   valueUnit String?
 
-  variables   Variable[]
-  formulas    Formula[]
-  lossFactors LossFactor[]
+  variables         Variable[]
+  formulas          Formula[]
+  lossFactors       LossFactor[]
+  concreteMixRatios ConcreteMixRatio[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -834,6 +871,52 @@ enum RegularizationDocumentCategory {
   NOTARIA_REGISTRO
 }
 
+// Modelo de tres ejes independientes — Fase 2 del plan de implementación
+// del Informe de Evaluación Preliminar (ver
+// docs/regularizacion-auditoria-funcional-normativa-ux.md y las 3
+// especificaciones en la raíz del proyecto: diseno-informe-regularizacion.md,
+// clasificacion-documentos-ley-20898.md, plan-implementacion-informe-
+// regularizacion.md — fuente de verdad de este modelo). Reemplaza el
+// booleano `obligatorio` plano: un documento puede ser mínimo y a la vez
+// aportado por el usuario, por ejemplo — dos ejes distintos, no una sola
+// etiqueta.
+enum RegularizationDocObligatoriedad {
+  MINIMO
+  CONDICIONAL
+}
+
+enum RegularizationDocOrigen {
+  USUARIO
+  PROFESIONAL
+  INSTITUCION
+}
+
+// El tercer eje: CUÁNDO ocurre un documento respecto del trámite, no solo
+// si es condicional o quién lo aporta. Un documento `POSTERIOR` (ej.
+// Certificado de Recepción Definitiva, pago de derechos municipales,
+// inscripción CBR) nunca pertenece al checklist de entrada — se filtra
+// automáticamente en getVisibleDocumentChecklist y se muestra solo en la
+// sección "¿Qué Ocurre Después?" del informe.
+enum RegularizationDocMomento {
+  PREVIO
+  DURANTE
+  POSTERIOR
+}
+
+// Indica cuánto de este documento resuelve la propia plataforma — el
+// argumento de valor del Informe de Evaluación Preliminar (ver sección
+// "¿Qué Puede Hacer ObraBien por Ti?" del diseño).
+enum RegularizationDocSoporteObraBien {
+  GENERA_PLATAFORMA
+  ORIENTA_ACCESO_DIRECTO
+  GESTION_EXTERNA
+}
+
+enum RegularizationDocEstadoValidacion {
+  PENDIENTE_VALIDACION_PROFESIONAL
+  VALIDADO
+}
+
 // Catálogo de documentos requeridos para el trámite — contenido vive en
 // BD, no hardcodeado en componentes (principio Database First). `dependeDe`
 // usa el mismo formato de nodo DSL que RegularizationRule.condition.
@@ -843,9 +926,20 @@ model RegularizationDocumentChecklist {
   category       RegularizationDocumentCategory
   paraQueSirve   String
   dondeSeObtiene String
-  obligatorio    Boolean                        @default(true)
-  dependeDe      Json?
-  order          Int                            @default(0)
+  // Ejes normativos — ver enums arriba. obligatoriedad reemplaza al
+  // antiguo `obligatorio: Boolean` (Fase 2): MINIMO = lo que antes era
+  // `true`, CONDICIONAL = lo que antes era `false`, con el matiz de que
+  // ahora es independiente de `origen`/`momento`.
+  obligatoriedad   RegularizationDocObligatoriedad
+  origen           RegularizationDocOrigen
+  momento          RegularizationDocMomento          @default(PREVIO)
+  soporteObraBien  RegularizationDocSoporteObraBien
+  // Texto libre citando la fuente normativa exacta (ej. "Formulario 12.1,
+  // sección 6") — trazabilidad, no un campo estructurado todavía.
+  citaNormativa    String
+  estadoValidacion RegularizationDocEstadoValidacion @default(VALIDADO)
+  dependeDe        Json?
+  order            Int                               @default(0)
 
   checks RegularizationDocumentCheck[]
 

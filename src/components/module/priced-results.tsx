@@ -12,6 +12,21 @@ function parsePrice(raw: string): number | null {
   return raw !== "" && Number.isFinite(num) && num > 0 ? num : null;
 }
 
+// Mismo cálculo que hacía PricedResults internamente (líneas con
+// materialName y unitPrice > 0), expuesto para que ResultHero pueda
+// mostrar el mismo "Total aproximado" en la tarjeta protagonista sin
+// duplicar la suma en dos lugares.
+export function computeApproxTotal(results: CalculationResult[]): { total: number; anyPriced: boolean } {
+  let total = 0;
+  let anyPriced = false;
+  for (const result of results) {
+    if (!result.materialName || result.unitPrice == null || result.unitPrice <= 0) continue;
+    total += result.value * result.unitPrice;
+    anyPriced = true;
+  }
+  return { total, anyPriced };
+}
+
 // Renderiza las líneas de resultado de un módulo (usado tanto en el wizard
 // en vivo como en el detalle de un proyecto guardado). Las líneas con
 // materialName (vinculadas a una entidad Material real, no variables
@@ -20,9 +35,19 @@ function parsePrice(raw: string): number | null {
 export function PricedResults({
   results,
   onPricesChange,
+  hideFeatured,
+  hideTotal,
 }: {
   results: CalculationResult[];
   onPricesChange?: (results: CalculationResult[]) => void;
+  // Cuando ResultScreen ya muestra el primer resultado en su propia
+  // tarjeta protagonista (ver ResultHero), este mismo dato no necesita
+  // repetirse agrandado acá — se ve como cualquier otra línea de la
+  // lista, pero sigue apareciendo (no se oculta el ítem).
+  hideFeatured?: boolean;
+  // Mismo criterio: si ResultHero ya muestra "Total aproximado" (mismo
+  // computeApproxTotal), este footer quedaría duplicado más abajo.
+  hideTotal?: boolean;
 }) {
   const [prices, setPrices] = useState<Record<string, string>>(() =>
     Object.fromEntries(
@@ -77,7 +102,7 @@ export function PricedResults({
         // previo. Ver discusión: módulos multi-material (ej. Hormigón) no
         // tienen "un" resultado obvio, así que se usa el primero de la lista
         // como criterio simple y consistente entre los 57 módulos.
-        const featured = groupIndex === 0;
+        const featured = groupIndex === 0 && !hideFeatured;
         return (
         <div
           key={result.key}
@@ -155,7 +180,7 @@ export function PricedResults({
         );
       })}
 
-      {anyPriced && (
+      {anyPriced && !hideTotal && (
         <div className="rounded-2xl p-5 bg-navy/[0.04] border border-navy/20">
           <div className="flex items-baseline justify-between gap-4">
             <span className="font-semibold text-[15px]">Total aproximado</span>

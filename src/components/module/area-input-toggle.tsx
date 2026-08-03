@@ -4,6 +4,9 @@ import { useEffect, useState } from "react";
 import { Plus, X } from "lucide-react";
 import { DiagramV2 } from "@/lib/diagram-v2";
 import { formatQuantity } from "@/lib/format-number";
+import { toNum } from "./dimension-utils/parsing";
+import { capitalize } from "./dimension-utils/formatting";
+import { parseAreaFromRawDims } from "./dimension-utils/area";
 
 export type AreaInputMode = "dims" | "area";
 
@@ -34,6 +37,9 @@ export function AreaInputToggle({
   initialPrimary,
   initialSecondary,
   initialArea,
+  tileSizeCm,
+  orientationHint,
+  roofSlopeFactor,
   onAreaChange,
 }: {
   primaryLabel?: string;
@@ -48,6 +54,18 @@ export function AreaInputToggle({
   initialSecondary?: string;
   // Prellenado opcional (editable) del modo "m² directo".
   initialArea?: string;
+  // Retícula de modulación con tamaño real de pieza (ver DiagramV2) — ya
+  // resuelta por el caller (QuestionGroupStep) desde una respuesta previa
+  // (ej. tamaño de cerámica elegido en un paso anterior).
+  tileSizeCm?: { width: number; height: number };
+  // Pista de orientación (recto/diagonal) cuando no hay tamaño de pieza.
+  orientationHint?: "recto" | "diagonal";
+  // Techumbres (Fase 4 Grupo 5) — mismo factor real que ya usa el motor de
+  // fórmulas (ver ROOF_SLOPE_FACTORS en question-group-step.tsx), ya
+  // resuelto por el caller desde una respuesta previa (pendiente del
+  // techo). Dibuja un plano inclinado ilustrativo junto al rectángulo de
+  // planta y muestra ambas superficies reales debajo.
+  roofSlopeFactor?: number;
   // Se llama cada vez que cambia el área NETA resultante o los campos del
   // modo activo. `dims` trae los valores CRUDOS (tal como los tecleó el
   // usuario, sin redondear) de largo/ancho cuando el modo activo es "dims"
@@ -69,24 +87,11 @@ export function AreaInputToggle({
   // "largo"/"ancho" existen acá, el modo "m² directo" no tiene diagrama.
   const [activeInput, setActiveInput] = useState<"largo" | "ancho" | null>(null);
 
-  const toNumber = (raw: string) => {
-    const num = Number(raw.replace(",", "."));
-    return Number.isFinite(num) && num > 0 ? num : null;
-  };
-  const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
-
-  const grossArea =
-    mode === "dims"
-      ? (() => {
-          const p = toNumber(primary);
-          const s = toNumber(secondary);
-          return p !== null && s !== null ? p * s : null;
-        })()
-      : toNumber(area);
+  const grossArea = mode === "dims" ? parseAreaFromRawDims(primary, secondary) : toNum(area);
 
   const deductionTotal = deductions.reduce((sum, row) => {
-    const a = toNumber(row.ancho);
-    const h = toNumber(row.alto);
+    const a = toNum(row.ancho);
+    const h = toNum(row.alto);
     return sum + (a !== null && h !== null ? a * h : 0);
   }, 0);
 
@@ -97,7 +102,7 @@ export function AreaInputToggle({
 
   useEffect(() => {
     const dims =
-      mode === "dims" && toNumber(primary) !== null && toNumber(secondary) !== null
+      mode === "dims" && toNum(primary) !== null && toNum(secondary) !== null
         ? { primary, secondary }
         : null;
     onAreaChange(computedArea, dims);
@@ -114,7 +119,8 @@ export function AreaInputToggle({
         <button
           type="button"
           onClick={() => setMode("dims")}
-          className={`rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
+          aria-pressed={mode === "dims"}
+          className={`rounded-full px-4 py-1.5 text-sm font-medium transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-action ${
             mode === "dims" ? "bg-ink text-white" : "text-ink-muted hover:text-ink"
           }`}
         >
@@ -123,7 +129,8 @@ export function AreaInputToggle({
         <button
           type="button"
           onClick={() => setMode("area")}
-          className={`rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
+          aria-pressed={mode === "area"}
+          className={`rounded-full px-4 py-1.5 text-sm font-medium transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-action ${
             mode === "area" ? "bg-ink text-white" : "text-ink-muted hover:text-ink"
           }`}
         >
@@ -132,22 +139,55 @@ export function AreaInputToggle({
       </div>
 
       {mode === "dims" ? (
-        <div className="bg-white rounded-2xl border border-border shadow-sm p-5 sm:p-8 grid lg:grid-cols-[1fr_1.15fr] lg:gap-10 lg:items-center">
-          <div className="order-1 lg:order-2 mb-6 lg:mb-0">
+        <div className="bg-white rounded-2xl border border-border shadow-sm p-5 md:p-8 grid md:grid-cols-[1fr_1.15fr] md:gap-10 md:items-center">
+          <div className="order-2 mb-6 md:mb-0">
             <DiagramV2
               kind="rect2d"
-              largo={toNumber(primary) ?? undefined}
-              ancho={toNumber(secondary) ?? undefined}
+              largo={toNum(primary) ?? undefined}
+              ancho={toNum(secondary) ?? undefined}
               labels={{ largo: capitalize(primaryLabel), ancho: capitalize(secondaryLabel) }}
               unit={unit}
               activeField={activeInput ?? undefined}
+              tileSizeCm={tileSizeCm}
+              orientationHint={tileSizeCm ? undefined : orientationHint}
+              roofSlopeFactor={roofSlopeFactor}
+              voids={
+                enableDeduction
+                  ? deductions
+                      .map((row) => ({ ancho: toNum(row.ancho) ?? 0, alto: toNum(row.alto) ?? 0 }))
+                      .filter((v) => v.ancho > 0 && v.alto > 0)
+                  : undefined
+              }
             />
+            {/* Nota de honestidad — spec Fase 4 (2026-08-02): "los diagramas
+                deben ser explicativos, no planos técnicos" — cuando la
+                posición de un dato no existe (acá, dónde está cada vano),
+                se avisa en vez de fingir precisión. */}
+            {enableDeduction && deductions.some((d) => toNum(d.ancho) && toNum(d.alto)) && (
+              <p className="mt-2 text-center text-xs text-ink-faint">
+                Representación esquemática. La ubicación de puertas y ventanas es ilustrativa.
+              </p>
+            )}
+            {/* Mismo criterio de honestidad: la orientación es real (el
+                usuario la eligió), pero las líneas NO representan piezas
+                reales — no hay tamaño de pieza conocido en estos módulos. */}
+            {!tileSizeCm && orientationHint && (
+              <p className="mt-2 text-center text-xs text-ink-faint">
+                Representación esquemática de la orientación — no representa el tamaño real de las piezas.
+              </p>
+            )}
+            {roofSlopeFactor && computedArea !== null && (
+              <p className="mt-2 text-center text-xs text-ink-muted">
+                Superficie proyectada: {formatQuantity(computedArea)} m² · Superficie real del techo:{" "}
+                {formatQuantity(computedArea * roofSlopeFactor)} m²
+              </p>
+            )}
           </div>
-          <div className="order-2 lg:order-1">
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div className="order-1">
+          <div className="grid gap-3 md:grid-cols-2">
             <label className="grid gap-1.5">
               <span className="text-sm font-medium capitalize">{primaryLabel}</span>
-              <div className="flex items-center gap-3 rounded-2xl bg-white border-[1.5px] border-ink px-4 py-3">
+              <div className="flex items-center gap-3 rounded-2xl bg-white border-[1.5px] border-ink px-4 py-3 focus-within:ring-2 focus-within:ring-action/70 focus-within:ring-offset-1">
                 <input
                   type="text"
                   inputMode="decimal"
@@ -163,7 +203,7 @@ export function AreaInputToggle({
             </label>
             <label className="grid gap-1.5">
               <span className="text-sm font-medium capitalize">{secondaryLabel}</span>
-              <div className="flex items-center gap-3 rounded-2xl bg-white border-[1.5px] border-ink px-4 py-3">
+              <div className="flex items-center gap-3 rounded-2xl bg-white border-[1.5px] border-ink px-4 py-3 focus-within:ring-2 focus-within:ring-action/70 focus-within:ring-offset-1">
                 <input
                   type="text"
                   inputMode="decimal"
@@ -191,6 +231,7 @@ export function AreaInputToggle({
                       value={row.ancho}
                       onChange={(e) => updateDeduction(i, { ancho: e.target.value })}
                       placeholder="Ancho"
+                      aria-label={`Ancho de la puerta o ventana ${i + 1}`}
                       className="w-24 rounded-lg px-3 py-1.5 text-sm bg-white border border-border outline-none focus:border-ink"
                     />
                     <span className="text-ink-faint text-sm">×</span>
@@ -200,12 +241,14 @@ export function AreaInputToggle({
                       value={row.alto}
                       onChange={(e) => updateDeduction(i, { alto: e.target.value })}
                       placeholder="Alto"
+                      aria-label={`Alto de la puerta o ventana ${i + 1}`}
                       className="w-24 rounded-lg px-3 py-1.5 text-sm bg-white border border-border outline-none focus:border-ink"
                     />
                     <span className="font-mono text-xs text-ink-muted">{unit}</span>
                     <button
                       type="button"
                       onClick={() => setDeductions((prev) => prev.filter((_, idx) => idx !== i))}
+                      aria-label={`Quitar puerta o ventana ${i + 1}`}
                       className="text-ink-muted hover:text-safety"
                     >
                       <X className="w-4 h-4" />
@@ -247,7 +290,7 @@ export function AreaInputToggle({
       ) : (
         <label className="grid gap-1.5">
           <span className="text-sm font-medium">Superficie</span>
-          <div className="flex items-center gap-3 rounded-2xl bg-white border-[1.5px] border-ink px-5 py-4">
+          <div className="flex items-center gap-3 rounded-2xl bg-white border-[1.5px] border-ink px-5 py-4 focus-within:ring-2 focus-within:ring-action/70 focus-within:ring-offset-1">
             <input
               type="text"
               inputMode="decimal"

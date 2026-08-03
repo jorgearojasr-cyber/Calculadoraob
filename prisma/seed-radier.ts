@@ -66,6 +66,24 @@ export async function seedRadierModule(prisma: PrismaClient) {
     },
   });
 
+  // Tabla de espesor sugerido por uso — misma tabla que antes vivía SOLO
+  // en la Variable espesor_cm (ver más abajo). Se declara una sola vez
+  // acá y se reutiliza en Question.defaultSource (precarga editable) y
+  // en Variable.source (rediseño de flujo, 2026-08-01, decisión de
+  // producto: el espesor pasa de LOOKUP fijo a QUESTION editable, ver
+  // docs/calculadoras-rediseno-ux-plan.md) — evita mantener el mismo
+  // mapa duplicado en dos lugares.
+  const espesorPorUso = {
+    patio_terraza: 8,
+    antepiso_interior: 7,
+    estacionamiento: 10,
+    bodega_industrial: 12,
+  };
+
+  // imageUrl: assets ya existentes en public/images/radier-uso/ (ver
+  // auditoría — estaban en el repo pero nunca quedaron conectados a la
+  // Question). Rediseño de flujo, 2026-08-01: "todas las pantallas de
+  // selección deben usar fotografías 16:9, reutilizar assets existentes".
   await prisma.question.create({
     data: {
       moduleId: mod.id,
@@ -75,15 +93,21 @@ export async function seedRadierModule(prisma: PrismaClient) {
       order: 1,
       options: {
         create: [
-          { key: "patio_terraza", label: "Patio o terraza", order: 1 },
-          { key: "antepiso_interior", label: "Antepiso interior", order: 2 },
-          { key: "estacionamiento", label: "Estacionamiento", order: 3 },
-          { key: "bodega_industrial", label: "Bodega o industrial", order: 4 },
+          { key: "patio_terraza", label: "Patio o terraza", order: 1, imageUrl: "/images/radier-uso/patio-o-terraza.png" },
+          { key: "antepiso_interior", label: "Antepiso interior", order: 2, imageUrl: "/images/radier-uso/antepiso-interior.png" },
+          { key: "estacionamiento", label: "Estacionamiento", order: 3, imageUrl: "/images/radier-uso/estacionamiento.png" },
+          { key: "bodega_industrial", label: "Bodega o industrial", order: 4, imageUrl: "/images/radier-uso/bodega-o-industrial.png" },
         ],
       },
     },
   });
 
+  // largo/ancho/espesor_cm comparten stepGroup "radier-medidas" (rediseño
+  // de flujo, 2026-08-01): antes largo/ancho eran 2 pasos sin diagrama de
+  // volumen real (el espesor se resolvía solo, sin pregunta propia) — ver
+  // DIMENSION_DIAGRAMS["cmrs94tlf..."] en question-group-step.tsx, que
+  // ahora los agrupa en un único paso "¿Qué medidas tiene el radier?" con
+  // diagrama 3D (caja) y espesor precargado/editable.
   await prisma.question.create({
     data: {
       moduleId: mod.id,
@@ -92,6 +116,7 @@ export async function seedRadierModule(prisma: PrismaClient) {
       type: "NUMBER",
       unit: "m",
       order: 2,
+      stepGroup: "radier-medidas",
     },
   });
 
@@ -103,6 +128,27 @@ export async function seedRadierModule(prisma: PrismaClient) {
       type: "NUMBER",
       unit: "m",
       order: 3,
+      stepGroup: "radier-medidas",
+    },
+  });
+
+  // Antes solo existía como Variable (LOOKUP fijo, sin pregunta propia —
+  // el usuario nunca la veía ni podía ajustarla). Rediseño de flujo,
+  // 2026-08-01: pasa a ser una pregunta NUMBER real, precargada según el
+  // uso (defaultSource) pero editable — mismo mecanismo ya usado por
+  // otras preguntas con sugerencia editable (ver "Te recomendamos..." en
+  // question-step.tsx). No cambia la fórmula del volumen ni el criterio
+  // de espesor por uso, solo dónde vive el valor y si se puede ajustar.
+  await prisma.question.create({
+    data: {
+      moduleId: mod.id,
+      key: "espesor_cm",
+      label: "¿Qué espesor tendrá el radier?",
+      type: "NUMBER",
+      unit: "cm",
+      order: 4,
+      stepGroup: "radier-medidas",
+      defaultSource: { type: "LOOKUP", questionKey: "uso", table: espesorPorUso },
     },
   });
 
@@ -112,7 +158,7 @@ export async function seedRadierModule(prisma: PrismaClient) {
       key: "metodo_hormigon",
       label: "¿Cómo vas a obtener el hormigón?",
       type: "SELECT",
-      order: 4,
+      order: 5,
       options: {
         create: [
           { key: "premezclado", label: "Comprarlo premezclado (camión mixer)", order: 1 },
@@ -128,7 +174,7 @@ export async function seedRadierModule(prisma: PrismaClient) {
       key: "colocacion",
       label: "¿Cómo vas a colocar el hormigón?",
       type: "SELECT",
-      order: 5,
+      order: 6,
       options: {
         create: [
           { key: "manual_carretilla", label: "Manual / carretilla", order: 1 },
@@ -161,16 +207,15 @@ export async function seedRadierModule(prisma: PrismaClient) {
         key: "espesor_cm",
         label: "Espesor (cm)",
         valueType: "NUMBER",
-        source: {
-          type: "LOOKUP",
-          questionKey: "uso",
-          table: {
-            patio_terraza: 8,
-            antepiso_interior: 7,
-            estacionamiento: 10,
-            bodega_industrial: 12,
-          },
-        },
+        // Antes LOOKUP (calculado siempre desde "uso", el usuario no podía
+        // ajustarlo). Rediseño de flujo, 2026-08-01: ahora viene de la
+        // pregunta "espesor_cm" (ver arriba), que YA se precarga con este
+        // mismo valor vía su propio defaultSource — el usuario puede
+        // editarla antes de calcular, o ajustarla desde el resultado (ver
+        // RECALCULATE_FIELDS en module-wizard.tsx). El motor de fórmulas
+        // no cambia: sigue siendo "la Variable espesor_cm", solo cambia de
+        // dónde saca su valor.
+        source: { type: "QUESTION", questionKey: "espesor_cm" },
         normId: practicaObraRadier.id,
         order: 3,
       },
@@ -356,6 +401,25 @@ export async function seedRadierModule(prisma: PrismaClient) {
         materialId: agua.id,
         normId: practicaObraRadier.id,
         order: 7,
+      },
+      {
+        moduleId: mod.id,
+        key: "volumen_total",
+        label: "Volumen de hormigón",
+        unit: "m³",
+        // Cero cálculo nuevo — expone con nombre propio el valor que
+        // "volumen_con_perdida" ya calcula internamente (ver arriba), para
+        // que el volumen sea un dato visible del resultado en AMBAS rutas
+        // (antes solo "volumen_premezclado" era visible, y solo cuando
+        // metodo_hormigon=premezclado). Rediseño de flujo, 2026-08-02,
+        // decisión de producto: "no como un cálculo nuevo... simplemente
+        // exponga el valor ya calculado". `order` después de los
+        // materiales para no competir con el cemento como dato
+        // protagonista (ver heroResult en result-screen.tsx).
+        expression: { ref: "volumen_con_perdida" },
+        isResult: true,
+        normId: practicaObraRadier.id,
+        order: 8,
       },
     ],
   });

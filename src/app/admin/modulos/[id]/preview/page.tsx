@@ -34,6 +34,7 @@ export default async function ModulePreviewPage({ params }: { params: { id: stri
       label: option.label,
       description: option.description,
       imageUrl: option.imageUrl,
+      numericValue: option.numericValue,
     })),
     stepGroup: question.stepGroup,
     visibleIfQuestionKey: question.visibleIfQuestionKey,
