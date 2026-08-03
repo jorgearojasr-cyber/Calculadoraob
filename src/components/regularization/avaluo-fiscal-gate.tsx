@@ -20,8 +20,8 @@ const SELECT_QUESTION: WizardQuestion = {
   unit: null,
   helpText: null,
   options: [
-    { key: "no_se", label: "No lo sé", description: null, imageUrl: null },
-    { key: "si_lo_se", label: "Sí, lo tengo", description: null, imageUrl: null },
+    { key: "no_se", label: "No lo sé", description: null, imageUrl: null, numericValue: null },
+    { key: "si_lo_se", label: "Sí, lo tengo", description: null, imageUrl: null, numericValue: null },
   ],
   stepGroup: null,
   visibleIfQuestionKey: null,

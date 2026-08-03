@@ -92,6 +92,7 @@ export default async function ModulePage({
       label: option.label,
       description: option.description,
       imageUrl: option.imageUrl,
+      numericValue: option.numericValue,
     })),
     stepGroup: question.stepGroup,
     visibleIfQuestionKey: question.visibleIfQuestionKey,
