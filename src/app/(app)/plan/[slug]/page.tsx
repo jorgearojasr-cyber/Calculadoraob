@@ -5,13 +5,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { PlanView, type PlanPhaseData } from "@/components/plan/plan-view";
-
-// Labels que representan una elección de FORMA (no cualquier label de
-// ProjectPlanPhaseModule) — solo estos participan en la propagación
-// ?shape= entre fases. Otros labels (ej. "Radier (base)", "Pastelones" en
-// "Terminar el entorno") no son una forma y no deben ensuciar la URL con
-// un valor sin sentido para ese query param.
-const SHAPE_LABELS = new Set(["rectangular", "circular"]);
+import { SHAPE_LABELS } from "@/lib/plan-shape";
 
 export default async function ProjectPlanPage({
   params,

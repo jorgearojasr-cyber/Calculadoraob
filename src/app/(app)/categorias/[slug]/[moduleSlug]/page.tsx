@@ -3,6 +3,65 @@ import { prisma } from "@/lib/prisma";
 import { ModuleWizard } from "@/components/module/module-wizard";
 import type { WizardQuestion } from "@/components/module/types";
 import type { ModuleGuideData } from "@/components/module/guide-section";
+import { SHAPE_LABELS } from "@/lib/plan-shape";
+
+// Sprint UX "Construir una piscina" (03-ago-2026), ítem 4: resuelve — server
+// side, antes de renderizar el wizard — a qué fase se debe continuar si el
+// usuario guarda desde acá (ver planContext.nextPhase, consumido por
+// ResultScreen para el botón principal "Continuar con: <fase>"). Mismo
+// criterio de resolución de forma que ya usa plan/[slug]/page.tsx (?shape=
+// o único link disponible); si la fase siguiente tiene 2+ links y ninguno
+// calza con la forma ya elegida (ej. Fase 3 "Terminar el entorno", que no
+// usa forma), se devuelve el nombre sin `href` — ResultScreen cae de vuelta
+// a /plan/[slug] en ese caso, igual que el flujo de hoy, en vez de duplicar
+// el selector de módulos acá.
+async function resolveNextPhase(
+  planSlug: string,
+  phaseId: string,
+  shape: string | undefined
+): Promise<{ name: string; href: string | null } | undefined> {
+  const plan = await prisma.projectPlan.findUnique({
+    where: { slug: planSlug },
+    include: {
+      phases: {
+        orderBy: { order: "asc" },
+        include: {
+          moduleLinks: {
+            orderBy: { order: "asc" },
+            include: { module: { include: { category: true } } },
+          },
+        },
+      },
+    },
+  });
+  if (!plan) return undefined;
+
+  const currentIndex = plan.phases.findIndex((p) => p.id === phaseId);
+  if (currentIndex === -1) return undefined;
+  const nextPhase = plan.phases[currentIndex + 1];
+  if (!nextPhase) return undefined;
+
+  const shapeParam = shape?.toLowerCase();
+  const matchingLink =
+    shapeParam && SHAPE_LABELS.has(shapeParam)
+      ? nextPhase.moduleLinks.find((link) => link.label?.toLowerCase() === shapeParam)
+      : undefined;
+  const resolvedLink = matchingLink ?? (nextPhase.moduleLinks.length === 1 ? nextPhase.moduleLinks[0] : undefined);
+
+  if (!resolvedLink) return { name: nextPhase.name, href: null };
+
+  const query = new URLSearchParams(resolvedLink.presetQuery ?? "");
+  query.set("plan", plan.slug);
+  query.set("phase", nextPhase.id);
+  if (resolvedLink.label && SHAPE_LABELS.has(resolvedLink.label.toLowerCase())) {
+    query.set("shape", resolvedLink.label.toLowerCase());
+  }
+
+  return {
+    name: nextPhase.name,
+    href: `/categorias/${resolvedLink.module.category.slug}/${resolvedLink.module.slug}?${query.toString()}`,
+  };
+}
 
 export default async function ModulePage({
   params,
@@ -121,9 +180,17 @@ export default async function ModulePage({
   // Presente solo cuando se llega desde /plan/[slug] (ver plan-view.tsx) —
   // permite que ResultScreen redirija de vuelta al plan al guardar, en vez
   // de dejar al usuario en /proyectos/[id] sin salida hacia la fase siguiente.
+  // `nextPhase` (sprint UX 03-ago-2026, ítem 4) se resuelve acá para que
+  // ResultScreen pueda ofrecer "Continuar con: <fase siguiente>" como acción
+  // principal, en vez de que guardar sea la única acción disponible.
   const planContext =
     searchParams.plan && searchParams.phase
-      ? { slug: searchParams.plan, phaseId: searchParams.phase, shape: searchParams.shape }
+      ? {
+          slug: searchParams.plan,
+          phaseId: searchParams.phase,
+          shape: searchParams.shape,
+          nextPhase: await resolveNextPhase(searchParams.plan, searchParams.phase, searchParams.shape),
+        }
       : undefined;
 
   // Precarga de área (ver Fase 3 de "Construir una piscina", plan/[slug]/
