@@ -28,7 +28,19 @@ function FaceGradient({ id, from, to }: { id: string; from: string; to: string }
   );
 }
 
-export function BoxSolid({ wallLeft, wallRight, top }: { wallLeft: Vec2[]; wallRight: Vec2[]; top: Vec2[] }) {
+export function BoxSolid({
+  wallLeft,
+  wallRight,
+  top,
+  waterFill,
+}: {
+  wallLeft: Vec2[];
+  wallRight: Vec2[];
+  top: Vec2[];
+  // Piscina (ver theme.water) — lavado celeste ENCIMA de las 3 caras ya
+  // pintadas, mismo sólido de siempre. Nunca cambia la geometría.
+  waterFill?: boolean;
+}) {
   const rawId = useId();
   const gid = (name: string) => `dimv2-grad-${name}-${rawId.replace(/[^a-zA-Z0-9]/g, "")}`;
   const idTop = gid("top");
@@ -63,6 +75,20 @@ export function BoxSolid({ wallLeft, wallRight, top }: { wallLeft: Vec2[]; wallR
         strokeWidth={theme.stroke.width}
         strokeLinejoin="round"
       />
+      {waterFill && (
+        <>
+          <polygon points={poly(wallLeft)} fill={theme.water.fill} opacity={theme.water.wallOpacity} />
+          <polygon points={poly(wallRight)} fill={theme.water.fill} opacity={theme.water.wallOpacity} />
+          <polygon
+            points={poly(top)}
+            fill={theme.water.fill}
+            opacity={theme.water.surfaceOpacity}
+            stroke={theme.water.rimStroke}
+            strokeWidth={theme.water.rimWidth}
+            strokeLinejoin="round"
+          />
+        </>
+      )}
     </g>
   );
 }
@@ -75,6 +101,7 @@ export function CylinderSolid({
   bottomRight,
   rx,
   ry,
+  waterFill,
 }: {
   topLeft: Vec2;
   topRight: Vec2;
@@ -83,6 +110,7 @@ export function CylinderSolid({
   bottomRight: Vec2;
   rx: number;
   ry: number;
+  waterFill?: boolean;
 }) {
   const rawId = useId();
   const gid = (name: string) => `dimv2-grad-${name}-${rawId.replace(/[^a-zA-Z0-9]/g, "")}`;
@@ -121,6 +149,25 @@ export function CylinderSolid({
         stroke={theme.stroke.solid}
         strokeWidth={theme.stroke.width}
       />
+      {waterFill && (
+        <>
+          <path
+            d={`M ${topLeft[0]} ${topLeft[1]} A ${rx} ${ry} 0 0 1 ${topRight[0]} ${topRight[1]} L ${bottomRight[0]} ${bottomRight[1]} A ${rx} ${ry} 0 0 1 ${bottomLeft[0]} ${bottomLeft[1]} Z`}
+            fill={theme.water.fill}
+            opacity={theme.water.wallOpacity}
+          />
+          <ellipse
+            cx={topCenter[0]}
+            cy={topCenter[1]}
+            rx={rx}
+            ry={ry}
+            fill={theme.water.fill}
+            opacity={theme.water.surfaceOpacity}
+            stroke={theme.water.rimStroke}
+            strokeWidth={theme.water.rimWidth}
+          />
+        </>
+      )}
     </g>
   );
 }

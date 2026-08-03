@@ -56,6 +56,62 @@ export const theme = {
     active: BRAND_ORANGE, // SOLO la cota que se está escribiendo ahora mismo
     inactive: "#8B96A8", // gris neutro suave — el carril nunca compite con el sólido
   },
+  // Vanos descontados (puertas/ventanas) dibujados sobre una figura 2D —
+  // spec "ObraBien Calculadora - Flujo rediseñado" (Fase 4, 2026-08-02):
+  // "diagramas explicativos, no planos técnicos" — se diferencian del
+  // muro con un color/trama clara y distinta (blanco + trama diagonal +
+  // trazo naranjo punteado), nunca pretendiendo ser la ubicación real.
+  voidShape: {
+    fill: "#FFFFFF",
+    hatch: BRAND_ORANGE,
+    hatchOpacity: 0.18,
+    stroke: BRAND_ORANGE,
+    strokeWidth: 1.25,
+    strokeDasharray: "3 2",
+  },
+  // Retícula de modulación (Cerámica/Porcelanato, ver `tileSizeCm` en
+  // DiagramV2) y pista de orientación (SPC/flotante, ver
+  // `orientationHint`) — dos intensidades DISTINTAS a propósito: la
+  // retícula usa datos reales (tamaño de pieza elegido), la pista de
+  // orientación no representa ninguna medida real, así que debe leerse
+  // claramente más tenue/decorativa para que nunca se confundan.
+  tileGrid: {
+    stroke: "#B9C4D6",
+    strokeWidth: 0.9,
+  },
+  orientationHint: {
+    stroke: "#D5DBE5",
+    strokeWidth: 0.75,
+    strokeDasharray: "2 3",
+  },
+  // Piscina (Fase 4 Grupo 4, 2026-08-02): "el diagrama debe transmitir
+  // profundidad... quiero que visualmente se perciba que es una piscina".
+  // Reutiliza el mismo box/cylinder de siempre (BoxSolid/CylinderSolid con
+  // waterFill=true) — un lavado celeste semitransparente ENCIMA del
+  // degradado ya calibrado, nunca un color/geometría nuevos. La cara
+  // superior (`top`) es literalmente la superficie del agua vista desde
+  // arriba — no existe una pregunta de "nivel de agua" distinta de la
+  // profundidad, así que el agua llena hasta el borde superior de la caja
+  // (mismo criterio "no inventar un dato que no existe"). El trazo del
+  // borde (`rimStroke`) marca el borde/coping de la piscina.
+  water: {
+    fill: "#3E8FD9",
+    wallOpacity: 0.22,
+    surfaceOpacity: 0.32,
+    rimStroke: "#FFFFFF",
+    rimWidth: 1.4,
+  },
+  // Techumbres (Fase 4 Grupo 5, 2026-08-02): plano inclinado ilustrativo
+  // junto al rectángulo de planta (ver `roofSlopeFactor` en DiagramV2,
+  // kind="rect2d") — mismo tono de "pared" que ya usa BoxSolid
+  // (wallRight) para que se lea como parte de la misma familia visual, no
+  // como un elemento inventado. El ángulo dibujado es solo proporcional
+  // al factor real (nunca un grado medido, ver comentario en DiagramV2).
+  roofSlope: {
+    fill: "#A7B8D5",
+    stroke: "#0B2A52",
+    strokeWidth: 1.4,
+  },
   chip: {
     bg: "#FFFFFF",
     border: "#DCE2EC",

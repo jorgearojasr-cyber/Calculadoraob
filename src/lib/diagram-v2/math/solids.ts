@@ -19,8 +19,21 @@ export type BoxProjected = {
 // largoR/anchoR/profundidadR: proporciones YA normalizadas (0-1, ver
 // scale-engine.ts) — este archivo no sabe de metros reales ni de
 // compresión, solo arma la geometría dado un tamaño relativo por eje.
-export function buildBox(largoR: number, anchoR: number, profundidadR: number): BoxProjected {
-  const p = (largo: number, ancho: number, profundidad: number) => project({ largo, ancho, profundidad });
+//
+// anchoOffsetR/profundidadOffsetR (opcionales, default 0): desplazan el
+// origen local del box antes de proyectar — usado por "steppedBox" (ver
+// DiagramV2.tsx) para apilar 2 boxes reales (base + cuello de una
+// fundación) que comparten cámara/proyección pero no el mismo origen. Con
+// 0/0 (el caso de siempre) el comportamiento es idéntico al de antes.
+export function buildBox(
+  largoR: number,
+  anchoR: number,
+  profundidadR: number,
+  anchoOffsetR = 0,
+  profundidadOffsetR = 0
+): BoxProjected {
+  const p = (largo: number, ancho: number, profundidad: number) =>
+    project({ largo, ancho: ancho + anchoOffsetR, profundidad: profundidad + profundidadOffsetR });
   return {
     P0: p(0, 0, 0),
     P1: p(largoR, 0, 0),
