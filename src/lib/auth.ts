@@ -21,7 +21,17 @@ export const authOptions: NextAuthOptions = {
       async authorize(credentials) {
         if (!credentials?.email || !credentials.password) return null;
 
-        const user = await prisma.user.findUnique({ where: { email: credentials.email } });
+        // Mismo criterio de normalización que registerUserAction (ver
+        // registro/actions.ts) — el email se guarda en minúsculas al
+        // registrar, así que la búsqueda al hacer login debe normalizar
+        // igual, o un email con cualquier mayúscula (autocompletado,
+        // hábito) no encuentra al usuario aunque la contraseña sea
+        // correcta. Bug real detectado en la auditoría de autenticación
+        // (03-ago-2026, Hallazgo #1) — afectaba también al auto-login
+        // inmediato tras registrarse (registro/page.tsx), no solo a logins
+        // posteriores.
+        const email = credentials.email.trim().toLowerCase();
+        const user = await prisma.user.findUnique({ where: { email } });
         if (!user?.passwordHash) return null;
 
         const valid = await bcrypt.compare(credentials.password, user.passwordHash);
