@@ -1,38 +1,27 @@
 "use client";
 
-import { useEffect, useMemo, useState, useTransition } from "react";
-import Link from "next/link";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, TriangleAlert } from "lucide-react";
+import { TriangleAlert } from "lucide-react";
 import { QuestionStep } from "./question-step";
 import { QuestionGroupStep, hasAreaToggle, hasDiagram } from "./question-group-step";
 import { ConditionalRevealStep } from "./conditional-reveal-step";
 import { ApplianceConsumptionStep } from "./appliance-consumption-step";
+import { FoundationStep, isFoundationStepGroup } from "./foundation-step";
 import { ResultScreen } from "./result-screen";
 import { WizardHeader } from "./wizard-header";
+import { WizardResumeGate } from "./wizard-resume-gate";
+import { LiveSummaryPanel, type SummaryItem } from "./live-summary-panel";
 import { pluralizeUnit } from "@/lib/pluralize";
 import type { WizardAnswers, WizardQuestion } from "./types";
 import type { ModuleGuideData } from "./guide-section";
 import { calculateModuleAction, type CalculateModuleResult } from "@/app/(app)/categorias/[slug]/[moduleSlug]/actions";
+import { readWizardDraft, writeWizardDraft, clearWizardDraft, type WizardDraft } from "./wizard-draft";
 
-// Módulos donde el resultado permite editar una pregunta NUMBER ya
-// contestada y recalcular todo sin volver atrás en el wizard (ver
-// RecalculateField en result-screen.tsx) — mecanismo genérico, pero por
-// ahora solo conectado en Radier (espesor). Cualquier otro módulo con una
-// pregunta NUMBER editable en el wizard podría sumarse acá sin tocar
-// ResultScreen ni la Server Action.
-const RECALCULATE_FIELDS: Record<string, string> = {
-  radier: "espesor-cm",
-};
-
-// Preguntas NUMBER que el usuario puede dejar en blanco y avanzar igual
-// (ver botón "Omitir" en QuestionStep) — hoy solo el precio del kWh en
-// Consumo eléctrico: si se omite, la Formula condicionada con
-// {op:"defined",...} sobre esa Variable simplemente no se calcula y la
-// tarjeta de costo no aparece (el consumo en kWh sí se muestra siempre).
-const OPTIONAL_QUESTION_KEYS: Record<string, string[]> = {
-  "consumo-electrico": ["precio-kwh"],
-};
+// Configuración por módulo (recálculo, hero, preguntas opcionales) — ver
+// module-visual-config.ts, el registro único (Fase de consolidación,
+// 2026-08-02) que reemplaza los mapas que antes vivían dispersos acá.
+import { RECALCULATE_FIELDS, HERO_RESULT_KEYS, OPTIONAL_QUESTION_KEYS } from "./module-visual-config";
 
 function isQuestionVisible(question: WizardQuestion, answers: WizardAnswers): boolean {
   if (!question.visibleIfQuestionKey) return true;
@@ -123,8 +112,17 @@ export function ModuleWizard({
   // Presente cuando el módulo se abrió desde una fase de /plan/[slug] — ver
   // ResultScreen para el redirect de vuelta al plan al guardar. `shape`
   // (Rectangular/Circular) viaja solo si el link de esta fase era de ese
-  // tipo — ver SHAPE_LABELS en plan/[slug]/page.tsx.
-  planContext?: { slug: string; phaseId: string; shape?: string };
+  // tipo — ver SHAPE_LABELS en src/lib/plan-shape.ts. `nextPhase` (sprint UX
+  // 03-ago-2026) ya viene resuelto desde el server (page.tsx) — `href: null`
+  // significa "existe fase siguiente pero no se pudo resolver un único
+  // módulo" (ver resolveNextPhase), y ausente del todo significa "es la
+  // última fase del plan".
+  planContext?: {
+    slug: string;
+    phaseId: string;
+    shape?: string;
+    nextPhase?: { name: string; href: string | null };
+  };
   // Cálculos especiales (grupo herramientas-avanzadas, ver page.tsx) — antes
   // el encuadre de "esto es una pieza suelta, no el proyecto completo"
   // solo vivía en /grupos/herramientas-avanzadas; un usuario que llegaba
@@ -143,6 +141,14 @@ export function ModuleWizard({
 }) {
   const router = useRouter();
   const [stepIndex, setStepIndex] = useState(0);
+  // BUG-003 (auditoría funcional 02-ago-2026): "Cambiar" en un campo
+  // específico del panel resumen saltaba al paso correcto pero el foco
+  // quedaba siempre en el primer input del grupo, no en el campo que el
+  // usuario quiso editar. Se limpia en cualquier otra navegación
+  // (avanzar/volver/reiniciar) para que solo aplique al salto inmediato
+  // que originó "Cambiar" — así un focusFieldKey viejo nunca compite con
+  // el autoFocus por defecto de un paso al que se llegó de otra forma.
+  const [focusFieldKey, setFocusFieldKey] = useState<string | null>(null);
   const [answers, setAnswers] = useState<WizardAnswers>(initialAnswers ?? {});
   const [calculation, setCalculation] = useState<CalculateModuleResult | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -159,32 +165,81 @@ export function ModuleWizard({
     setCanGoBack(window.history.length > 1);
   }, []);
 
-  // "Guardar y seguir después" (ver conversación 2026-07-30, rediseño de
-  // pasos con diagrama): persiste las respuestas dadas hasta ahora en
-  // localStorage y vuelve a Inicio. Al volver a este mismo módulo, se
-  // retoman una sola vez (se borra el guardado apenas se aplica) — no pisa
-  // un initialAnswers real (ej. ?tipo= o un prellenado de plan) si el
-  // usuario entra de nuevo por un link con datos propios.
+  // BUG-007 (auditoría funcional 02-ago-2026, Grupo 4B): recargar la
+  // página o volver con "atrás" del navegador durante un asistente en
+  // progreso perdía todo, sin aviso. Decisión de arquitectura del usuario:
+  // localStorage únicamente, un solo borrador por módulo (unifica con
+  // "Guardar y seguir después", que antes usaba su propia clave/forma —
+  // ver wizard-draft.ts). `resumeDraft` es un borrador de origen
+  // "autosave" a la espera de que el usuario confirme si quiere
+  // retomarlo (ver WizardResumeGate) — nunca se aplica solo.
+  const [resumeDraft, setResumeDraft] = useState<WizardDraft | null>(null);
+  // Evita que el efecto de autosave (más abajo) escriba un borrador ANTES
+  // de que este efecto de restauración haya terminado de revisar si ya
+  // había uno — de lo contrario, en el primer render ambos efectos leen
+  // `resumeDraft` como null todavía (el setState de abajo recién aplica en
+  // el próximo render) y el autosave podría pisar el borrador que se
+  // acaba de detectar. Un ref se lee al tiro, sin esperar un re-render.
+  const restoreCheckedRef = useRef(false);
+
   useEffect(() => {
-    if (!moduleSlug) return;
-    const key = `obrabien:wizard-progress:${moduleSlug}`;
-    const raw = window.localStorage.getItem(key);
-    if (!raw) return;
-    window.localStorage.removeItem(key);
-    try {
-      const saved = JSON.parse(raw) as WizardAnswers;
-      setAnswers((prev) => ({ ...saved, ...prev }));
-    } catch {
-      // Guardado corrupto o de una versión anterior — se ignora.
+    if (!moduleSlug) {
+      restoreCheckedRef.current = true;
+      return;
     }
+    const draft = readWizardDraft(moduleSlug, moduleId);
+    if (draft) {
+      if (draft.savedVia === "explicit") {
+        // "Guardar y seguir después": comportamiento ya aprobado, sin
+        // cambios — se retoma sin preguntar. No pisa un initialAnswers
+        // real (ej. ?tipo= o un prellenado de plan) si el usuario entra
+        // de nuevo por un link con datos propios.
+        setAnswers((prev) => ({ ...draft.answers, ...prev }));
+        setStepIndex(draft.stepIndex);
+        clearWizardDraft(moduleSlug);
+      } else {
+        // "autosave": nunca se restaura solo — se le pregunta al usuario.
+        setResumeDraft(draft);
+      }
+    }
+    restoreCheckedRef.current = true;
     // Solo al montar: initialAnswers/answers cambian con cada respuesta y
     // no deben re-disparar esta lectura de localStorage.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [moduleSlug]);
 
+  // Autoguardado silencioso en cada respuesta — a diferencia de "Guardar y
+  // seguir después" (acción explícita del usuario), esto corre solo,
+  // protegiendo contra recarga/"atrás" accidental. Se detiene apenas hay
+  // cálculo (el asistente ya terminó, no hay nada que proteger) o mientras
+  // haya un resumeDraft pendiente de decisión (no pisar ese borrador antes
+  // de que el usuario elija Continuar/Comenzar de nuevo).
+  useEffect(() => {
+    if (!moduleSlug) return;
+    if (!restoreCheckedRef.current) return;
+    if (calculation) return;
+    if (resumeDraft) return;
+    if (Object.keys(answers).length === 0) return;
+    writeWizardDraft(moduleSlug, { moduleId, stepIndex, answers, savedVia: "autosave" });
+  }, [moduleSlug, moduleId, calculation, resumeDraft, stepIndex, answers]);
+
+  const handleResumeDraft = () => {
+    if (!resumeDraft || !moduleSlug) return;
+    setAnswers((prev) => ({ ...resumeDraft.answers, ...prev }));
+    setStepIndex(resumeDraft.stepIndex);
+    clearWizardDraft(moduleSlug);
+    setResumeDraft(null);
+  };
+
+  const handleDiscardDraft = () => {
+    if (!moduleSlug) return;
+    clearWizardDraft(moduleSlug);
+    setResumeDraft(null);
+  };
+
   const handleSaveForLater = moduleSlug
     ? () => {
-        window.localStorage.setItem(`obrabien:wizard-progress:${moduleSlug}`, JSON.stringify(answers));
+        writeWizardDraft(moduleSlug, { moduleId, stepIndex, answers, savedVia: "explicit" });
         router.push("/");
       }
     : undefined;
@@ -195,6 +250,7 @@ export function ModuleWizard({
   const advanceOrCalculate = (nextAnswers: WizardAnswers) => {
     setAnswers(nextAnswers);
     setError(null);
+    setFocusFieldKey(null);
 
     // steps/stepIndex del render actual reflejan las respuestas ANTERIORES a
     // esta; recalculamos con nextAnswers para decidir el próximo paso
@@ -213,6 +269,10 @@ export function ModuleWizard({
       try {
         const result = await calculateModuleAction(moduleId, withHiddenDefaults(questions, nextAnswers));
         setCalculation(result);
+        // Asistente terminado: el borrador autoguardado ya cumplió su
+        // propósito (proteger contra recarga/"atrás" a mitad de camino),
+        // no debe seguir ofreciéndose para retomar tras llegar al resultado.
+        if (moduleSlug) clearWizardDraft(moduleSlug);
       } catch {
         setError("No pudimos calcular con esos datos. Revisa las respuestas e inténtalo de nuevo.");
       }
@@ -245,6 +305,7 @@ export function ModuleWizard({
 
   const handleBack = () => {
     if (stepIndex === 0) return;
+    setFocusFieldKey(null);
     setStepIndex(stepIndex - 1);
   };
 
@@ -258,17 +319,42 @@ export function ModuleWizard({
   const handleEditAnswers = () => {
     setCalculation(null);
     setError(null);
+    setFocusFieldKey(null);
     setStepIndex(0);
+  };
+
+  // Salta directo al paso donde vive `questionKey` (ver LiveSummaryPanel,
+  // "Cambiar" en una línea del resumen) — a diferencia de handleEditAnswers
+  // (siempre vuelve al paso 1), esto respeta en qué paso está la pregunta.
+  // Genérico: usa el mismo `steps` (agrupado por stepGroup) que ya arma
+  // buildSteps(), no una lista aparte. BUG-003: además de saltar al paso
+  // correcto, recuerda qué campo puntual se pidió editar para que el paso
+  // (si agrupa varios campos) autoenfoque ese campo, no siempre el primero.
+  const handleEditField = (questionKey: string) => {
+    const targetIndex = steps.findIndex((group) => group.some((q) => q.key === questionKey));
+    if (targetIndex === -1) return;
+    setCalculation(null);
+    setError(null);
+    setFocusFieldKey(questionKey);
+    setStepIndex(targetIndex);
   };
 
   const handleRestart = () => {
     setAnswers({});
     setCalculation(null);
     setError(null);
+    setFocusFieldKey(null);
     setStepIndex(0);
+    if (moduleSlug) clearWizardDraft(moduleSlug);
   };
 
-  const answersSummary = useMemo(() => {
+  // `SummaryItem[]` — mismo dato de siempre (label/value por pregunta
+  // respondida), ahora con `questionKey` (para que LiveSummaryPanel pueda
+  // pedir "salta a esta pregunta" vía handleEditField) y `answered`
+  // (para distinguir "Pendiente" de una respuesta real, ver
+  // LiveSummaryPanel) — se usa tanto durante el wizard como en el
+  // resultado, un solo cómputo para los dos.
+  const answersSummary: SummaryItem[] = useMemo(() => {
     return questions
       .filter((question) => isQuestionVisible(question, answers))
       // Respuestas TEXT que son un blob JSON (ej. el desglose de Consumo
@@ -283,11 +369,13 @@ export function ModuleWizard({
         const raw = answers[question.key];
         if (question.type === "SELECT") {
           const option = question.options.find((o) => o.key === raw);
-          return { label: question.label, value: option?.label ?? "—" };
+          return { questionKey: question.key, label: question.label, value: option?.label ?? "—", answered: raw !== undefined };
         }
-        if (!raw) return { label: question.label, value: "—" };
+        if (raw === undefined || raw === "") {
+          return { questionKey: question.key, label: question.label, value: "—", answered: false };
+        }
         const unit = question.unit ? pluralizeUnit(Number(raw), question.unit) : "";
-        return { label: question.label, value: `${raw} ${unit}`.trim() };
+        return { questionKey: question.key, label: question.label, value: `${raw} ${unit}`.trim(), answered: true };
       });
   }, [questions, answers]);
 
@@ -299,6 +387,11 @@ export function ModuleWizard({
   // mismo criterio que isConditionalReveal para saltarse QuestionGroupStep
   // por completo en este caso especial.
   const isApplianceConsumption = currentGroup?.length === 2 && currentGroup[0].key === "consumo-detalle-json";
+
+  // Fundación (base + cuello): geometría propia, ver foundation-step.tsx —
+  // mismo criterio que isConditionalReveal/isApplianceConsumption para
+  // saltarse QuestionGroupStep con un componente a medida.
+  const isFoundationGroup = Boolean(currentGroup) && isFoundationStepGroup(currentGroup[0]?.stepGroup);
 
   const stepInitialValues = useMemo(
     () => (currentGroup ? withSuggestedDefaults(currentGroup, answers) : answers),
@@ -319,32 +412,41 @@ export function ModuleWizard({
         }
       : undefined;
 
-  // Pasos con diagrama van a 2 columnas (ver QuestionGroupStep) — el ancho
-  // angosto de siempre (pensado para 1 sola columna) los dejaba apretados.
-  const isWideStep = !calculation && Boolean(currentGroup) && hasDiagram(currentGroup[0]?.stepGroup);
+  // Pasos con diagrama, o cualquier paso con el resumen en vivo visible,
+  // van a 2 columnas (ver QuestionGroupStep) — el ancho angosto de siempre
+  // (pensado para 1 sola columna) los dejaba apretados.
+  const showSummaryPanel = !calculation && stepIndex > 0;
+  const isWideStep =
+    !calculation &&
+    (showSummaryPanel || isFoundationGroup || (Boolean(currentGroup) && hasDiagram(currentGroup[0]?.stepGroup)));
+
+  // Fila "← Inicio / ← Atrás / ← Volver al paso N" (ver WizardHeader) —
+  // antes era un link suelto siempre a "/", fijo en el primer paso;
+  // ahora refleja de dónde vuelve realmente el usuario en cada momento
+  // del flujo, mismo criterio en todos los módulos.
+  const back = calculation
+    ? { label: `Volver al paso ${steps.length}`, onClick: handleEditAnswers }
+    : stepIndex === 0
+      ? { label: "Inicio", href: "/" }
+      : { label: "Atrás", onClick: handleBack };
 
   return (
     <div className={`mx-auto px-6 pt-8 pb-20 ${isWideStep ? "max-w-4xl" : "max-w-2xl"}`}>
-      {/* Antes apuntaba a /categorias/[categorySlug] (breadcrumb fijo a la
-          categoría padre) — pero varias rutas llevan a un módulo sin pasar
-          nunca por esa pantalla (buscador, /empezar, /guias, /plan,
-          /galeria), así que el link mentía sobre de dónde "volvía" el
-          usuario. Apunta a Inicio, igual que el resto de los "volver" de
-          la app (ver /grupos/[slug]). */}
-      <Link
-        href="/"
-        className="inline-flex items-center gap-1.5 text-sm text-ink-muted hover:text-ink"
-      >
-        <ArrowLeft className="w-4 h-4" />
-        Inicio
-      </Link>
-
       <WizardHeader
         moduleName={moduleName}
         step={!calculation ? { index: stepIndex, total: steps.length } : undefined}
+        back={back}
+        resultMode={Boolean(calculation)}
       />
 
-      {isAdvancedMode && !calculation && stepIndex === 0 && (
+      {/* BUG-007: borrador autoguardado a la espera de confirmación — se
+          muestra en vez del contenido del paso hasta que el usuario elija
+          Continuar o Comenzar de nuevo (ver WizardResumeGate). */}
+      {!calculation && resumeDraft && (
+        <WizardResumeGate onResume={handleResumeDraft} onDiscard={handleDiscardDraft} />
+      )}
+
+      {isAdvancedMode && !calculation && !resumeDraft && stepIndex === 0 && (
         <div className="mb-6 rounded-2xl p-4 bg-danger-tint border-2 border-danger">
           <div className="flex items-start gap-2.5">
             <TriangleAlert className="w-5 h-5 flex-shrink-0 mt-0.5 text-danger" strokeWidth={2.75} />
@@ -357,8 +459,20 @@ export function ModuleWizard({
         </div>
       )}
 
-      {!calculation && (
-        <>
+      {/* El panel "Tu proyecto" se vuelve columna lateral recién en lg
+          (1024px), un peldaño DESPUÉS del split diagrama/formulario (md,
+          768px) — ver Fase B responsive, 2026-08-02. No es una
+          inconsistencia: son 2 regiones visuales distintas con
+          necesidades de espacio distintas. A los 768px el contenido del
+          paso (formulario + diagrama) ya tiene prioridad de espacio;
+          sumarle una tercera columna de 300px ahí lo dejaba apretado
+          (probado en vivo). El criterio queda así, documentado una sola
+          vez acá: contenido del paso -> md; panel secundario persistente
+          -> lg, aplicado igual en TODOS los módulos, no una excepción
+          puntual. */}
+      {!calculation && !resumeDraft && (
+        <div className={showSummaryPanel ? "lg:grid lg:grid-cols-[1fr_300px] lg:gap-8 lg:items-start" : undefined}>
+        <div>
           {isConditionalReveal ? (
             <ConditionalRevealStep
               key={currentGroup.map((q) => q.id).join("-")}
@@ -374,12 +488,22 @@ export function ModuleWizard({
               totalQuestion={currentGroup[1]}
               onAnswer={handleGroupAnswer}
             />
+          ) : isFoundationGroup ? (
+            <FoundationStep
+              key={currentGroup.map((q) => q.id).join("-")}
+              questions={currentGroup}
+              initialValues={stepInitialValues}
+              onAnswer={handleGroupAnswer}
+              onSaveForLater={handleSaveForLater}
+              focusFieldKey={focusFieldKey}
+            />
           ) : currentGroup.length > 1 || hasAreaToggle(currentGroup[0].stepGroup) ? (
             <QuestionGroupStep
               key={currentGroup.map((q) => q.id).join("-")}
               questions={currentGroup}
               initialValues={stepInitialValues}
               onAnswer={handleGroupAnswer}
+              focusFieldKey={focusFieldKey}
               forcedInitialArea={
                 forcedInitialArea !== undefined &&
                 stepIndex === 0 &&
@@ -410,14 +534,9 @@ export function ModuleWizard({
           {isPending && <p className="mt-6 text-sm text-ink-muted">Calculando…</p>}
           {error && <p className="mt-6 text-sm text-safety">{error}</p>}
 
-          {stepIndex > 0 && !isPending && (
-            <button
-              onClick={handleBack}
-              className="mt-8 text-sm font-medium underline underline-offset-4 text-ink-muted"
-            >
-              Volver a la pregunta anterior
-            </button>
-          )}
+          {/* "Volver a la pregunta anterior" (stepIndex > 0) se sacó de acá:
+              ahora es el mismo "← Atrás" del WizardHeader (ver `back` más
+              arriba) — dos botones para la misma acción era duplicado. */}
           {/* Paso 1: no hay pregunta anterior DENTRO del módulo, pero antes
               la única salida si el usuario entró al módulo equivocado era
               el link "Inicio" de arriba (te saca de todo el contexto).
@@ -435,7 +554,14 @@ export function ModuleWizard({
               Volver
             </button>
           )}
-        </>
+        </div>
+
+        {showSummaryPanel && (
+          <div className="mt-8 lg:mt-0">
+            <LiveSummaryPanel items={answersSummary} onEditItem={handleEditField} />
+          </div>
+        )}
+        </div>
       )}
 
       {calculation && (
@@ -455,6 +581,8 @@ export function ModuleWizard({
           recalculateField={recalculateField}
           onRecalculate={handleRecalculate}
           onEditAnswers={handleEditAnswers}
+          onEditField={handleEditField}
+          heroResultKey={moduleSlug ? HERO_RESULT_KEYS[moduleSlug] : undefined}
         />
       )}
     </div>

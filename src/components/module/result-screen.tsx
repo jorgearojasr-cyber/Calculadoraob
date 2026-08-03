@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Check, Copy, FolderPlus, Pencil, RotateCcw, Sparkles } from "lucide-react";
+import { ArrowRight, Check, Copy, FolderPlus, Pencil, RotateCcw, Sparkles } from "lucide-react";
 import { buildCalculationPrompt, buildRestartLabel } from "@/lib/prompt-generator";
 import type { CalculationResult, InfoResult } from "@/lib/formula-engine";
 import type { CalculateModuleResult, NormSummary } from "@/app/(app)/categorias/[slug]/[moduleSlug]/actions";
@@ -10,10 +10,12 @@ import { createSavedProjectAction } from "@/app/(app)/proyectos/actions";
 import { togglePhaseCompletionAction } from "@/app/(app)/plan/[slug]/actions";
 import { PENDING_PROJECT_KEY } from "@/lib/pending-project";
 import { NormsDisclaimer } from "./norms-disclaimer";
-import { PricedResults } from "./priced-results";
+import { PricedResults, computeApproxTotal } from "./priced-results";
+import { ResultHero } from "./result-hero";
 import { GuideSection, type ModuleGuideData } from "./guide-section";
 import { PhotoGallery } from "./photo-gallery";
 import { RecalculateField } from "./recalculate-field";
+import { LiveSummaryPanel, type SummaryItem } from "./live-summary-panel";
 
 // Aplica el precio de referencia (sugerencia editable) como unitPrice
 // inicial a cada línea de resultado que aún no tiene uno propio. `previous`
@@ -48,11 +50,13 @@ export function ResultScreen({
   recalculateField,
   onRecalculate,
   onEditAnswers,
+  onEditField,
+  heroResultKey,
 }: {
   moduleId: string;
   moduleName: string;
   categoryName: string;
-  answersSummary: { label: string; value: string }[];
+  answersSummary: SummaryItem[];
   results: CalculationResult[];
   infoResults: InfoResult[];
   norms: NormSummary[];
@@ -60,7 +64,13 @@ export function ResultScreen({
   onRestart: () => void;
   guide?: ModuleGuideData | null;
   approvedPhotos?: { id: string; url: string }[];
-  planContext?: { slug: string; phaseId: string; shape?: string };
+  // Sprint UX "Construir una piscina" (03-ago-2026), ítem 4: `nextPhase`
+  // (opcional, ya resuelto server-side) habilita el botón principal
+  // "Continuar con: <fase>" — ver handleSaveProject. Sin `nextPhase` (fase
+  // sin continuación, ej. la última del plan, o módulo usado fuera de un
+  // plan) el comportamiento queda idéntico al de siempre: un solo botón
+  // "Guardar como proyecto".
+  planContext?: { slug: string; phaseId: string; shape?: string; nextPhase?: { name: string; href: string | null } };
   // Campo opcional editable desde el resultado (ej. espesor de Radier) que
   // dispara un recálculo completo vía onRecalculate — ver
   // RECALCULATE_FIELDS en module-wizard.tsx. Ninguno de los dos viene
@@ -72,11 +82,26 @@ export function ResultScreen({
   // pregunta se prellena sola vía stepInitialValues) — a diferencia de
   // onRestart, que empieza de cero. Transversal a los 57 módulos.
   onEditAnswers: () => void;
+  // Salta directo al paso de una pregunta puntual (ver LiveSummaryPanel,
+  // "Cambiar" en una línea de "Con estos datos calculamos") — a
+  // diferencia de onEditAnswers, no vuelve al paso 1.
+  onEditField: (questionKey: string) => void;
+  // Fuerza qué Formula.key ocupa la tarjeta hero (ver HERO_RESULT_KEYS en
+  // module-wizard.tsx) — usado cuando el dato más relevante para el
+  // usuario no es el primer resultado priced (ej. Piscina: volumen de agua
+  // antes que hormigón). Sin este prop, se mantiene el criterio de
+  // siempre (primer resultado no-secundario CON materialName).
+  heroResultKey?: string;
 }) {
   const router = useRouter();
   const [promptOpen, setPromptOpen] = useState(false);
   const [copied, setCopied] = useState(false);
-  const [saveState, setSaveState] = useState<"idle" | "saving" | "error">("idle");
+  // "saving-next"/"saving-plan" distinguen cuál de los 2 botones disparó el
+  // guardado (sprint UX 03-ago-2026, ítem 4) — solo para mostrar el label de
+  // "Guardando…" en el botón correcto; ambos quedan deshabilitados mientras
+  // cualquiera de los dos está en curso.
+  const [saveState, setSaveState] = useState<"idle" | "saving-next" | "saving-plan" | "error">("idle");
+  const isSaving = saveState === "saving-next" || saveState === "saving-plan";
   // Precarga el precio de referencia (sugerencia editable) como unitPrice
   // inicial, para que lo que se ve en pantalla sea lo mismo que se guarda
   // si el usuario no lo edita.
@@ -104,6 +129,39 @@ export function ResultScreen({
 
   const prompt = buildCalculationPrompt({ moduleName, categoryName, answersSummary, results, infoResults, norms });
 
+  // Mismo criterio que el "featured" de PricedResults (ver ese archivo):
+  // el primer resultado no-secundario es el dato protagonista. Si ese
+  // resultado no tiene materialName (algún módulo sin materiales físicos,
+  // ej. solo entrega una cantidad informativa), no se arma la tarjeta
+  // protagonista — ResultHero asume un material real.
+  const heroResult = heroResultKey
+    ? (pricedResults.find((r) => r.key === heroResultKey) ?? null)
+    : (pricedResults.find((r) => !r.isSecondary) ?? null);
+  const otherMaterialNames = pricedResults
+    .filter((r) => !r.isSecondary && r.materialName && r.key !== heroResult?.key)
+    .map((r) => r.materialName!.toLowerCase());
+  const { total: approxTotal, anyPriced } = computeApproxTotal(pricedResults);
+  // Con heroResultKey explícito, el módulo decidió a propósito destacar un
+  // resultado informativo (sin materialName/precio) — no se exige
+  // materialName como en el criterio genérico.
+  const showsHero = heroResultKey ? Boolean(heroResult) : Boolean(heroResult?.materialName);
+  // PricedResults agranda el primer resultado no-secundario de su propia
+  // lista (ver `featured` ahí) — solo hay que ocultar ese agrandado cuando
+  // es EXACTAMENTE el mismo dato que ya se ve gigante en ResultHero. Con
+  // heroResultKey (Piscina: hero=volumen de agua, primero de la lista=
+  // hormigón), son dos resultados distintos — hormigón no se duplica en
+  // ningún lado, así que conserva su propio destaque en la lista.
+  const firstListResult = pricedResults.find((r) => !r.isSecondary);
+  const hidesFeaturedInList = showsHero && heroResult?.key === firstListResult?.key;
+  // Nota: se probó ocultar infoResults[0] de la lista de abajo (ya que se
+  // repite en el subtítulo de ResultHero), pero en módulos donde
+  // infoResults[0] es solo la mitad de un par relacionado (ej. Piscina:
+  // "Espesor de los muros" / "Espesor del fondo", ambos eco de respuestas
+  // del usuario, no una recomendación como el tipo de hormigón de Radier)
+  // esconder solo uno de los dos se ve incoherente — se probó en vivo con
+  // Piscina circular durante la Fase 3. Se prefiere la pequeña duplicación
+  // (mismo dato en el subtítulo Y en su tarjeta) antes que esa asimetría.
+
   // Consumo eléctrico: la Variable "consumo_detalle_json" (si existe en este
   // módulo) trae el desglose por artefacto como JSON — no pasa por el motor
   // de fórmulas (que no soporta listas/arrays), se parsea acá directo para
@@ -128,8 +186,15 @@ export function ResultScreen({
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const handleSaveProject = async () => {
-    setSaveState("saving");
+  // `destination` (sprint UX 03-ago-2026, ítem 4): "next-phase" salta
+  // directo al módulo de la fase siguiente (ver planContext.nextPhase.href,
+  // ya resuelto server-side) cuando es posible; "plan" es el comportamiento
+  // de siempre (vuelve a /plan/[slug] con el banner "Sigue con: <fase>").
+  // Si nextPhase.href es null (fase siguiente ambigua, 2+ módulos posibles,
+  // ver resolveNextPhase en page.tsx) "next-phase" cae al mismo destino que
+  // "plan" — evita duplicar acá el selector de módulos de plan-view.tsx.
+  const handleSaveProject = async (destination: "next-phase" | "plan" = "plan") => {
+    setSaveState(destination === "next-phase" ? "saving-next" : "saving-plan");
     const result: CalculateModuleResult = { results: pricedResults, infoResults, variables, norms };
 
     try {
@@ -151,11 +216,18 @@ export function ResultScreen({
       }
 
       // Si el módulo se abrió desde una fase de un plan, guardar la
-      // fórmula ES la señal natural de "fase lista" — marca la fase y
-      // vuelve al plan (con la fase siguiente resaltada) en vez de dejar
-      // al usuario en /proyectos/[id] sin un camino de vuelta.
+      // fórmula ES la señal natural de "fase lista" — marca la fase.
       if (planContext) {
         await togglePhaseCompletionAction(planContext.slug, planContext.phaseId, true);
+
+        if (destination === "next-phase" && planContext.nextPhase?.href) {
+          router.push(planContext.nextPhase.href);
+          return;
+        }
+
+        // Destino de siempre: vuelve al plan (con la fase siguiente
+        // resaltada) en vez de dejar al usuario en /proyectos/[id] sin un
+        // camino de vuelta.
         const shapeQuery = planContext.shape ? `&shape=${encodeURIComponent(planContext.shape)}` : "";
         router.push(`/plan/${planContext.slug}?justCompleted=${planContext.phaseId}${shapeQuery}`);
         return;
@@ -173,6 +245,16 @@ export function ResultScreen({
       <h2 className="font-display text-[22px] font-semibold tracking-tight mb-6">
         Esto es lo que necesitas
       </h2>
+
+      {showsHero && heroResult && (
+        <ResultHero
+          moduleName={moduleName}
+          result={heroResult}
+          otherMaterialNames={otherMaterialNames}
+          primaryInfo={infoResults[0] ?? null}
+          total={anyPriced ? approxTotal : null}
+        />
+      )}
 
       {recalculateField && onRecalculate && (
         <RecalculateField
@@ -216,7 +298,12 @@ export function ResultScreen({
         </div>
       )}
 
-      <PricedResults results={seededResults} onPricesChange={setPricedResults} />
+      <PricedResults
+        results={seededResults}
+        onPricesChange={setPricedResults}
+        hideFeatured={hidesFeaturedInList}
+        hideTotal={showsHero && anyPriced}
+      />
 
       <NormsDisclaimer norms={norms} />
 
@@ -224,29 +311,53 @@ export function ResultScreen({
 
       <PhotoGallery photos={approvedPhotos ?? []} />
 
-      <div className="mt-8 rounded-2xl p-5 bg-white border border-border">
-        <p className="text-xs font-mono uppercase tracking-wider text-ink-muted mb-3">
-          Con estos datos respondiste
-        </p>
-        <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
-          {answersSummary.map((item) => (
-            <div key={item.label} className="contents">
-              <dt className="text-ink-muted">{item.label}</dt>
-              <dd className="font-medium text-right">{item.value}</dd>
-            </div>
-          ))}
-        </dl>
+      <div className="mt-8">
+        <LiveSummaryPanel items={answersSummary} onEditItem={onEditField} title="Con estos datos calculamos" />
       </div>
 
       <div className="mt-8 flex flex-wrap items-center gap-3">
-        <button
-          onClick={handleSaveProject}
-          disabled={saveState === "saving"}
-          className="rounded-full px-6 py-3 text-sm font-semibold text-white flex items-center gap-2 bg-action disabled:opacity-50"
-        >
-          <FolderPlus className="w-4 h-4" />
-          {saveState === "saving" ? "Guardando…" : "Guardar como proyecto"}
-        </button>
+        {/* Sprint UX "Construir una piscina" (03-ago-2026), ítem 4: con
+            nextPhase resuelta, la acción principal pasa a ser "Continuar con
+            la fase siguiente" (para que el plan se sienta un proyecto
+            continuo, no cálculos sueltos) y "Guardar proyecto" queda como
+            acción secundaria — mismo guardado de siempre, solo cambia el
+            destino final. Sin nextPhase (última fase del plan, o módulo
+            usado fuera de un plan) el botón único de siempre no cambia. */}
+        {planContext?.nextPhase ? (
+          <>
+            <button
+              onClick={() => handleSaveProject("next-phase")}
+              disabled={isSaving}
+              className="rounded-full px-6 py-3 text-sm font-semibold text-white flex items-center gap-2 bg-action disabled:opacity-50"
+            >
+              {saveState === "saving-next" ? (
+                "Guardando…"
+              ) : (
+                <>
+                  Continuar con: {planContext.nextPhase.name}
+                  <ArrowRight className="w-4 h-4" />
+                </>
+              )}
+            </button>
+            <button
+              onClick={() => handleSaveProject("plan")}
+              disabled={isSaving}
+              className="rounded-full px-6 py-3 text-sm font-medium border border-ink flex items-center gap-2 disabled:opacity-50"
+            >
+              <FolderPlus className="w-4 h-4" />
+              {saveState === "saving-plan" ? "Guardando…" : "Guardar proyecto"}
+            </button>
+          </>
+        ) : (
+          <button
+            onClick={() => handleSaveProject("plan")}
+            disabled={isSaving}
+            className="rounded-full px-6 py-3 text-sm font-semibold text-white flex items-center gap-2 bg-action disabled:opacity-50"
+          >
+            <FolderPlus className="w-4 h-4" />
+            {saveState === "saving-plan" ? "Guardando…" : "Guardar como proyecto"}
+          </button>
+        )}
         <button
           onClick={onEditAnswers}
           className="rounded-full px-6 py-3 text-sm font-medium border border-ink flex items-center gap-2"

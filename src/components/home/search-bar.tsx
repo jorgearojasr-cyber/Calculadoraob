@@ -157,7 +157,8 @@ export function SearchBar({
                 <span className="min-w-0">
                   <span className="block text-sm font-medium truncate">{result.name}</span>
                   <span className="block text-xs text-ink-muted truncate">
-                    {result.type === "category" ? "Categoría" : result.categoryName} · {result.description}
+                    {result.type === "category" ? "Categoría" : result.categoryName}
+                    {result.description ? ` · ${result.description}` : ""}
                   </span>
                 </span>
               </button>

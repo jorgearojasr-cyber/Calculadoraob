@@ -9,6 +9,7 @@ import { GasConfirmationGate } from "./gas-confirmation-gate";
 import { CollapsibleHelp } from "./collapsible-help";
 import { ImageOptionCard } from "./image-option-card";
 import { NotSureHelper } from "./not-sure-helper";
+import { PreselectedConfirmation } from "./preselected-confirmation";
 
 // Consumo eléctrico: link clickeable a la tarifa oficial de la CNE, debajo
 // del campo de precio del kWh — el valor exacto depende de la distribuidora
@@ -41,18 +42,30 @@ const OPTION_ICONS: Record<string, ReactNode> = {
 // ImageOptionCard, keyed por "moduleSlug/questionKey" — mismo criterio que
 // OPTION_ICONS: contenido editorial fijo, no vale la pena una columna en
 // la base de datos todavía para una sola pregunta.
+// UX-001 (2026-08-03, revisión de BUG-004): además del texto de siempre,
+// cada entrada trae una plantilla para cuando esta pregunta llega YA
+// respondida por query param (ej. ?tipo=estacionamiento, ver
+// `presetQuery` en ProjectTaskModule/ProjectPlanPhaseModule — hoy solo
+// usado por estos mismos 2 módulos). En ese caso no tiene sentido
+// mostrar "¿No sabes cuál elegir?" sugiriendo una opción DISTINTA a la
+// que el usuario ya trae elegida — se reemplaza por una confirmación de
+// lo detectado. `{opcion}` se reemplaza por la etiqueta real de la
+// opción preseleccionada (no hardcodeada), para que seguir funcionando
+// si en el futuro se linkea otro valor de `tipo=` a esta misma pregunta.
 const NOT_SURE_HELPERS: Record<
   string,
-  { description: string; recommendedOptionKey: string }
+  { description: string; recommendedOptionKey: string; preselectedConfirmationTemplate: string }
 > = {
   "radier/uso": {
     description:
       "Para la mayoría de las casas y ampliaciones, el radier de patio o terraza es la opción más común.",
     recommendedOptionKey: "patio_terraza",
+    preselectedConfirmationTemplate: "Detectamos que quieres construir este radier para: {opcion}. Puedes cambiar esta selección si lo deseas.",
   },
   "pintura/que-vas-a-pintar": {
     description: "En la mayoría de los casos, se comienza pintando los muros interiores.",
     recommendedOptionKey: "muro-interior",
+    preselectedConfirmationTemplate: "Detectamos que quieres pintar: {opcion}. Puedes cambiar esta selección si lo deseas.",
   },
 };
 
@@ -158,6 +171,12 @@ export function QuestionStep({
       question.options.length > 0 && question.options.every((o) => o.imageUrl);
     const notSureKey = moduleSlug ? `${moduleSlug}/${question.key}` : null;
     const notSureHelper = notSureKey ? NOT_SURE_HELPERS[notSureKey] : undefined;
+    // UX-001: si esta pregunta ya llegó respondida (ver `initialValue`,
+    // seteado en categorias/[slug]/[moduleSlug]/page.tsx desde ?tipo= u
+    // otro query param) y coincide con una opción real, mostramos la
+    // confirmación de detección en vez de "¿No sabes cuál elegir?".
+    const preselectedOption =
+      initialValue !== undefined ? question.options.find((o) => o.key === initialValue) : undefined;
 
     return (
       <div>
@@ -172,7 +191,13 @@ export function QuestionStep({
           </div>
         )}
         {hasImageOptions ? (
-          <div className="grid gap-3 mt-6">
+          // El wizard usa un contenedor angosto (max-w-2xl, pensado para 1
+          // columna) en pasos sin diagrama/resumen — 3+ columnas ahí
+          // dejaba cada tarjeta demasiado angosta para foto 16:9 + label
+          // (bug real: el radio tapaba texto envuelto a 3 líneas,
+          // verificado visualmente con las 4 opciones reales de Radier).
+          // 2 columnas es lo que entra cómodo a ese ancho.
+          <div className="grid gap-3 mt-6 sm:grid-cols-2">
             {question.options.map((option) => (
               <ImageOptionCard
                 key={option.key}
@@ -180,6 +205,7 @@ export function QuestionStep({
                 icon={moduleSlug ? OPTION_ICONS[`${moduleSlug}/${question.key}/${option.key}`] : undefined}
                 selected={initialValue === option.key}
                 onSelect={() => onAnswer(option.key)}
+                forceCover={question.options.length <= 2}
               />
             ))}
           </div>
@@ -191,7 +217,8 @@ export function QuestionStep({
                 <button
                   key={option.key}
                   onClick={() => onAnswer(option.key)}
-                  className={`flex items-center justify-between text-left rounded-xl px-5 py-4 border transition-colors ${
+                  aria-pressed={selected}
+                  className={`flex items-center justify-between text-left rounded-xl px-5 py-4 border transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-action ${
                     selected
                       ? "border-safety bg-safety-tint"
                       : "border-border bg-white hover:border-ink"
@@ -208,7 +235,12 @@ export function QuestionStep({
             })}
           </div>
         )}
-        {hasImageOptions && notSureHelper && (
+        {hasImageOptions && notSureHelper && preselectedOption && (
+          <PreselectedConfirmation
+            text={notSureHelper.preselectedConfirmationTemplate.replace("{opcion}", preselectedOption.label)}
+          />
+        )}
+        {hasImageOptions && notSureHelper && !preselectedOption && (
           <NotSureHelper
             description={notSureHelper.description}
             recommendedLabel={
@@ -258,11 +290,12 @@ export function QuestionStep({
           </p>
         </div>
       )}
-      <div className="mt-6 flex items-center gap-3 rounded-2xl px-5 py-4 bg-white border-[1.5px] border-ink">
+      <div className="mt-6 flex items-center gap-3 rounded-2xl px-5 py-4 bg-white border-[1.5px] border-ink focus-within:ring-2 focus-within:ring-action/70 focus-within:ring-offset-1">
         <input
           type="text"
           inputMode={isNumber ? "decimal" : "text"}
           autoFocus
+          aria-label={question.label}
           value={textValue}
           onChange={(e) => setTextValue(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && handleSubmit()}

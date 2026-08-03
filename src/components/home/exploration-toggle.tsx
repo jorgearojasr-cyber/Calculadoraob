@@ -33,7 +33,11 @@ export function ExplorationToggle({
   return (
     <section
       id="empezar"
-      className="bg-white border-t border-dashed border-[#D8DEE8] px-4 sm:px-10 py-[18px] sm:py-[30px] pb-6 sm:pb-10 flex flex-col gap-3 sm:gap-4"
+      // scroll-mt compensa el header fijo (MobileTopBar h-14=56px /
+      // TopNav desktop ~73.5px) — sin esto, un link a "/#empezar" desde
+      // otra página deja el título tapado detrás del header (BUG-001,
+      // auditoría funcional 02-ago-2026).
+      className="bg-white border-t border-dashed border-[#D8DEE8] px-4 sm:px-10 py-[18px] sm:py-[30px] pb-6 sm:pb-10 flex flex-col gap-3 sm:gap-4 scroll-mt-16 md:scroll-mt-20"
     >
       <div className="flex flex-wrap items-end justify-between gap-4">
         <h2
