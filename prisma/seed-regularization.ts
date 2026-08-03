@@ -114,145 +114,403 @@ export async function seedRegularizationNorms(prisma: PrismaClient) {
 // Antes de promover a producción, cambiar a upsert por un campo único de
 // negocio (ej. agregar `key String @unique` al modelo) — requiere
 // migración, fuera de alcance de este seed.
+// Redacción exacta para documentos sin respaldo directo en el listado
+// oficial del Formulario 12.1 (ver clasificacion-documentos-ley-20898.md,
+// sección 3) — nunca "No corresponde"/"No es necesario"/"Puedes omitirlo".
+const LENGUAJE_PRUDENTE =
+  "No aparece dentro de los antecedentes adjuntos del Formulario 12.1 y permanece pendiente de validación profesional. Algunas Direcciones de Obras Municipales podrían solicitarlo igualmente según el caso.";
+
 export async function seedRegularizationDocuments(prisma: PrismaClient) {
   await prisma.regularizationDocumentCheck.deleteMany({});
   await prisma.regularizationDocumentChecklist.deleteMany({});
 
+  // Fase 2 del plan de implementación del Informe de Evaluación Preliminar
+  // — modelo de tres ejes (obligatoriedad/origen/momento) + soporteObraBien
+  // + citaNormativa + estadoValidacion. Fuente exacta de esta lista:
+  // clasificacion-documentos-ley-20898.md (documento cerrado, en la raíz
+  // del proyecto) — específicamente su sección 2 (Tramo 1 verificado
+  // contra Formulario 12.1), sección 3 (sin respaldo confirmado, lenguaje
+  // prudente) y sección 4 (momento: posterior, fuera del checklist de
+  // entrada). No reemplaza la necesidad de validación profesional del
+  // Tramo 2 (Formulario 12.4) — ver "Pendientes explícitos" en ese mismo
+  // documento.
+  //
+  // Nota sobre el eje `origen`: el documento de clasificación describe
+  // varios orígenes compuestos en prosa (ej. "Profesional + Usuario
+  // (firma conjunta)", "Usuario, con respaldo del profesional") que no
+  // caben en el enum de 3 valores tal cual — se resolvieron eligiendo el
+  // origen principal (quién prepara/aporta el documento en la práctica),
+  // consistente con que el propio documento de clasificación aclara que
+  // el modelo de datos necesita "tres atributos separados, no una sola
+  // etiqueta" (la prosa es contexto legible para humanos, el enum es lo
+  // normativo). Ver informe de Fase 2 para el detalle de esta decisión.
   const DOCUMENTS = [
+    // ===== Tramo 1 (Formulario 12.1) — momento: previo =====
     {
-      documento: "Certificado de Informaciones Previas (CIP)",
-      category: "MUNICIPAL",
-      paraQueSirve: "Informa la normativa urbanística aplicable al predio (uso de suelo, rasantes, etc.) antes de iniciar el trámite",
-      dondeSeObtiene: "DOM de la municipalidad correspondiente",
-      obligatorio: true,
-      dependeDe: null,
-    },
-    {
-      documento: "Certificado de dominio vigente",
-      category: "NOTARIA_REGISTRO",
-      paraQueSirve: "Acredita quién es el propietario actual del predio ante la DOM",
-      dondeSeObtiene: "Conservador de Bienes Raíces (CBR) de la comuna",
-      obligatorio: true,
-      dependeDe: null,
-    },
-    {
-      documento: "Copia de la escritura de la propiedad",
-      category: "NOTARIA_REGISTRO",
-      paraQueSirve: "Respalda el dominio junto al certificado de vigencia",
-      dondeSeObtiene: "Notaría donde se firmó la escritura original, o CBR",
-      obligatorio: true,
-      dependeDe: null,
-    },
-    {
-      documento: "Planos de arquitectura (planta, elevaciones, cortes)",
-      category: "ARQUITECTO",
-      paraQueSirve: "Documento técnico base de toda regularización — muestra lo construido tal como está",
-      dondeSeObtiene: "Arquitecto o profesional competente",
-      obligatorio: true,
-      dependeDe: null,
-    },
-    {
-      documento: "Memoria explicativa",
-      category: "ARQUITECTO",
-      paraQueSirve: "Describe en texto lo construido, materialidad y uso, acompañando los planos",
-      dondeSeObtiene: "Arquitecto o profesional competente",
-      obligatorio: true,
-      dependeDe: null,
-    },
-    {
-      documento: "Especificaciones técnicas",
-      category: "ARQUITECTO",
-      paraQueSirve: "Detalla materiales y soluciones constructivas usadas",
-      dondeSeObtiene: "Arquitecto o profesional competente",
-      obligatorio: false,
-      dependeDe: { op: "!=", args: [{ var: "material" }, { str: "OTRO" }] },
-    },
-    {
-      documento: "Informe de cálculo estructural",
-      category: "ARQUITECTO",
-      paraQueSirve: "Certifica que la estructura es segura — exigible según tamaño/material",
-      dondeSeObtiene: "Ingeniero estructural o civil",
-      obligatorio: false,
-      dependeDe: { op: "or", args: [EXCEDE_TRAMO, MADERA_SEGUNDO_PISO] },
-    },
-    {
-      documento: "Solicitud de regularización (formulario DOM)",
+      documento: "Formulario 12.1 (solicitud firmada por propietario y profesional)",
       category: "DOM",
-      paraQueSirve: "Formulario formal que da inicio al trámite ante la Dirección de Obras",
-      dondeSeObtiene: "DOM de la municipalidad correspondiente",
-      obligatorio: true,
-      dependeDe: null,
-    },
-    {
-      documento: "Certificado de recepción municipal anterior (si existe)",
-      category: "DOM",
-      paraQueSirve: "Acredita qué parte de la propiedad ya cuenta con recepción, para regularizar solo lo nuevo",
-      dondeSeObtiene: "DOM de la municipalidad correspondiente",
-      obligatorio: false,
-      // El DSL de formula-engine no tiene un nodo de literal booleano
-      // (solo número y {str:...}) — {var:"recepcionMunicipal"} solo, sin
-      // comparar contra `true`, ya resuelve al valor booleano real, que
-      // es exactamente lo que "== true" intentaba expresar. Bug real
-      // encontrado en verificación end-to-end 2026-08-01 (ver también
-      // Reglas #2 y #4 en seedRegularizationRules).
-      //
-      // TODO(fase-2b): este dependeDe usa exactamente el mismo patrón que
-      // las Reglas #2/#4, que SÍ se verificaron en ejecución (wizard real,
-      // vía Puppeteer, 2026-08-01) — pero este dependeDe en sí todavía NO
-      // se ejercitó en tiempo de ejecución, porque la evaluación del
-      // checklist de documentos es Fase 2B, que aún no existe. No asumir
-      // que queda cubierto solo porque el patrón ya se validó en las
-      // reglas — verificar explícitamente cuando se construya el
-      // checklist (¿el documento se oculta/muestra correctamente según
-      // recepcionMunicipal true/false/null?).
-      dependeDe: { var: "recepcionMunicipal" },
-    },
-    {
-      documento: "Informe de revisor independiente",
-      category: "DOM",
-      paraQueSirve: "Exigido en construcciones de mayor envergadura antes de la recepción",
-      dondeSeObtiene: "Revisor independiente inscrito en el municipio",
-      obligatorio: false,
-      dependeDe: EXCEDE_TRAMO,
-    },
-    {
-      documento: "Certificado de Recepción Definitiva (resultado del trámite)",
-      category: "DOM",
-      paraQueSirve: "Documento final que certifica que la construcción quedó regularizada",
-      dondeSeObtiene: "DOM de la municipalidad correspondiente",
-      obligatorio: true,
-      dependeDe: null,
-    },
-    {
-      documento: "Pago de derechos municipales",
-      category: "MUNICIPAL",
-      paraQueSirve: "Comprobante de pago asociado al permiso/regularización",
-      dondeSeObtiene: "Tesorería municipal",
-      obligatorio: true,
-      dependeDe: null,
-    },
-    {
-      documento: "Inscripción de la recepción en el Conservador de Bienes Raíces",
-      category: "NOTARIA_REGISTRO",
-      paraQueSirve: "Paso final — deja constancia registral de la regularización",
-      dondeSeObtiene: "Conservador de Bienes Raíces (CBR) de la comuna",
-      obligatorio: true,
-      dependeDe: null,
-    },
-    {
-      documento: "Certificado de Avalúo Fiscal, vigente al 4 de febrero de 2016",
-      category: "MUNICIPAL",
-      paraQueSirve: "Fuente oficial del avalúo fiscal del inmueble — el dato que el usuario carga en avaluoFiscalPesos sale de este certificado",
-      dondeSeObtiene: "Servicio de Impuestos Internos (SII), sii.cl con Clave Única o RUT",
-      obligatorio: true,
+      paraQueSirve: "Formulario formal que da inicio al trámite ante la Dirección de Obras, firmado conjuntamente por el propietario y el profesional a cargo",
+      dondeSeObtiene: "DOM de la municipalidad correspondiente, con tu profesional a cargo",
+      obligatoriedad: "MINIMO",
+      origen: "PROFESIONAL",
+      momento: "PREVIO",
+      soporteObraBien: "GESTION_EXTERNA",
+      citaNormativa: "Formulario 12.1 oficial MINVU",
+      estadoValidacion: "VALIDADO",
       dependeDe: null,
     },
     {
       documento: "Declaración simple de no reclamaciones pendientes ante la DOM o el Juzgado de Policía Local",
       category: "DOM",
-      paraQueSirve: "Acredita que no existen litigios o reclamos pendientes sobre la propiedad que impidan la regularización",
-      dondeSeObtiene: "Declaración jurada simple del propio propietario",
-      obligatorio: true,
+      paraQueSirve: "Declaración jurada integrada en la sección 2 del propio Formulario 12.1 — no es un documento separado, se firma junto con la solicitud",
+      dondeSeObtiene: "Se completa junto con el Formulario 12.1",
+      obligatoriedad: "MINIMO",
+      origen: "USUARIO",
+      momento: "PREVIO",
+      soporteObraBien: "GESTION_EXTERNA",
+      citaNormativa: "Formulario 12.1, sección 2 (declaración jurada)",
+      estadoValidacion: "VALIDADO",
+      dependeDe: null,
+    },
+    {
+      documento: "Listado de documentos y planos numerados",
+      category: "ARQUITECTO",
+      paraQueSirve: "Índice numerado de todos los antecedentes y planos que se adjuntan al expediente",
+      dondeSeObtiene: "Arquitecto o profesional competente",
+      obligatoriedad: "MINIMO",
+      origen: "PROFESIONAL",
+      momento: "PREVIO",
+      soporteObraBien: "GESTION_EXTERNA",
+      citaNormativa: "Formulario 12.1, sección 6",
+      estadoValidacion: "VALIDADO",
+      dependeDe: null,
+    },
+    {
+      documento: "Certificado de avalúo fiscal simple, a la fecha 04/02/2016",
+      category: "MUNICIPAL",
+      paraQueSirve: "Fuente oficial del avalúo fiscal del inmueble a la fecha de publicación de la ley (no el avalúo vigente actual) — el dato que cargas en el sistema sale de este certificado",
+      dondeSeObtiene: "Servicio de Impuestos Internos (SII), sii.cl con Clave Única o RUT",
+      obligatoriedad: "MINIMO",
+      origen: "USUARIO",
+      momento: "PREVIO",
+      soporteObraBien: "ORIENTA_ACCESO_DIRECTO",
+      citaNormativa: "Formulario 12.1, sección 6; numeral 5, art. 1° Ley 20.898",
+      estadoValidacion: "VALIDADO",
+      dependeDe: null,
+    },
+    {
+      documento: "Antecedentes que acrediten antigüedad anterior al 04/02/2016",
+      category: "DOM",
+      paraQueSirve: "Evidencia de que la construcción existía antes del 4 de febrero de 2016 (boletas de servicios, fotografías aéreas, certificados de avalúo antiguos, u otro medio a elección)",
+      dondeSeObtiene: "Reúnes tú los antecedentes disponibles, con respaldo de tu profesional",
+      obligatoriedad: "MINIMO",
+      origen: "USUARIO",
+      momento: "PREVIO",
+      soporteObraBien: "GESTION_EXTERNA",
+      citaNormativa: "Formulario 12.1, sección 6",
+      estadoValidacion: "VALIDADO",
+      dependeDe: null,
+    },
+    {
+      documento: "Certificado de recepción municipal anterior (si existe)",
+      category: "DOM",
+      paraQueSirve: "Acredita qué parte de la propiedad ya cuenta con recepción anterior, para regularizar solo lo nuevo",
+      dondeSeObtiene: "DOM de la municipalidad correspondiente",
+      obligatoriedad: "CONDICIONAL",
+      origen: "USUARIO",
+      momento: "PREVIO",
+      soporteObraBien: "GESTION_EXTERNA",
+      citaNormativa: "Formulario 12.1, sección 5.2 — pendiente confirmar si la DOM exige el certificado físico o basta la declaración",
+      estadoValidacion: "PENDIENTE_VALIDACION_PROFESIONAL",
+      // Hotfix (post-Fase 5, 2026-08-02): {var:"recepcionMunicipal"} solo,
+      // sin guard, lanza "Variable no resuelta" cuando el caso no tiene
+      // ese campo respondido (recepcionMunicipal: null se omite del
+      // contexto — ver buildRegularizationContext). Antes solo se había
+      // verificado en ejecución con el campo definido. Ahora usa el mismo
+      // patrón defensivo { op: "defined" } que ya usan las Reglas #2/#4 en
+      // seedRegularizationRules para este mismo campo.
+      dependeDe: {
+        op: "and",
+        args: [{ op: "defined", key: "recepcionMunicipal" }, { var: "recepcionMunicipal" }],
+      },
+    },
+    {
+      documento: "Croquis de ubicación + plano de emplazamiento escala 1:500",
+      category: "ARQUITECTO",
+      paraQueSirve: "Ubica la propiedad y la construcción dentro del predio",
+      dondeSeObtiene: "Lo generas tú mismo en ObraBien (croquis referencial), o tu profesional prepara la versión final",
+      obligatoriedad: "MINIMO",
+      origen: "PROFESIONAL",
+      momento: "PREVIO",
+      soporteObraBien: "GENERA_PLATAFORMA",
+      citaNormativa: "Formulario 12.1, sección 6",
+      estadoValidacion: "VALIDADO",
+      dependeDe: null,
+    },
+    {
+      documento: "Planos escala 1:50 (plantas, elevación, corte) + cuadro de superficies",
+      category: "ARQUITECTO",
+      paraQueSirve: "Documento técnico base de toda regularización — muestra lo construido tal como está, con el cuadro de superficies",
+      dondeSeObtiene: "Arquitecto o profesional competente (ObraBien aporta el cálculo de recintos como insumo)",
+      obligatoriedad: "MINIMO",
+      origen: "PROFESIONAL",
+      momento: "PREVIO",
+      soporteObraBien: "GESTION_EXTERNA",
+      citaNormativa: "Formulario 12.1, sección 6",
+      estadoValidacion: "VALIDADO",
+      dependeDe: null,
+    },
+    {
+      documento: "Especificaciones técnicas resumidas",
+      category: "ARQUITECTO",
+      paraQueSirve: "Detalla materiales y soluciones constructivas usadas",
+      dondeSeObtiene: "Arquitecto o profesional competente",
+      obligatoriedad: "MINIMO",
+      origen: "PROFESIONAL",
+      momento: "PREVIO",
+      soporteObraBien: "GESTION_EXTERNA",
+      citaNormativa: "Formulario 12.1, sección 6",
+      estadoValidacion: "VALIDADO",
+      dependeDe: null,
+    },
+    {
+      documento: "Informe del profesional competente",
+      category: "ARQUITECTO",
+      paraQueSirve: "Informe técnico del profesional que certifica la seguridad y habitabilidad de la construcción",
+      dondeSeObtiene: "Arquitecto, ingeniero civil, ingeniero constructor o constructor civil habilitado",
+      obligatoriedad: "MINIMO",
+      origen: "PROFESIONAL",
+      momento: "PREVIO",
+      soporteObraBien: "GESTION_EXTERNA",
+      citaNormativa: "Numeral 6, art. 1° Ley 20.898",
+      estadoValidacion: "VALIDADO",
+      dependeDe: null,
+    },
+    {
+      documento: "Formulario único de estadísticas de edificación",
+      category: "DOM",
+      paraQueSirve: "Formulario estadístico oficial que acompaña toda solicitud de permiso o regularización",
+      dondeSeObtiene: "Tu profesional lo completa junto con el resto del expediente",
+      obligatoriedad: "MINIMO",
+      origen: "PROFESIONAL",
+      momento: "PREVIO",
+      soporteObraBien: "GESTION_EXTERNA",
+      citaNormativa: "Formulario 12.1, sección 6",
+      estadoValidacion: "VALIDADO",
+      dependeDe: null,
+    },
+    {
+      documento: "Fotocopia patente del profesional que suscribe",
+      category: "ARQUITECTO",
+      paraQueSirve: "Acredita que el profesional está habilitado para ejercer en la comuna",
+      dondeSeObtiene: "Tu profesional la aporta",
+      obligatoriedad: "MINIMO",
+      origen: "PROFESIONAL",
+      momento: "PREVIO",
+      soporteObraBien: "GESTION_EXTERNA",
+      citaNormativa: "Formulario 12.1, sección 6",
+      estadoValidacion: "VALIDADO",
+      dependeDe: null,
+    },
+    {
+      documento: "Proyecto de cálculo estructural",
+      category: "ARQUITECTO",
+      paraQueSirve: "Certifica que la estructura es segura — exigible según tamaño/material",
+      dondeSeObtiene: "Ingeniero estructural o civil",
+      obligatoriedad: "CONDICIONAL",
+      origen: "PROFESIONAL",
+      momento: "PREVIO",
+      soporteObraBien: "GESTION_EXTERNA",
+      citaNormativa: "Numeral 6, art. 2° Ley 20.898",
+      estadoValidacion: "VALIDADO",
+      dependeDe: { op: "or", args: [EXCEDE_TRAMO, MADERA_SEGUNDO_PISO] },
+    },
+    {
+      documento: "Fotocopia cédula de identidad, propietario mayor de 65 años",
+      category: "DOM",
+      paraQueSirve: "Exigido cuando el propietario es mayor de 65 años",
+      dondeSeObtiene: "La aportas tú",
+      obligatoriedad: "CONDICIONAL",
+      origen: "USUARIO",
+      momento: "PREVIO",
+      soporteObraBien: "GESTION_EXTERNA",
+      citaNormativa: "Formulario 12.1, sección 6",
+      estadoValidacion: "VALIDADO",
+      // Sin pregunta de edad en el wizard hoy — fuera de alcance de esta
+      // fase agregarla (no se toca el motor de reglas). Sin dependeDe
+      // computable, el documento se muestra siempre como condicional.
+      dependeDe: null,
+    },
+    {
+      documento: "Acuerdo de asamblea de copropietarios",
+      category: "DOM",
+      paraQueSirve: "Exigido solo si la propiedad está acogida a copropiedad inmobiliaria",
+      dondeSeObtiene: "Comunidad/administración de copropiedad",
+      obligatoriedad: "CONDICIONAL",
+      origen: "USUARIO",
+      momento: "PREVIO",
+      soporteObraBien: "GESTION_EXTERNA",
+      citaNormativa: "Ley 21.442, si procede",
+      estadoValidacion: "VALIDADO",
+      dependeDe: null,
+    },
+    {
+      documento: "Inscripción en el Registro Nacional de la Discapacidad",
+      category: "DOM",
+      paraQueSirve: "Exigido si corresponde acogerse a beneficios asociados a discapacidad",
+      dondeSeObtiene: "Registro Civil / Registro Nacional de la Discapacidad",
+      obligatoriedad: "CONDICIONAL",
+      origen: "USUARIO",
+      momento: "PREVIO",
+      soporteObraBien: "GESTION_EXTERNA",
+      citaNormativa: "Formulario 12.1, sección 6",
+      estadoValidacion: "VALIDADO",
+      dependeDe: null,
+    },
+    {
+      documento: "Certificado de subsidio MINVU",
+      category: "MUNICIPAL",
+      paraQueSirve: "Exigido solo si el financiamiento de la construcción incluyó un subsidio MINVU",
+      dondeSeObtiene: "SERVIU / MINVU",
+      obligatoriedad: "CONDICIONAL",
+      origen: "USUARIO",
+      momento: "PREVIO",
+      soporteObraBien: "GESTION_EXTERNA",
+      citaNormativa: "Art. 15 Ley 20.898",
+      estadoValidacion: "VALIDADO",
+      dependeDe: null,
+    },
+
+    // ===== Sin respaldo confirmado en el Formulario 12.1 — lenguaje
+    // prudente exacto, momento: previo, obligatoriedad: condicional =====
+    {
+      documento: "Certificado de Informaciones Previas (CIP)",
+      category: "MUNICIPAL",
+      paraQueSirve: LENGUAJE_PRUDENTE,
+      dondeSeObtiene: "DOM de la municipalidad correspondiente",
+      obligatoriedad: "CONDICIONAL",
+      origen: "USUARIO",
+      momento: "PREVIO",
+      soporteObraBien: "GESTION_EXTERNA",
+      citaNormativa: "Sin cita directa — típico de permisos de edificación regulares, proceso distinto al Formulario 12.1",
+      estadoValidacion: "PENDIENTE_VALIDACION_PROFESIONAL",
+      dependeDe: null,
+    },
+    {
+      documento: "Copia de la escritura de la propiedad",
+      category: "NOTARIA_REGISTRO",
+      paraQueSirve: LENGUAJE_PRUDENTE,
+      dondeSeObtiene: "Notaría donde se firmó la escritura original, o CBR",
+      obligatoriedad: "CONDICIONAL",
+      origen: "USUARIO",
+      momento: "PREVIO",
+      soporteObraBien: "GESTION_EXTERNA",
+      citaNormativa: "Sin cita directa — el formulario pide datos de inscripción (fojas/año/CBR), normalmente acreditados con un certificado de dominio vigente, no con la escritura",
+      estadoValidacion: "PENDIENTE_VALIDACION_PROFESIONAL",
+      dependeDe: null,
+    },
+    {
+      documento: "Informe de revisor independiente",
+      category: "DOM",
+      paraQueSirve: LENGUAJE_PRUDENTE,
+      dondeSeObtiene: "Revisor independiente inscrito en el municipio",
+      obligatoriedad: "CONDICIONAL",
+      origen: "PROFESIONAL",
+      momento: "PREVIO",
+      soporteObraBien: "GESTION_EXTERNA",
+      citaNormativa: "Sin cita directa — la figura del revisor independiente aplica típicamente a proyectos de mayor complejidad bajo la OGUC, no a esta vía simplificada",
+      estadoValidacion: "PENDIENTE_VALIDACION_PROFESIONAL",
+      dependeDe: EXCEDE_TRAMO,
+    },
+    {
+      // Corrección Fase 2 (ver clasificacion-documentos-ley-20898.md,
+      // sección 3 y 6, punto 4): antes `obligatorio: true` sin respaldo
+      // directo — baja a condicional + lenguaje prudente.
+      documento: "Certificado de dominio vigente",
+      category: "NOTARIA_REGISTRO",
+      paraQueSirve: LENGUAJE_PRUDENTE,
+      dondeSeObtiene: "Conservador de Bienes Raíces (CBR) de la comuna",
+      obligatoriedad: "CONDICIONAL",
+      origen: "USUARIO",
+      momento: "PREVIO",
+      soporteObraBien: "GESTION_EXTERNA",
+      citaNormativa: "Sin cita directa — el formulario pide datos de inscripción registral (fojas/año/CBR) que normalmente se acreditan con este certificado, pero no lo exige explícitamente como adjunto en la sección 6",
+      estadoValidacion: "PENDIENTE_VALIDACION_PROFESIONAL",
+      dependeDe: null,
+    },
+    {
+      // ADVERTENCIA — clasificación TEMPORAL, no definitiva. "Memoria
+      // explicativa" no está resuelta en ninguna de las 3 especificaciones
+      // (diseno-informe-regularizacion.md, clasificacion-documentos-
+      // ley-20898.md, plan-implementacion-informe-regularizacion.md): no
+      // aparece ni en el listado oficial verificado (sección 2), ni en
+      // "sin respaldo" (sección 3), ni en "sale del checklist" (sección
+      // 4). Existía en el checklist antes de la Fase 2 (obligatorio:
+      // true, sin respaldo citado). Para no hacerla desaparecer
+      // silenciosamente ni afirmar una obligatoriedad sin respaldo
+      // directo, se le aplicó el MISMO tratamiento prudente ya definido
+      // para CIP/escritura/certificado de dominio (sección 3 de la
+      // clasificación) — es una decisión de implementación (aplicar un
+      // patrón ya aprobado a un caso no cubierto), NO una clasificación
+      // normativa nueva ni definitiva. No usar esta fila como precedente
+      // de que "Memoria explicativa" quedó normativamente resuelta —
+      // sigue pendiente de la misma validación profesional que el resto
+      // de la sección 3, y de la revisión del Formulario 12.4 (Tramo 2)
+      // mencionada en esa sección. Ver informe de Fase 2, sección
+      // "Contradicciones encontradas", y la aprobación de Jorge
+      // (2026-08-02) que pidió esta anotación explícita.
+      documento: "Memoria explicativa",
+      category: "ARQUITECTO",
+      paraQueSirve: LENGUAJE_PRUDENTE,
+      dondeSeObtiene: "Arquitecto o profesional competente",
+      obligatoriedad: "CONDICIONAL",
+      origen: "PROFESIONAL",
+      momento: "PREVIO",
+      soporteObraBien: "GESTION_EXTERNA",
+      citaNormativa: "Sin cita directa — no aparece como línea separada en el listado oficial verificado; podría estar cubierta por 'Especificaciones técnicas' o los planos",
+      estadoValidacion: "PENDIENTE_VALIDACION_PROFESIONAL",
+      dependeDe: null,
+    },
+
+    // ===== momento: posterior — nunca en el checklist de entrada, solo
+    // en la sección "¿Qué Ocurre Después?" del informe =====
+    {
+      documento: "Certificado de Recepción Definitiva (resultado del trámite)",
+      category: "DOM",
+      paraQueSirve: "Documento final que certifica que la construcción quedó regularizada — se obtiene al final del trámite, no se aporta para iniciarlo",
+      dondeSeObtiene: "DOM de la municipalidad correspondiente",
+      obligatoriedad: "MINIMO",
+      origen: "INSTITUCION",
+      momento: "POSTERIOR",
+      soporteObraBien: "GESTION_EXTERNA",
+      citaNormativa: "Resultado del trámite ante la DOM",
+      estadoValidacion: "VALIDADO",
+      dependeDe: null,
+    },
+    {
+      documento: "Pago de derechos municipales",
+      category: "MUNICIPAL",
+      paraQueSirve: "Comprobante de pago que la propia DOM calcula y emite después de revisar el expediente",
+      dondeSeObtiene: "Tesorería municipal",
+      obligatoriedad: "MINIMO",
+      origen: "INSTITUCION",
+      momento: "POSTERIOR",
+      soporteObraBien: "GESTION_EXTERNA",
+      citaNormativa: "Formularios 12.2 / 12.3",
+      estadoValidacion: "VALIDADO",
+      dependeDe: null,
+    },
+    {
+      documento: "Inscripción de la recepción en el Conservador de Bienes Raíces",
+      category: "NOTARIA_REGISTRO",
+      paraQueSirve: "Paso final — deja constancia registral de la regularización, una vez obtenida la recepción definitiva",
+      dondeSeObtiene: "Conservador de Bienes Raíces (CBR) de la comuna",
+      obligatoriedad: "MINIMO",
+      origen: "USUARIO",
+      momento: "POSTERIOR",
+      soporteObraBien: "GESTION_EXTERNA",
+      citaNormativa: "Paso final de registro, no un requisito de entrada",
+      estadoValidacion: "VALIDADO",
       dependeDe: null,
     },
   ] as const;
@@ -265,7 +523,12 @@ export async function seedRegularizationDocuments(prisma: PrismaClient) {
         category: doc.category,
         paraQueSirve: doc.paraQueSirve,
         dondeSeObtiene: doc.dondeSeObtiene,
-        obligatorio: doc.obligatorio,
+        obligatoriedad: doc.obligatoriedad,
+        origen: doc.origen,
+        momento: doc.momento,
+        soporteObraBien: doc.soporteObraBien,
+        citaNormativa: doc.citaNormativa,
+        estadoValidacion: doc.estadoValidacion,
         dependeDe: doc.dependeDe ?? undefined,
         order: i,
       },

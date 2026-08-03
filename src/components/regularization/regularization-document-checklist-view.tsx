@@ -4,15 +4,16 @@ import Link from "next/link";
 import { useState, useTransition } from "react";
 import { toggleDocumentCheckAction } from "@/app/(app)/regularizacion/[id]/actions";
 import { STALE_SESSION_ERROR, STALE_SESSION_MESSAGE } from "@/lib/stale-session";
-import type { RegularizationDocumentItem } from "@/lib/regularization-documents";
+import { describeDocumentOrigen, describeObligatoriedad, type RegularizationDocumentItem } from "@/lib/regularization-document-labels";
 
 // Adaptación de ShoppingListView (src/components/shopping-list/) — mismo
 // patrón de checkbox optimista + useTransition + rollback en sesión
 // caducada. Cambia: materialName -> documento, quantity/unit/cost
 // desaparecen (no aplican a un documento), sourceProjectNames ->
-// paraQueSirve + dondeSeObtiene, se agrega category como agrupador y un
-// badge "Opcional" para obligatorio:false. Documentos con dependeDe falso
-// ya vienen excluidos de `items` (filtrados en getVisibleDocumentChecklist,
+// paraQueSirve + dondeSeObtiene, se agrega category como agrupador y una
+// etiqueta combinada "Obligatoriedad · origen" (Fase 2, modelo de tres
+// ejes). Documentos con dependeDe falso o momento:posterior ya vienen
+// excluidos de `items` (filtrados en getVisibleDocumentChecklist,
 // servidor) — esta vista nunca los ve, no hay que ocultarlos acá.
 const CATEGORY_LABELS: Record<string, string> = {
   MUNICIPAL: "Municipal",
@@ -45,10 +46,12 @@ export function RegularizationDocumentChecklistView({
     });
   };
 
-  // Progreso: solo documentos obligatorios, y solo entre los visibles
-  // (los ya filtrados por dependeDe en el servidor) — un documento
-  // opcional o excluido por condición no cuenta en el denominador.
-  const requiredItems = items.filter((d) => d.obligatorio);
+  // Progreso: solo documentos obligatoriedad:minimo, y solo entre los
+  // visibles (los ya filtrados por dependeDe/momento en el servidor) —
+  // un documento condicional o excluido por condición no cuenta en el
+  // denominador (mismo criterio que el "avance del expediente" del
+  // informe, ver diseño sección 8).
+  const requiredItems = items.filter((d) => d.obligatoriedad === "MINIMO");
   const requiredDone = requiredItems.filter((d) => d.checked).length;
 
   const grouped = CATEGORY_ORDER.map((category) => ({
@@ -94,17 +97,26 @@ export function RegularizationDocumentChecklistView({
                       aria-label={`Reunido: ${doc.documento}`}
                     />
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
                         <span className={`font-medium text-[15px] ${doc.checked ? "line-through text-ink-muted" : ""}`}>
                           {doc.documento}
                         </span>
-                        {!doc.obligatorio && (
-                          <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-safety-tint text-safety">
-                            Opcional
+                        {doc.estadoValidacion === "PENDIENTE_VALIDACION_PROFESIONAL" && (
+                          <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-amber-100 text-amber-800">
+                            Pendiente de validación normativa
                           </span>
                         )}
                       </div>
-                      <p className="text-xs text-ink-muted mt-1">{doc.paraQueSirve}</p>
+                      <p className="text-xs text-ink-muted mt-1">
+                        {describeObligatoriedad(doc.obligatoriedad)} · {describeDocumentOrigen(doc.origen)}
+                      </p>
+                      <p
+                        className={`text-xs mt-1 ${
+                          doc.estadoValidacion === "PENDIENTE_VALIDACION_PROFESIONAL" ? "text-amber-700" : "text-ink-muted"
+                        }`}
+                      >
+                        {doc.paraQueSirve}
+                      </p>
                       <p className="text-xs text-ink-muted mt-1">Dónde se obtiene: {doc.dondeSeObtiene}</p>
                     </div>
                   </div>

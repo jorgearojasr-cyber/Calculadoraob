@@ -4,7 +4,7 @@ import { renderToBuffer } from "@react-pdf/renderer";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { evaluateRegularizationRules } from "@/lib/regularization-rules";
-import { getVisibleDocumentChecklist } from "@/lib/regularization-documents";
+import { getVisibleDocumentChecklist, getPosteriorDocuments } from "@/lib/regularization-documents";
 import { RegularizationCarpetaDocument } from "@/lib/regularization-pdf";
 import type { SketchData } from "@/lib/regularization-sketch";
 
@@ -23,7 +23,7 @@ export async function GET(_request: Request, { params }: { params: { id: string 
   const regCase = await prisma.regularizationCase.findUnique({ where: { id: params.id } });
   if (!regCase || regCase.userId !== session.user.id) return new NextResponse(null, { status: 404 });
 
-  const [rules, documents, rooms, photos, sketch] = await Promise.all([
+  const [rules, documents, documentsPosteriores, rooms, photos, sketch] = await Promise.all([
     evaluateRegularizationRules({
       tipoConstruccion: regCase.tipoConstruccion,
       anioConstruccion: regCase.anioConstruccion,
@@ -33,13 +33,23 @@ export async function GET(_request: Request, { params }: { params: { id: string 
       avaluoFiscalPesos: regCase.avaluoFiscalPesos,
     }),
     getVisibleDocumentChecklist(regCase.id, session.user.id),
+    getPosteriorDocuments(),
     prisma.regularizationRoom.findMany({ where: { caseId: regCase.id }, orderBy: { order: "asc" } }),
     prisma.regularizationPhoto.findMany({ where: { caseId: regCase.id }, orderBy: { createdAt: "asc" } }),
     prisma.regularizationSketch.findUnique({ where: { caseId: regCase.id } }),
   ]);
 
+  // Folio simple — identifica el documento en conversaciones con el
+  // profesional/DOM ("mira el folio OB-REG-2026-a1b2c3d4"). No es un
+  // correlativo transaccional (no hay tabla de secuencia); usa el año de
+  // generación + los primeros 8 caracteres del cuid del caso, que ya es
+  // único — suficiente para identificar el documento sin agregar estado
+  // nuevo en Fase 1.
+  const folio = `OB-REG-${new Date().getFullYear()}-${regCase.id.slice(0, 8)}`;
+
   const buffer = await renderToBuffer(
     RegularizationCarpetaDocument({
+      folio,
       regCase: {
         name: regCase.name,
         tipoConstruccion: regCase.tipoConstruccion,
@@ -52,9 +62,11 @@ export async function GET(_request: Request, { params }: { params: { id: string 
       rules,
       rooms,
       documents,
+      documentsPosteriores,
       photos,
       sketch: (sketch?.dataJson as unknown as SketchData) ?? null,
       generatedAt: new Date(),
+      caseUpdatedAt: regCase.updatedAt,
     })
   );
 

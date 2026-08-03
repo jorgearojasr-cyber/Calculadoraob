@@ -189,8 +189,14 @@ function dimensionPrimitives(el: DimensionElement): [PathPrimitive, TextPrimitiv
   const t2ay = el.y2 + ny * tick;
   const t2bx = el.x2 - nx * tick;
   const t2by = el.y2 - ny * tick;
-  const midX = (el.x1 + el.x2) / 2 + nx * 8;
-  const midY = (el.y1 + el.y2) / 2 + ny * 8;
+  // 20cm en vez de 8cm: un muro típico (10-20cm de espesor) se dibuja
+  // centrado en la línea de cota, así que un offset menor que su medio
+  // espesor deja la etiqueta superpuesta con el trazo del muro en vez
+  // de despejada hacia afuera (bug real, detectado en la verificación
+  // visual de Fase 4 con datos poblados).
+  const LABEL_OFFSET = 20; // cm
+  const midX = (el.x1 + el.x2) / 2 + nx * LABEL_OFFSET;
+  const midY = (el.y1 + el.y2) / 2 + ny * LABEL_OFFSET;
 
   return [
     {
@@ -254,6 +260,15 @@ export function computeViewBox(elements: SketchElement[]): { minX: number; minY:
       consider(el.x, el.y);
       const rot = deg2rad(el.rotation);
       consider(el.x + el.width * Math.cos(rot), el.y + el.width * Math.sin(rot));
+      if (el.type === "door") {
+        // El arco de la puerta abre hacia el punto de la hoja (perpendicular
+        // al vano, a distancia `width`), no solo hacia su extremo final —
+        // sin este punto, el viewBox queda más chico que el arco dibujado y
+        // este se corta/desborda fuera del croquis (bug real, detectado en
+        // la verificación visual de Fase 4 con datos poblados).
+        const leafRot = rot + Math.PI / 2;
+        consider(el.x + el.width * Math.cos(leafRot), el.y + el.width * Math.sin(leafRot));
+      }
     } else if (el.type === "text") {
       consider(el.x, el.y);
     }
