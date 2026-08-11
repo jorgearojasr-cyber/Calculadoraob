@@ -17,7 +17,7 @@ export const TASK_IMAGES: Record<string, string> = {
   "cambiar-o-instalar-un-wc": "/images/categorias/wc.png",
   "instalar-un-enchufe-reemplazo": "/images/categorias/enchufe.png",
   "construir-un-radier": "/images/categorias/radier.png",
-  "pintar-una-habitacion": "/images/categorias/pintar-muro.png",
+  "pintar-una-habitacion": "/images/categorias/pintar-habitacion.png",
   "instalar-ceramica": "/images/categorias/ceramica.png",
   "construir-una-piscina": "/images/categorias/piscina.png",
 };
