@@ -383,7 +383,10 @@ export function QuestionGroupStep({
                     value={values[question.key]}
                     onChange={(e) => setValue(question.key, e.target.value)}
                     onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
-                    onFocus={() => setActiveKey(question.key)}
+                    onFocus={(e) => {
+                      e.target.select();
+                      setActiveKey(question.key);
+                    }}
                     onBlur={() => setActiveKey((prev) => (prev === question.key ? null : prev))}
                     placeholder="0"
                     className="w-full bg-transparent outline-none font-display placeholder:text-ink-faint text-2xl"
@@ -456,7 +459,10 @@ export function QuestionGroupStep({
                   value={values[question.key]}
                   onChange={(e) => setValue(question.key, e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
-                  onFocus={() => setActiveKey(question.key)}
+                  onFocus={(e) => {
+                    e.target.select();
+                    setActiveKey(question.key);
+                  }}
                   onBlur={() => setActiveKey((prev) => (prev === question.key ? null : prev))}
                   placeholder="0"
                   className={`w-full bg-transparent outline-none font-display placeholder:text-ink-faint ${

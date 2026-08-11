@@ -181,6 +181,7 @@ export function ApplianceConsumptionStep({
                           inputMode="numeric"
                           value={state.quantity}
                           onChange={(e) => update(appliance.id, { quantity: e.target.value })}
+                          onFocus={(e) => e.target.select()}
                           className="w-full bg-transparent outline-none font-display text-base"
                         />
                       </div>
@@ -196,6 +197,7 @@ export function ApplianceConsumptionStep({
                         inputMode="decimal"
                         value={state.watts}
                         onChange={(e) => update(appliance.id, { watts: e.target.value })}
+                        onFocus={(e) => e.target.select()}
                         className="w-full bg-transparent outline-none font-display text-base"
                       />
                       <span className="font-mono text-xs text-ink-muted">W</span>
@@ -209,6 +211,7 @@ export function ApplianceConsumptionStep({
                         inputMode="decimal"
                         value={state.hours}
                         onChange={(e) => update(appliance.id, { hours: e.target.value })}
+                        onFocus={(e) => e.target.select()}
                         className="w-full bg-transparent outline-none font-display text-base"
                       />
                       <span className="font-mono text-xs text-ink-muted">h/día</span>

@@ -92,7 +92,10 @@ export function FieldRow({
             value={value}
             onChange={(e) => onChange(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && onEnter()}
-            onFocus={onFocus}
+            onFocus={(e) => {
+              e.target.select();
+              onFocus?.();
+            }}
             onBlur={onBlur}
             placeholder="0"
             className="w-full bg-transparent outline-none font-display text-xl placeholder:text-ink-faint"

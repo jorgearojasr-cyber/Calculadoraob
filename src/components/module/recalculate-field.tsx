@@ -52,6 +52,7 @@ export function RecalculateField({
             inputMode="decimal"
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
+            onFocus={(e) => e.target.select()}
             className="w-20 bg-transparent outline-none font-display text-lg"
           />
           {unit && <span className="font-mono text-xs text-ink-muted">{unit}</span>}

@@ -299,6 +299,7 @@ export function QuestionStep({
           value={textValue}
           onChange={(e) => setTextValue(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
+          onFocus={(e) => isNumber && e.target.select()}
           placeholder={isNumber ? "0" : ""}
           className="w-full bg-transparent outline-none text-2xl font-display placeholder:text-ink-faint"
         />

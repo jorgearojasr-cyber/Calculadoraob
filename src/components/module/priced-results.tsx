@@ -144,6 +144,7 @@ export function PricedResults({
                     inputMode="decimal"
                     value={priceStr}
                     onChange={(e) => handlePriceChange(result.key, e.target.value)}
+                    onFocus={(e) => e.target.select()}
                     placeholder="0"
                     className="w-24 rounded-lg px-2 py-1 border border-border text-sm outline-none focus:border-ink"
                   />

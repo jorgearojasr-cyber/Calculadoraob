@@ -36,6 +36,8 @@ const INVARIANT = new Set([
   "m³",
   "m³/h",
   "m lineal",
+  "ml",
+  "%",
   "kwh/mes",
   "$/kwh",
   "capa",

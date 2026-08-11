@@ -103,6 +103,7 @@ export function ConditionalRevealStep({
               value={numberValue}
               onChange={(e) => setNumberValue(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleSubmitNumber()}
+              onFocus={(e) => e.target.select()}
               placeholder="0"
               className="w-full bg-transparent outline-none text-2xl font-display placeholder:text-ink-faint"
             />

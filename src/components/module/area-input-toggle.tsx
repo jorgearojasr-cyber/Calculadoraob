@@ -193,7 +193,10 @@ export function AreaInputToggle({
                   inputMode="decimal"
                   value={primary}
                   onChange={(e) => setPrimary(e.target.value)}
-                  onFocus={() => setActiveInput("largo")}
+                  onFocus={(e) => {
+                    e.target.select();
+                    setActiveInput("largo");
+                  }}
                   onBlur={() => setActiveInput((prev) => (prev === "largo" ? null : prev))}
                   placeholder="0"
                   className="w-full bg-transparent outline-none font-display text-xl placeholder:text-ink-faint"
@@ -209,7 +212,10 @@ export function AreaInputToggle({
                   inputMode="decimal"
                   value={secondary}
                   onChange={(e) => setSecondary(e.target.value)}
-                  onFocus={() => setActiveInput("ancho")}
+                  onFocus={(e) => {
+                    e.target.select();
+                    setActiveInput("ancho");
+                  }}
                   onBlur={() => setActiveInput((prev) => (prev === "ancho" ? null : prev))}
                   placeholder="0"
                   className="w-full bg-transparent outline-none font-display text-xl placeholder:text-ink-faint"
@@ -230,6 +236,7 @@ export function AreaInputToggle({
                       inputMode="decimal"
                       value={row.ancho}
                       onChange={(e) => updateDeduction(i, { ancho: e.target.value })}
+                      onFocus={(e) => e.target.select()}
                       placeholder="Ancho"
                       aria-label={`Ancho de la puerta o ventana ${i + 1}`}
                       className="w-24 rounded-lg px-3 py-1.5 text-sm bg-white border border-border outline-none focus:border-ink"
@@ -240,6 +247,7 @@ export function AreaInputToggle({
                       inputMode="decimal"
                       value={row.alto}
                       onChange={(e) => updateDeduction(i, { alto: e.target.value })}
+                      onFocus={(e) => e.target.select()}
                       placeholder="Alto"
                       aria-label={`Alto de la puerta o ventana ${i + 1}`}
                       className="w-24 rounded-lg px-3 py-1.5 text-sm bg-white border border-border outline-none focus:border-ink"
@@ -297,6 +305,7 @@ export function AreaInputToggle({
               autoFocus
               value={area}
               onChange={(e) => setArea(e.target.value)}
+              onFocus={(e) => e.target.select()}
               placeholder="0"
               className="w-full bg-transparent outline-none font-display text-2xl placeholder:text-ink-faint"
             />
