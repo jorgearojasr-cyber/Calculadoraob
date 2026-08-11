@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { ArrowLeft, Calculator, LayoutGrid, Layers, SearchX } from "lucide-react";
+import { ArrowLeft, LayoutGrid, SearchX } from "lucide-react";
 import { searchContent } from "@/lib/search";
+import { ProjectCard } from "@/components/project-card";
 
 export default async function BuscarPage({
   searchParams,
@@ -48,27 +49,32 @@ export default async function BuscarPage({
           <p className="text-sm text-ink-muted mb-6">
             {results.length} resultado{results.length === 1 ? "" : "s"}
           </p>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {results.map((result) => (
-              <Link
-                key={`${result.type}-${result.id}`}
-                href={result.href}
-                className="group relative text-left rounded-2xl p-5 transition-all hover:-translate-y-0.5 bg-white border border-border hover:border-safety/40"
-              >
-                <div className="flex items-center gap-1.5 text-xs font-medium mb-1.5 text-safety">
-                  {result.type === "module" ? (
-                    <Layers className="w-3.5 h-3.5" />
-                  ) : result.type === "task" ? (
-                    <Calculator className="w-3.5 h-3.5" />
-                  ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {results.map((result) =>
+              result.type === "category" ? (
+                <Link
+                  key={`${result.type}-${result.id}`}
+                  href={result.href}
+                  className="group relative text-left rounded-2xl p-5 transition-all hover:-translate-y-0.5 bg-white border border-border hover:border-safety/40"
+                >
+                  <div className="flex items-center gap-1.5 text-xs font-medium mb-1.5 text-safety">
                     <LayoutGrid className="w-3.5 h-3.5" />
-                  )}
-                  {result.type === "category" ? "Categoría" : result.categoryName}
-                </div>
-                <h3 className="font-semibold text-[15px] mb-1">{result.name}</h3>
-                <p className="text-xs text-ink-muted">{result.description}</p>
-              </Link>
-            ))}
+                    Categoría
+                  </div>
+                  <h3 className="font-semibold text-[15px] mb-1">{result.name}</h3>
+                  <p className="text-xs text-ink-muted">{result.description}</p>
+                </Link>
+              ) : (
+                <ProjectCard
+                  key={`${result.type}-${result.id}`}
+                  href={result.href}
+                  title={result.name}
+                  categoryLabel={result.categoryName}
+                  imageUrl={result.imageUrl}
+                  stepCount={result.stepCount}
+                />
+              )
+            )}
           </div>
         </>
       )}

@@ -1,12 +1,13 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ChevronRight, ListChecks, Clock, HelpCircle as HelpCircleIcon, TriangleAlert } from "lucide-react";
+import { ListChecks, Clock, HelpCircle as HelpCircleIcon, TriangleAlert } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { getCategoryIcon } from "@/lib/category-icons";
 import { pluralizeUnit } from "@/lib/pluralize";
 import { GROUP_ICON_CHIP_CLASS } from "@/lib/group-colors";
 import { GroupChip } from "@/components/home/group-chip";
-import { TaskPhotoCard } from "@/components/home/task-photo-card";
+import { ProjectCard } from "@/components/project-card";
+import { TASK_IMAGES } from "@/lib/popular-tasks";
 
 export const dynamic = "force-dynamic";
 
@@ -21,7 +22,7 @@ export default async function GroupDetailPage({ params }: { params: Promise<{ sl
         include: {
           moduleLinks: {
             orderBy: { order: "asc" },
-            include: { module: { include: { guide: true } } },
+            include: { module: { include: { guide: true, _count: { select: { questions: true } } } } },
           },
         },
       },
@@ -53,45 +54,44 @@ export default async function GroupDetailPage({ params }: { params: Promise<{ sl
   const Icon = getCategoryIcon(group.icon);
   const total = group.tasks.length;
 
-  // Cada tarea se muestra como una tarjeta de texto plano, salvo que
-  // tenga foto — ahí pasa a TaskPhotoCard. Si una tarea con foto tiene
-  // 2+ moduleLinks (ej. "Construir una piscina" -> Rectangular/Circular),
-  // cada link con su propia foto se muestra como su propia tarjeta en
-  // vez de una sola tarjeta para toda la tarea, porque la foto real
-  // corresponde a la opción específica, no a la tarea genérica.
-  type TaskCard =
-    | { kind: "photo"; key: string; href: string; imageUrl: string | null; title: string; description: string | null }
-    | { kind: "plain"; key: string; href: string; title: string };
+  // Fase 1 de homogeneización visual (07-ago-2026): toda tarea se muestra
+  // con la misma ProjectCard, con o sin foto (el placeholder de la tarjeta
+  // reemplaza la antigua distinción "photo" vs "plain" con layouts
+  // distintos). Si una tarea tiene 2+ moduleLinks (ej. "Construir una
+  // piscina" -> Rectangular/Circular), cada link se muestra como su propia
+  // tarjeta, porque cada opción es un cálculo distinto con su propia foto e
+  // cantidad de pasos, no la tarea genérica.
+  type TaskCard = { key: string; href: string; imageUrl: string | null; title: string; stepCount: number | null };
 
   const taskCards: TaskCard[] = group.tasks.flatMap((task): TaskCard[] => {
-    const linksWithPhoto = task.moduleLinks.filter((l) => l.imageUrl);
-    if (task.moduleLinks.length > 1 && linksWithPhoto.length > 0) {
+    if (task.moduleLinks.length > 1) {
       return task.moduleLinks.map((link) => ({
-        kind: "photo",
         key: link.id,
         // La forma elegida (label, ej. "Rectangular"/"Circular") viaja como
         // ?shape= para que /empezar/[taskSlug] la propague al plan — antes
         // las 2 tarjetas apuntaban al mismo href y la elección no llegaba a
         // ningún lado (ver diagnóstico de "Construir una piscina").
         href: link.label ? `/empezar/${task.slug}?shape=${encodeURIComponent(link.label.toLowerCase())}` : `/empezar/${task.slug}`,
-        imageUrl: link.imageUrl,
+        // Sin foto propia del link/módulo, cae a la foto de la tarea
+        // completa (TASK_IMAGES, ya aprobada) antes que al placeholder —
+        // menos preciso que una foto por forma, pero más útil que nada.
+        imageUrl: link.imageUrl ?? link.module.imageUrl ?? TASK_IMAGES[task.slug] ?? null,
         title: link.module.name,
-        description: link.description,
+        stepCount: link.module._count.questions,
       }));
     }
-    if (task.imageUrl) {
-      return [
-        {
-          kind: "photo",
-          key: task.id,
-          href: `/empezar/${task.slug}`,
-          imageUrl: task.imageUrl,
-          title: task.name,
-          description: task.description,
-        },
-      ];
-    }
-    return [{ kind: "plain", key: task.id, href: `/empezar/${task.slug}`, title: task.name }];
+    const singleLink = task.moduleLinks[0];
+    return [
+      {
+        key: task.id,
+        href: `/empezar/${task.slug}`,
+        // TASK_IMAGES (curada a mano, Fase 7) tiene prioridad — mismas 6
+        // fotos ya aprobadas y visibles en el carrusel de Home.
+        imageUrl: TASK_IMAGES[task.slug] ?? task.imageUrl ?? singleLink?.imageUrl ?? singleLink?.module.imageUrl ?? null,
+        title: task.name,
+        stepCount: singleLink?.module._count.questions ?? null,
+      },
+    ];
   });
 
   return (
@@ -136,34 +136,20 @@ export default async function GroupDetailPage({ params }: { params: Promise<{ sl
         </div>
       )}
 
-      {/* 2 columnas ya desde mobile (no 1) — mismo patron que "Proyectos
-          mas buscados" en Home (exploration-toggle.tsx): con foto+aspect
-          4/3 a ancho completo de un mobile de 375px, la tarjeta ocupaba
-          casi toda la pantalla y obligaba a scroll excesivo para ver mas
-          de una opcion. */}
+      {/* 2 columnas ya desde mobile (no 1) — con la imagen 16:9 a ancho
+          completo de un mobile de 375px, la tarjeta ocuparía casi toda la
+          pantalla y obligaría a scroll excesivo para ver más de una opción. */}
       <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-10">
-        {taskCards.map((card) =>
-          card.kind === "photo" ? (
-            <TaskPhotoCard
-              key={card.key}
-              href={card.href}
-              imageUrl={card.imageUrl}
-              groupSlug={group.slug}
-              groupName={group.name}
-              title={card.title}
-              description={card.description}
-            />
-          ) : (
-            <Link
-              key={card.key}
-              href={card.href}
-              className="flex items-center justify-between gap-3 rounded-2xl p-5 bg-white border border-border hover:border-safety/40 hover:-translate-y-0.5 transition-all"
-            >
-              <span className="font-semibold text-[15px]">{card.title}</span>
-              <ChevronRight className="w-4 h-4 text-ink-faint flex-shrink-0 md:hidden" />
-            </Link>
-          )
-        )}
+        {taskCards.map((card) => (
+          <ProjectCard
+            key={card.key}
+            href={card.href}
+            title={card.title}
+            categoryLabel={group.name}
+            imageUrl={card.imageUrl}
+            stepCount={card.stepCount}
+          />
+        ))}
       </div>
 
       {modulesWithGuide.length > 0 && (

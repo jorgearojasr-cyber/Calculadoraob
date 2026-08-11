@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { ArrowLeft, ChevronRight } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { getCategoryIcon } from "@/lib/category-icons";
+import { ProjectCard } from "@/components/project-card";
 
 export const revalidate = 3600;
 
@@ -25,7 +26,13 @@ export default async function CategoryPage({ params }: { params: { slug: string 
 
   const category = await prisma.category.findUnique({
     where: { slug: params.slug },
-    include: { modules: { where: { published: true }, orderBy: { name: "asc" } } },
+    include: {
+      modules: {
+        where: { published: true },
+        orderBy: { name: "asc" },
+        include: { _count: { select: { questions: true } } },
+      },
+    },
   });
 
   if (!category) notFound();
@@ -82,17 +89,16 @@ export default async function CategoryPage({ params }: { params: { slug: string 
           </div>
         ) : (
           <>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {visibleModules.map((mod) => (
-                <Link
+                <ProjectCard
                   key={mod.id}
                   href={`/categorias/${category.slug}/${mod.slug}`}
-                  className="group relative text-left rounded-2xl p-5 transition-all hover:-translate-y-0.5 bg-white border border-border hover:border-safety/40"
-                >
-                  <h3 className="font-semibold text-[15px] mb-1">{mod.name}</h3>
-                  <p className="text-xs text-ink-muted">{mod.description}</p>
-                  <ChevronRight className="w-4 h-4 absolute bottom-5 right-5 opacity-0 group-hover:opacity-100 transition-opacity text-safety" />
-                </Link>
+                  title={mod.name}
+                  categoryLabel={category.name}
+                  imageUrl={mod.imageUrl}
+                  stepCount={mod._count.questions}
+                />
               ))}
             </div>
             {hiddenAdvancedCount > 0 && (

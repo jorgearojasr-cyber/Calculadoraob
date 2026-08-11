@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { TASK_IMAGES } from "@/lib/popular-tasks";
 
 export type SearchResult = {
   type: "module" | "category" | "task";
@@ -7,6 +8,11 @@ export type SearchResult = {
   description: string;
   href: string;
   categoryName: string;
+  // Solo poblado para "module"/"task" (tarjetas de proyecto/calculadora,
+  // ver ProjectCard) — "category" no representa un cálculo, no tiene
+  // imagen ni cantidad de pasos.
+  imageUrl: string | null;
+  stepCount: number | null;
 };
 
 // Minúsculas + sin tildes/diacríticos, para tolerar variaciones de acentos
@@ -114,6 +120,8 @@ export async function searchContent(rawQuery: string): Promise<SearchResult[]> {
         name: true,
         description: true,
         searchKeywords: true,
+        imageUrl: true,
+        _count: { select: { questions: true } },
         category: { select: { slug: true, name: true } },
       },
     }),
@@ -130,15 +138,23 @@ export async function searchContent(rawQuery: string): Promise<SearchResult[]> {
         slug: true,
         name: true,
         description: true,
+        imageUrl: true,
         group: { select: { name: true } },
-        moduleLinks: { select: { moduleId: true } },
+        moduleLinks: {
+          orderBy: { order: "asc" },
+          select: {
+            moduleId: true,
+            imageUrl: true,
+            module: { select: { imageUrl: true, _count: { select: { questions: true } } } },
+          },
+        },
       },
     }),
   ]);
 
   // Categoría y ProjectGroup son taxonomías paralelas (Categoría = "por
   // material" en /categorias, ProjectGroup = "qué quieres construir" en
-  // /grupos, con fotos vía TaskPhotoCard). Cuando una categoría tiene un
+  // /grupos, con fotos vía ProjectCard). Cuando una categoría tiene un
   // grupo homónimo, el resultado de búsqueda lleva a /grupos en vez de
   // /categorias — evita que buscar "piscina" caiga en el listado de texto
   // plano cuando ya existe la versión con fotos para lo mismo.
@@ -160,6 +176,8 @@ export async function searchContent(rawQuery: string): Promise<SearchResult[]> {
         description: mod.description,
         href: `/categorias/${mod.category.slug}/${mod.slug}`,
         categoryName: mod.category.name,
+        imageUrl: mod.imageUrl,
+        stepCount: mod._count.questions,
       },
     });
   }
@@ -185,6 +203,7 @@ export async function searchContent(rawQuery: string): Promise<SearchResult[]> {
     if (task.moduleLinks.length === 1) {
       suppressedModuleIds.add(task.moduleLinks[0].moduleId);
     }
+    const firstLink = task.moduleLinks[0];
     scored.push({
       score,
       result: {
@@ -194,6 +213,12 @@ export async function searchContent(rawQuery: string): Promise<SearchResult[]> {
         description: task.description ?? "",
         href: `/empezar/${task.slug}`,
         categoryName: task.group.name,
+        // TASK_IMAGES (curada a mano, Fase 7) tiene prioridad — mismas 6
+        // fotos ya aprobadas y visibles en el carrusel de Home; sin esto,
+        // un resultado de búsqueda para esas mismas tareas mostraría
+        // placeholder en vez de la foto real ya disponible.
+        imageUrl: TASK_IMAGES[task.slug] ?? task.imageUrl ?? firstLink?.imageUrl ?? firstLink?.module.imageUrl ?? null,
+        stepCount: firstLink?.module._count.questions ?? null,
       },
     });
   }
@@ -216,6 +241,8 @@ export async function searchContent(rawQuery: string): Promise<SearchResult[]> {
         description: category.description,
         href: matchingGroupSlug ? `/grupos/${matchingGroupSlug}` : `/categorias/${category.slug}`,
         categoryName: category.name,
+        imageUrl: null,
+        stepCount: null,
       },
     });
   }

@@ -2,8 +2,8 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import Image from "next/image";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ProjectCard } from "@/components/project-card";
 import type { PopularTaskCard } from "@/lib/popular-tasks";
 
 // Carrusel "Proyectos más buscados" — especificación de UI de Home
@@ -101,41 +101,15 @@ export function PopularTasksCarousel({ tasks }: { tasks: PopularTaskCard[] }) {
           className="flex gap-3 sm:gap-4 overflow-x-auto pb-1 [scroll-snap-type:x_mandatory] [scroll-behavior:smooth] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
         >
           {tasks.map((task) => (
-            <Link
+            <ProjectCard
               key={task.id}
               href={task.href}
-              className="flex-none w-[186px] sm:w-[288px] rounded-[20px] sm:rounded-[22px] bg-white border border-[#EEF1F6] overflow-hidden [scroll-snap-align:start] focus-visible:outline focus-visible:outline-2 focus-visible:outline-action focus-visible:outline-offset-2"
-              style={{ boxShadow: "0 10px 24px rgba(16,32,58,.10)" }}
-            >
-              <div className="relative w-full h-[124px] sm:h-[150px] bg-[#EEF1F6]">
-                {task.image && (
-                  <Image
-                    src={task.image}
-                    alt={task.name}
-                    fill
-                    className="object-cover"
-                    sizes="(max-width: 640px) 186px, 288px"
-                  />
-                )}
-                <span
-                  className="absolute left-2.5 top-2.5 sm:left-3 sm:top-3 text-[11px] sm:text-xs font-bold px-2.5 sm:px-[11px] py-1.5 rounded-full text-[#10203A]"
-                  style={{ backgroundColor: "rgba(255,255,255,.94)" }}
-                >
-                  {task.groupName}
-                </span>
-              </div>
-              <div className="flex flex-col gap-1.5 p-3 sm:px-4 sm:pt-[14px] sm:pb-[15px]">
-                <p className="text-[16px] sm:text-[18px] font-bold" style={{ lineHeight: 1.22 }}>
-                  {task.name}
-                </p>
-                <div className="mt-auto pt-2.5 flex items-center justify-between">
-                  <span className="font-mono text-[11px] sm:text-xs text-[#7A8496]">
-                    {task.stepCount !== null ? `${task.stepCount} pasos` : ""}
-                  </span>
-                  <span className="text-[14px] font-bold text-action">Calcular →</span>
-                </div>
-              </div>
-            </Link>
+              title={task.name}
+              categoryLabel={task.groupName}
+              imageUrl={task.image}
+              stepCount={task.stepCount}
+              className="flex-none w-[186px] sm:w-[288px] [scroll-snap-align:start]"
+            />
           ))}
         </div>
 

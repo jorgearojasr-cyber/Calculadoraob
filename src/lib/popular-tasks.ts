@@ -54,7 +54,7 @@ export async function getPopularTasks(): Promise<PopularTaskCard[]> {
       moduleLinks: {
         orderBy: { order: "asc" },
         take: 1,
-        include: { module: { select: { _count: { select: { questions: true } } } } },
+        include: { module: { select: { imageUrl: true, _count: { select: { questions: true } } } } },
       },
     },
   });
@@ -66,7 +66,12 @@ export async function getPopularTasks(): Promise<PopularTaskCard[]> {
       slug: t.slug,
       name: t.name,
       href: TASK_HREF_OVERRIDES[t.slug] ?? `/empezar/${t.slug}`,
-      image: TASK_IMAGES[t.slug] ?? null,
+      // TASK_IMAGES (curada a mano) tiene prioridad mientras exista — es el
+      // contenido fotográfico ya cargado hoy; Module.imageUrl es el campo
+      // único de fase 2 (todavía vacío), dejado como fallback para que la
+      // misma imagen del proyecto se reutilice sola apenas se cargue ahí,
+      // sin tocar este archivo de nuevo.
+      image: TASK_IMAGES[t.slug] ?? t.moduleLinks[0]?.module.imageUrl ?? null,
       groupName: t.group.name,
       stepCount: t.moduleLinks[0]?.module._count.questions ?? null,
     }));
