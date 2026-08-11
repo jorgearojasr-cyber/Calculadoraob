@@ -624,6 +624,18 @@ export const MODULE_CONFIG: Record<string, ModuleVisualConfig> = {
     optionalQuestionKeys: ["precio-kwh"],
   },
 
+  // Cerámica para baño (Fase 4D, 09-ago-2026): el descuento de puertas/
+  // ventanas es opcional — "no hay vanos que descontar" es un caso legítimo,
+  // pero la validación global de NUMBER exige > 0, así que no se puede
+  // resolver pidiendo "escribe 0" (ver conditional-reveal-step.tsx/
+  // question-step.tsx). Mismo patrón que precio-kwh: si se omite, la
+  // Formula "superficie-descontada" (condicionada con {op:"defined",...})
+  // no se calcula, y superficie-final usa el `coalesce` ya existente que
+  // cae a 0 cuando esa referencia no está disponible.
+  "ceramica-para-bano": {
+    optionalQuestionKeys: ["descuento-vanos-m2"],
+  },
+
   // Auditoría 2026-08-01 — módulos cuyo RESULTADO final es m³ pero la 3ra
   // dimensión (espesor, largo o cantidad de escalones) se pide en un paso
   // SEPARADO, no wireado a este diagrama: Cercha de techo (grupo "cuántas
