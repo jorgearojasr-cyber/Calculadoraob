@@ -16,6 +16,9 @@ import { GuideSection, type ModuleGuideData } from "./guide-section";
 import { PhotoGallery } from "./photo-gallery";
 import { RecalculateField } from "./recalculate-field";
 import { LiveSummaryPanel, type SummaryItem } from "./live-summary-panel";
+import { ExecutionAdvisorPanel } from "./execution-advisor-panel";
+import { getExecutionAdvisorReport, type InformeEjecucionUI } from "@/lib/execution-advisor/action";
+import type { WizardAnswers } from "./types";
 
 // Aplica el precio de referencia (sugerencia editable) como unitPrice
 // inicial a cada línea de resultado que aún no tiene uno propio. `previous`
@@ -36,9 +39,11 @@ function seedPrices(results: CalculationResult[], previous: CalculationResult[])
 
 export function ResultScreen({
   moduleId,
+  moduleSlug,
   moduleName,
   categoryName,
   answersSummary,
+  answers,
   results,
   infoResults,
   norms,
@@ -54,9 +59,21 @@ export function ResultScreen({
   heroResultKey,
 }: {
   moduleId: string;
+  // Asesor de Ejecución (Fase 0/4, 04-ago-2026): junto con `answers`, es
+  // lo mínimo que hace falta para poder pedir el informe del asesor
+  // (ver getExecutionAdvisorReport) — decisión de arquitectura: ResultScreen
+  // NO recibe el motor ni el loader, solo estos 2 datos ya existentes en
+  // ModuleWizard, pasados hacia abajo (data threading, sin tocar ningún
+  // componente del wizard). Opcional: la vista previa de /admin no lo pasa.
+  moduleSlug?: string;
   moduleName: string;
   categoryName: string;
   answersSummary: SummaryItem[];
+  // Respuestas crudas (WizardAnswers, keyed por Question.key) — a
+  // diferencia de `answersSummary` (formateado para mostrar, con labels
+  // en vez de option keys), esto es lo que el Asesor de Ejecución
+  // necesita para comparar respuestas reales contra las reglas cargadas.
+  answers?: WizardAnswers;
   results: CalculationResult[];
   infoResults: InfoResult[];
   norms: NormSummary[];
@@ -102,6 +119,26 @@ export function ResultScreen({
   // cualquiera de los dos está en curso.
   const [saveState, setSaveState] = useState<"idle" | "saving-next" | "saving-plan" | "error">("idle");
   const isSaving = saveState === "saving-next" || saveState === "saving-plan";
+
+  // Asesor de Ejecución (Fase 4, 04-ago-2026): se evalúa UNA sola vez acá,
+  // al montar la pantalla de resultado, con el objeto de respuestas ya
+  // completo — nunca desde el wizard (ver decisión de Fase 0). Para los
+  // ~56 módulos sin Asesor configurado, getExecutionAdvisorReport
+  // devuelve null y el panel no renderiza nada — no hace falta un
+  // `if (moduleSlug === "excavacion")` acá, la ausencia de datos ya
+  // resuelve el caso genérico.
+  const [informeEjecucion, setInformeEjecucion] = useState<InformeEjecucionUI | null>(null);
+  useEffect(() => {
+    if (!moduleSlug || !answers) return;
+    let cancelado = false;
+    getExecutionAdvisorReport(moduleSlug, answers).then((informe) => {
+      if (!cancelado) setInformeEjecucion(informe);
+    });
+    return () => {
+      cancelado = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [moduleSlug]);
   // Precarga el precio de referencia (sugerencia editable) como unitPrice
   // inicial, para que lo que se ve en pantalla sea lo mismo que se guarda
   // si el usuario no lo edita.
@@ -304,6 +341,8 @@ export function ResultScreen({
         hideFeatured={hidesFeaturedInList}
         hideTotal={showsHero && anyPriced}
       />
+
+      {informeEjecucion && <ExecutionAdvisorPanel informe={informeEjecucion} />}
 
       <NormsDisclaimer norms={norms} />
 

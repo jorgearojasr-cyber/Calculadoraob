@@ -567,9 +567,11 @@ export function ModuleWizard({
       {calculation && (
         <ResultScreen
           moduleId={moduleId}
+          moduleSlug={moduleSlug}
           moduleName={moduleName}
           categoryName={categoryName}
           answersSummary={answersSummary}
+          answers={answers}
           results={calculation.results}
           infoResults={calculation.infoResults}
           norms={calculation.norms}
