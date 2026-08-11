@@ -96,6 +96,22 @@ export type ModuleVisualConfig = {
   recalculateField?: string;
   // Ver OPTIONAL_QUESTION_KEYS.
   optionalQuestionKeys?: string[];
+  // Ver RECIPE_GROUPS.
+  recipeGroups?: RecipeGroupConfig[];
+};
+
+// Fase 9B, sprint UX V1.2 (04-ago-2026) — agrupa un resultado "primario"
+// (ej. cantidad de cargas de betonera) con sus resultados "ingrediente"
+// (ej. cemento/arena/gravilla/agua por carga) para que ResultScreen los
+// pinte juntos en una tarjeta de receta (ver RecipeCard), en vez de la
+// lista genérica de PricedResults. Genérico a propósito — cualquier
+// módulo futuro con el mismo patrón ("una cantidad base + su desglose de
+// ingredientes por unidad") reutiliza esto sin escribir componente
+// nuevo, con solo agregar su propia entrada acá.
+export type RecipeGroupConfig = {
+  title: string;
+  primaryKey: string;
+  itemKeys: string[];
 };
 
 // Mismo factor que ya usa la Variable "factor-de-inclinacion" (LOOKUP) en
@@ -131,7 +147,11 @@ export const MODULE_CONFIG: Record<string, ModuleVisualConfig> = {
         shape: "rectangle-with-depth",
         primaryLabel: "largo",
         secondaryLabel: "ancho",
-        depthLabel: "espesor",
+        // "Espesor recomendado" (no solo "Espesor") — Fase 1, sprint UX
+        // V1.2 (04-ago-2026): el valor viene precargado según el uso
+        // elegido, así que el label debe dejar claro que es una sugerencia
+        // editable, no una medida que el usuario tiene que saber de memoria.
+        depthLabel: "espesor recomendado",
         primarySubLabel: "El lado más largo",
         secondarySubLabel: "El lado más corto",
         depthSubLabel: "Sugerido según el uso, puedes ajustarlo",
@@ -146,6 +166,18 @@ export const MODULE_CONFIG: Record<string, ModuleVisualConfig> = {
     // sin volver atrás en el wizard (ver RecalculateField en
     // result-screen.tsx) — mecanismo genérico, por ahora solo conectado acá.
     recalculateField: "espesor_cm",
+    // Fase 9B, sprint UX V1.2 (04-ago-2026): dosificación por carga de
+    // betonera (ver Fase 9A — Formula.key "numero_cargas_betonera" +
+    // "*_por_carga", todas ya condicionadas a metodo_hormigon=manual, así
+    // que en el camino premezclado esta sección simplemente no aparece,
+    // sin necesitar ninguna condición acá).
+    recipeGroups: [
+      {
+        title: "Dosificación por carga de betonera",
+        primaryKey: "numero_cargas_betonera",
+        itemKeys: ["cemento_por_carga", "arena_por_carga", "gravilla_por_carga", "agua_por_carga"],
+      },
+    ],
   },
   "ceramica-pisos": {
     diagrams: {
@@ -432,8 +464,15 @@ export const MODULE_CONFIG: Record<string, ModuleVisualConfig> = {
         // el campo "diámetro" aclaraba hoyo-vs-piscina (via su helpText
         // propio); acá se sube al groupHelpText (siempre visible, no solo al
         // abrir un campo) e iguala textualmente con la variante rectangular.
+        // Fase 1, Sprint Producto V1.3 (04-ago-2026): se agrega la
+        // referencia de holgura (20-30cm) pedida por Jorge — puramente
+        // texto, no crea ninguna Variable/Formula ni toca el cálculo. Se
+        // redacta como recomendación explícita ("como referencia", "no
+        // un cálculo"), nunca como una medida verificada, y se aclara que
+        // depende del sistema constructivo — mismo criterio editorial ya
+        // usado en el resto de los helpText/note del proyecto.
         groupHelpText:
-          "Mide el hoyo terminado, no la marca en el suelo ni el tamaño de la piscina: el hoyo va más ancho y profundo que la piscina para dejar espacio de moldaje y el espesor del muro. La profundidad se mide desde el nivel del terreno hasta el fondo.",
+          "Mide el hoyo terminado, no la marca en el suelo ni el tamaño de la piscina: el hoyo va más ancho y profundo que la piscina para dejar espacio de moldaje y el espesor del muro. La profundidad se mide desde el nivel del terreno hasta el fondo. Como referencia general, muchos proyectos dejan entre 20 y 30 cm de holgura alrededor de la piscina — es solo una recomendación, no un cálculo: el valor real depende del sistema constructivo que uses, confírmalo con tu maestro o constructor.",
       },
     },
   },
@@ -584,8 +623,15 @@ export const MODULE_CONFIG: Record<string, ModuleVisualConfig> = {
         // texto que excavacion-circular — antes esta variante no tenía
         // ninguna aclaración de hoyo-vs-piscina (la circular sí, pero solo
         // en el campo "diámetro").
+        // Fase 1, Sprint Producto V1.3 (04-ago-2026): se agrega la
+        // referencia de holgura (20-30cm) pedida por Jorge — puramente
+        // texto, no crea ninguna Variable/Formula ni toca el cálculo. Se
+        // redacta como recomendación explícita ("como referencia", "no
+        // un cálculo"), nunca como una medida verificada, y se aclara que
+        // depende del sistema constructivo — mismo criterio editorial ya
+        // usado en el resto de los helpText/note del proyecto.
         groupHelpText:
-          "Mide el hoyo terminado, no la marca en el suelo ni el tamaño de la piscina: el hoyo va más ancho y profundo que la piscina para dejar espacio de moldaje y el espesor del muro. La profundidad se mide desde el nivel del terreno hasta el fondo.",
+          "Mide el hoyo terminado, no la marca en el suelo ni el tamaño de la piscina: el hoyo va más ancho y profundo que la piscina para dejar espacio de moldaje y el espesor del muro. La profundidad se mide desde el nivel del terreno hasta el fondo. Como referencia general, muchos proyectos dejan entre 20 y 30 cm de holgura alrededor de la piscina — es solo una recomendación, no un cálculo: el valor real depende del sistema constructivo que uses, confírmalo con tu maestro o constructor.",
       },
     },
   },
@@ -684,6 +730,16 @@ export const HERO_RESULT_KEYS: Record<string, string> = Object.fromEntries(
   Object.entries(MODULE_CONFIG)
     .filter(([, m]) => m.heroResultKey)
     .map(([slug, m]) => [slug, m.heroResultKey!])
+);
+
+// Ver RecipeGroupConfig — módulos con una tarjeta de "receta" (cantidad
+// base + desglose de ingredientes) además de la lista genérica de
+// PricedResults. Los Formula.key listados en cada grupo se sacan de esa
+// lista genérica (ver ResultScreen) para no duplicarse.
+export const RECIPE_GROUPS: Record<string, RecipeGroupConfig[]> = Object.fromEntries(
+  Object.entries(MODULE_CONFIG)
+    .filter(([, m]) => m.recipeGroups)
+    .map(([slug, m]) => [slug, m.recipeGroups!])
 );
 
 // Preguntas NUMBER que el usuario puede dejar en blanco y avanzar igual

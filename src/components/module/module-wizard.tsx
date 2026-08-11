@@ -21,7 +21,7 @@ import { readWizardDraft, writeWizardDraft, clearWizardDraft, type WizardDraft }
 // Configuración por módulo (recálculo, hero, preguntas opcionales) — ver
 // module-visual-config.ts, el registro único (Fase de consolidación,
 // 2026-08-02) que reemplaza los mapas que antes vivían dispersos acá.
-import { RECALCULATE_FIELDS, HERO_RESULT_KEYS, OPTIONAL_QUESTION_KEYS } from "./module-visual-config";
+import { RECALCULATE_FIELDS, HERO_RESULT_KEYS, OPTIONAL_QUESTION_KEYS, RECIPE_GROUPS } from "./module-visual-config";
 
 function isQuestionVisible(question: WizardQuestion, answers: WizardAnswers): boolean {
   if (!question.visibleIfQuestionKey) return true;
@@ -122,6 +122,11 @@ export function ModuleWizard({
     phaseId: string;
     shape?: string;
     nextPhase?: { name: string; href: string | null };
+    // Fase 4, sprint UX V1.2 (04-ago-2026): contraparte de nextPhase para
+    // el botón "Volver" del header en el primer paso — a diferencia de
+    // nextPhase, siempre viene resuelto con un href navegable (ver
+    // resolvePreviousPhase en page.tsx: nunca deja al header sin destino).
+    previousPhase?: { label: string; href: string };
   };
   // Cálculos especiales (grupo herramientas-avanzadas, ver page.tsx) — antes
   // el encuadre de "esto es una pieza suelta, no el proyecto completo"
@@ -424,10 +429,18 @@ export function ModuleWizard({
   // antes era un link suelto siempre a "/", fijo en el primer paso;
   // ahora refleja de dónde vuelve realmente el usuario en cada momento
   // del flujo, mismo criterio en todos los módulos.
+  //
+  // Fase 4, sprint UX V1.2 (04-ago-2026): en el primer paso, si el módulo
+  // se abrió desde una fase de un Plan (planContext.previousPhase, ya
+  // resuelto server-side en page.tsx), el "volver" apunta a la fase
+  // anterior (o al plan, si es la primera fase) en vez de a "Inicio" — antes
+  // ese caso perdía por completo el contexto de plan al volver atrás.
   const back = calculation
     ? { label: `Volver al paso ${steps.length}`, onClick: handleEditAnswers }
     : stepIndex === 0
-      ? { label: "Inicio", href: "/" }
+      ? planContext?.previousPhase
+        ? { label: planContext.previousPhase.label, href: planContext.previousPhase.href }
+        : { label: "Inicio", href: "/" }
       : { label: "Atrás", onClick: handleBack };
 
   return (
@@ -585,6 +598,7 @@ export function ModuleWizard({
           onEditAnswers={handleEditAnswers}
           onEditField={handleEditField}
           heroResultKey={moduleSlug ? HERO_RESULT_KEYS[moduleSlug] : undefined}
+          recipeGroups={moduleSlug ? RECIPE_GROUPS[moduleSlug] : undefined}
         />
       )}
     </div>

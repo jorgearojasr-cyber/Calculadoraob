@@ -18,6 +18,8 @@ import { RecalculateField } from "./recalculate-field";
 import { LiveSummaryPanel, type SummaryItem } from "./live-summary-panel";
 import { ExecutionAdvisorPanel } from "./execution-advisor-panel";
 import { getExecutionAdvisorReport, type InformeEjecucionUI } from "@/lib/execution-advisor/action";
+import { RecipeCard } from "./recipe-card";
+import type { RecipeGroupConfig } from "./module-visual-config";
 import type { WizardAnswers } from "./types";
 
 // Aplica el precio de referencia (sugerencia editable) como unitPrice
@@ -57,6 +59,7 @@ export function ResultScreen({
   onEditAnswers,
   onEditField,
   heroResultKey,
+  recipeGroups,
 }: {
   moduleId: string;
   // Asesor de Ejecución (Fase 0/4, 04-ago-2026): junto con `answers`, es
@@ -109,6 +112,12 @@ export function ResultScreen({
   // antes que hormigón). Sin este prop, se mantiene el criterio de
   // siempre (primer resultado no-secundario CON materialName).
   heroResultKey?: string;
+  // Fase 9B (04-ago-2026): grupos "cantidad base + ingredientes" que se
+  // pintan como RecipeCard en vez de aparecer en la lista genérica de
+  // PricedResults (ver RECIPE_GROUPS en module-visual-config.ts). Sin
+  // este prop (la mayoría de los módulos), el comportamiento es idéntico
+  // al de siempre — ningún resultado se saca de la lista genérica.
+  recipeGroups?: RecipeGroupConfig[];
 }) {
   const router = useRouter();
   const [promptOpen, setPromptOpen] = useState(false);
@@ -190,6 +199,23 @@ export function ResultScreen({
   // ningún lado, así que conserva su propio destaque en la lista.
   const firstListResult = pricedResults.find((r) => !r.isSecondary);
   const hidesFeaturedInList = showsHero && heroResult?.key === firstListResult?.key;
+
+  // Fase 9B: arma cada RecipeCard con los resultados reales (sin volver a
+  // calcular nada, solo mirar seededResults por key) y descarta el grupo
+  // completo si el resultado primario no existe (ej. camino premezclado
+  // de Radier, donde estas Formula ni se calculan por su `condition`) —
+  // así no hace falta ningún chequeo de moduleSlug acá, la ausencia de
+  // datos ya resuelve el caso genérico, mismo criterio que ya usa
+  // ExecutionAdvisorPanel más abajo.
+  const recipeSections = (recipeGroups ?? [])
+    .map((group) => ({
+      group,
+      primary: seededResults.find((r) => r.key === group.primaryKey),
+      items: group.itemKeys.map((k) => seededResults.find((r) => r.key === k)).filter((r) => r !== undefined),
+    }))
+    .filter((section) => section.primary !== undefined);
+  const recipeKeys = new Set(recipeSections.flatMap((s) => [s.group.primaryKey, ...s.group.itemKeys]));
+  const listResults = recipeKeys.size > 0 ? seededResults.filter((r) => !recipeKeys.has(r.key)) : seededResults;
   // Nota: se probó ocultar infoResults[0] de la lista de abajo (ya que se
   // repite en el subtítulo de ResultHero), pero en módulos donde
   // infoResults[0] es solo la mitad de un par relacionado (ej. Piscina:
@@ -221,6 +247,19 @@ export function ResultScreen({
     await navigator.clipboard.writeText(prompt);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+  };
+
+  // PricedResults reconstruye el array COMPLETO a partir de lo que recibe
+  // en `results` (ver ese archivo) — como acá le pasamos `listResults`
+  // (sin los resultados de recipeGroups, ver más abajo), no se puede usar
+  // setPricedResults directo: perdería esos resultados de `pricedResults`
+  // para siempre (rompería el total guardado y el proyecto guardado). Se
+  // actualiza por key, dejando intactos los que PricedResults nunca vio
+  // (siempre es un no-op cuando no hay recipeGroups — mismo resultado que
+  // setPricedResults directo).
+  const handlePricesChange = (updatedVisible: CalculationResult[]) => {
+    const byKey = new Map(updatedVisible.map((r) => [r.key, r]));
+    setPricedResults((prev) => prev.map((r) => byKey.get(r.key) ?? r));
   };
 
   // `destination` (sprint UX 03-ago-2026, ítem 4): "next-phase" salta
@@ -336,11 +375,15 @@ export function ResultScreen({
       )}
 
       <PricedResults
-        results={seededResults}
-        onPricesChange={setPricedResults}
+        results={listResults}
+        onPricesChange={handlePricesChange}
         hideFeatured={hidesFeaturedInList}
         hideTotal={showsHero && anyPriced}
       />
+
+      {recipeSections.map(({ group, primary, items }) => (
+        <RecipeCard key={group.primaryKey} title={group.title} primary={primary!} items={items} />
+      ))}
 
       {informeEjecucion && <ExecutionAdvisorPanel informe={informeEjecucion} />}
 

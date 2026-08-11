@@ -63,6 +63,67 @@ async function resolveNextPhase(
   };
 }
 
+// Fase 4, sprint UX V1.2 (04-ago-2026): contraparte de resolveNextPhase
+// para el botón "Volver" del header en el primer paso del wizard. Antes,
+// llegar acá desde una fase de un Plan mostraba "← Inicio" igual que un
+// módulo suelto — no había forma de volver a la fase anterior ni al plan.
+// A diferencia de resolveNextPhase, siempre devuelve un href resoluble
+// (nunca null): si es la primera fase del plan, o si la fase anterior
+// tiene 2+ módulos y ninguno calza con la forma actual, el destino cae a
+// /plan/[slug] en vez de dejar al header sin nada que mostrar.
+async function resolvePreviousPhase(
+  planSlug: string,
+  phaseId: string,
+  shape: string | undefined
+): Promise<{ label: string; href: string } | undefined> {
+  const plan = await prisma.projectPlan.findUnique({
+    where: { slug: planSlug },
+    include: {
+      phases: {
+        orderBy: { order: "asc" },
+        include: {
+          moduleLinks: {
+            orderBy: { order: "asc" },
+            include: { module: { include: { category: true } } },
+          },
+        },
+      },
+    },
+  });
+  if (!plan) return undefined;
+
+  const currentIndex = plan.phases.findIndex((p) => p.id === phaseId);
+  if (currentIndex === -1) return undefined;
+
+  if (currentIndex === 0) {
+    return { label: `Volver al plan: ${plan.title}`, href: `/plan/${plan.slug}` };
+  }
+
+  const previousPhase = plan.phases[currentIndex - 1];
+  const shapeParam = shape?.toLowerCase();
+  const matchingLink =
+    shapeParam && SHAPE_LABELS.has(shapeParam)
+      ? previousPhase.moduleLinks.find((link) => link.label?.toLowerCase() === shapeParam)
+      : undefined;
+  const resolvedLink = matchingLink ?? (previousPhase.moduleLinks.length === 1 ? previousPhase.moduleLinks[0] : undefined);
+
+  if (!resolvedLink) {
+    return { label: `Volver a: ${previousPhase.name}`, href: `/plan/${plan.slug}` };
+  }
+
+  const query = new URLSearchParams(resolvedLink.presetQuery ?? "");
+  query.set("plan", plan.slug);
+  query.set("phase", previousPhase.id);
+  if (resolvedLink.label && SHAPE_LABELS.has(resolvedLink.label.toLowerCase())) {
+    query.set("shape", resolvedLink.label.toLowerCase());
+  }
+
+  return {
+    label: `Volver a: ${previousPhase.name}`,
+    href: `/categorias/${resolvedLink.module.category.slug}/${resolvedLink.module.slug}?${query.toString()}`,
+  };
+}
+
 export default async function ModulePage({
   params,
   searchParams,
@@ -190,6 +251,7 @@ export default async function ModulePage({
           phaseId: searchParams.phase,
           shape: searchParams.shape,
           nextPhase: await resolveNextPhase(searchParams.plan, searchParams.phase, searchParams.shape),
+          previousPhase: await resolvePreviousPhase(searchParams.plan, searchParams.phase, searchParams.shape),
         }
       : undefined;
 

@@ -61,13 +61,22 @@ export const theme = {
   // "diagramas explicativos, no planos técnicos" — se diferencian del
   // muro con un color/trama clara y distinta (blanco + trama diagonal +
   // trazo naranjo punteado), nunca pretendiendo ser la ubicación real.
+  //
+  // Fase 8, sprint UX V1.2 (04-ago-2026): "que la incorporación de
+  // puertas/ventanas se note mucho más evidente, aunque siga siendo
+  // esquemática" — el problema no era la posición (ya se resolvía bien),
+  // era el CONTRASTE: blanco (#FFFFFF) sobre el muro casi-blanco
+  // (theme.fill.top = #F1F5FB) con una trama al 18% de opacidad y un
+  // trazo de 1.25px apenas se distinguía. Se sube la opacidad de la trama
+  // y el grosor del trazo — mismo color naranjo de marca, mismo patrón
+  // diagonal, solo con más peso visual.
   voidShape: {
     fill: "#FFFFFF",
     hatch: BRAND_ORANGE,
-    hatchOpacity: 0.18,
+    hatchOpacity: 0.42,
     stroke: BRAND_ORANGE,
-    strokeWidth: 1.25,
-    strokeDasharray: "3 2",
+    strokeWidth: 1.8,
+    strokeDasharray: "4 2",
   },
   // Retícula de modulación (Cerámica/Porcelanato, ver `tileSizeCm` en
   // DiagramV2) y pista de orientación (SPC/flotante, ver

@@ -14,7 +14,17 @@ import { bboxOf, clamp } from "./vec2";
 // < 1, para que ninguna proporción extrema (ej. 12×0,6×0,8, la Zanja del
 // mockup) colapse en una franja ilegible.
 const COMPRESSION_THRESHOLD = 0.3;
-const COMPRESSION_POWER = 0.25;
+// Fase 7, sprint UX V1.2 (04-ago-2026): 0.25 → 0.45. Con 0.25, una
+// proporción muy chica (ej. la Zanja del mockup, ancho/largo=0,05) se
+// empujaba a ~0,19 — casi 4x su proporción real, lo que se leía como
+// "deformado" en Piscinas/Excavación. 0.45 sigue evitando que colapse en
+// una franja ilegible (ver AXIS_RATIO_FLOOR) pero se acerca más a la
+// proporción real del objeto. Los casos ya razonables (ratio cercano al
+// threshold, ej. una piscina típica profundidad/largo=0,25) casi no
+// cambian — el ajuste se nota en los casos extremos, no en los normales.
+// Cálculo (fórmula del motor de resultados) sin cambios — ver
+// src/lib/formula-engine, no tocado en esta fase.
+const COMPRESSION_POWER = 0.45;
 const AXIS_RATIO_FLOOR = 0.12;
 
 function compressRatio(ratio: number): number {

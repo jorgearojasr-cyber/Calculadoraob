@@ -28,6 +28,27 @@ function FaceGradient({ id, from, to }: { id: string; from: string; to: string }
   );
 }
 
+// Fase 7, sprint UX V1.2 (04-ago-2026): el cuerpo curvo del cilindro NO
+// puede leer volumen con un degradado vertical de un solo tono (lo que
+// tenía antes) — a diferencia de la caja, que vende volumen con 2 CARAS
+// realmente distintas (wallLeft oscura / wallRight media), la superficie
+// curva nunca usaba el tono oscuro de wallLeft en absoluto, así que se
+// veía plana ("inflada") y el borde donde la curva termina (sobre todo el
+// izquierdo) se sentía como un corte abrupto en vez de un degradado hacia
+// sombra. Este degradado HORIZONTAL (izquierda oscura → centro claro,
+// el punto más cercano a la cámara → derecha media) reutiliza los MISMOS
+// 2 tonos ya definidos para la caja (wallLeft/wallRight) — mismo lenguaje
+// visual, sin inventar un color nuevo, sin tocar geometría ni cámara.
+function CylinderBodyGradient({ id }: { id: string }) {
+  return (
+    <linearGradient id={id} x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stopColor={theme.gradient.wallLeft.to} />
+      <stop offset="48%" stopColor={theme.gradient.wallRight.from} />
+      <stop offset="100%" stopColor={theme.gradient.wallRight.to} />
+    </linearGradient>
+  );
+}
+
 export function BoxSolid({
   wallLeft,
   wallRight,
@@ -120,11 +141,12 @@ export function CylinderSolid({
   return (
     <g>
       <defs>
-        <FaceGradient id={idBody} from={theme.gradient.wallRight.from} to={theme.gradient.wallRight.to} />
+        <CylinderBodyGradient id={idBody} />
         <FaceGradient id={idTop} from={theme.gradient.top.from} to={theme.gradient.top.to} />
       </defs>
-      {/* Cuerpo — un solo tono medio (un cilindro no tiene 2 caras planas
-          distintas que diferenciar como la caja). */}
+      {/* Cuerpo — degradado horizontal oscuro→claro→medio (ver
+          CylinderBodyGradient arriba): vende la curvatura igual que la
+          caja vende sus 2 caras, sin necesitar 2 polígonos separados. */}
       <path
         d={`M ${topLeft[0]} ${topLeft[1]} A ${rx} ${ry} 0 0 1 ${topRight[0]} ${topRight[1]} L ${bottomRight[0]} ${bottomRight[1]} A ${rx} ${ry} 0 0 1 ${bottomLeft[0]} ${bottomLeft[1]} Z`}
         fill={`url(#${idBody})`}

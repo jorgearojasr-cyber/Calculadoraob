@@ -96,10 +96,16 @@ export function VolumeStep({
     showArea: diagram.showArea,
   });
 
-  // El tip reutiliza el helpText que ya tenga alguna pregunta del grupo
-  // (dato específico del módulo, ya cargado en la DB) — no se hardcodea
-  // texto nuevo por módulo acá.
-  const tip = fields.map((f) => f.question.helpText).find(Boolean);
+  // Un tip POR CAMPO (Fase 1, sprint UX V1.2, 04-ago-2026) — antes se
+  // mostraba solo el primer helpText no nulo de todo el grupo, así que un
+  // campo con su propio helpText (ej. espesor) quedaba tapado si otro
+  // campo del mismo grupo (largo/ancho) ya tenía uno. Se dedupea por texto
+  // (no por campo) porque largo/ancho comparten literalmente el mismo
+  // helpText de rango — mostrarlo dos veces sería ruido, no información
+  // nueva. Patrón pensado para ser reutilizable por cualquier módulo
+  // futuro con VolumeStep (Losa, Muro, Fundación, Piscinas), sin tocar
+  // nada específico de Radier en este componente.
+  const tips = Array.from(new Set(fields.map((f) => f.question.helpText).filter((t): t is string => Boolean(t))));
 
   return (
     <div className="bg-white rounded-2xl border border-border shadow-sm p-5 md:p-8 grid md:grid-cols-[1fr_1.15fr] md:gap-10 md:items-start">
@@ -149,7 +155,13 @@ export function VolumeStep({
           {formulaText && <p className="col-span-2 mt-1 text-xs text-ink-muted">{formulaText}</p>}
         </div>
 
-        <Tip text={tip} className="mt-4 md:hidden" />
+        {tips.length > 0 && (
+          <div className="mt-4 md:hidden grid gap-2">
+            {tips.map((t) => (
+              <Tip key={t} text={t} />
+            ))}
+          </div>
+        )}
 
         {error && <p className="mt-4 text-sm text-safety">{error}</p>}
 
@@ -199,9 +211,13 @@ export function VolumeStep({
             waterFill={diagram.waterFill}
           />
         )}
-        <div className="hidden md:block mt-4">
-          <Tip text={tip} />
-        </div>
+        {tips.length > 0 && (
+          <div className="hidden md:block mt-4 grid gap-2">
+            {tips.map((t) => (
+              <Tip key={t} text={t} />
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

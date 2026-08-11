@@ -73,28 +73,48 @@ export type CylinderProjected = {
   ry: number;
 };
 
-// Proporción de achatado de la elipse (vista de un círculo desde esta
-// cámara) — no hay un valor "correcto" único para una proyección
-// simplificada de 2 ejes oblicuos + 1 vertical (una axonométrica real de
-// 3 ejes a 120° tiene una fórmula distinta); se ajusta por criterio
-// visual contra el mockup en la Fase 0 (ver conversación 2026-08-01).
-const ELLIPSE_RY_RATIO = 0.32;
+// Fase 7, sprint UX V1.2 (04-ago-2026) — reescrito desde la causa raíz,
+// no desde una calibración visual. La versión anterior definía
+// topLeft/topRight proyectando los dos extremos del diámetro A LO LARGO
+// DEL EJE "largo" (ancho=0) y por separado dibujaba una elipse con un
+// `ry` de un valor libre (ELLIPSE_RY_RATIO, ajustado "a ojo"). Esos dos
+// puntos NUNCA caían realmente sobre esa elipse — se puede verificar
+// reemplazando sus coordenadas en la ecuación de la elipse dibujada: el
+// resultado da ~1.93 en vez de 1. Ese desfase geométrico (no un problema
+// de proporción ni de color) era la causa del "escalón" entre la pared y
+// la tapa que se seguía viendo tras ajustar COMPRESSION_POWER y
+// ELLIPSE_RY_RATIO.
+//
+// Proyectando un círculo real de radio r a través de esta misma cámara
+// (parametrizado por ángulo θ, con largo=r·cosθ, ancho=r·senθ) y usando
+// cosθ−senθ=√2·cos(θ+45°), cosθ+senθ=√2·sen(θ+45°), el círculo SÍ se
+// proyecta como una elipse de eje alineado a pantalla (por la simetría de
+// AXIS_LARGO/AXIS_ANCHO), con semiejes:
+//   A (horizontal) = r · √2 · AXIS_LARGO[0]   (= r·√2·cos(18°))
+//   B (vertical)   = r · √2 · AXIS_LARGO[1]   (= r·√2·sen(18°))
+// — derivados del mismo ángulo de cámara que ya existía, cero valores
+// libres nuevos. topLeft/topRight/bottomLeft/bottomRight se definen ahora
+// como centro±A, así que quedan matemáticamente forzados a estar sobre
+// la misma elipse que se dibuja, para cualquier radio y profundidad (ver
+// demostración completa en la conversación de cierre de esta fase) — no
+// es una calibración que funcione mejor en un rango, es una identidad
+// algebraica válida para todo el dominio.
+const SQRT2 = Math.SQRT2;
 
 export function buildCylinder(radiusR: number, profundidadR: number): CylinderProjected {
-  // rx real = radiusR proyectado sobre el eje "largo" (cos del ángulo de
-  // cámara) — el radio horizontal 2D no es 1:1 con el radio real, igual
-  // que cualquier otro largo medido a lo largo de ese eje.
-  const rx = radiusR * AXIS_LARGO[0];
-  const ry = radiusR * ELLIPSE_RY_RATIO;
+  const A = radiusR * SQRT2 * AXIS_LARGO[0];
+  const B = radiusR * SQRT2 * AXIS_LARGO[1];
+  const topCenter = project({ largo: 0, ancho: 0, profundidad: 0 });
+  const bottomCenter = project({ largo: 0, ancho: 0, profundidad: profundidadR });
   return {
-    topLeft: project({ largo: -radiusR, ancho: 0, profundidad: 0 }),
-    topRight: project({ largo: radiusR, ancho: 0, profundidad: 0 }),
-    topCenter: project({ largo: 0, ancho: 0, profundidad: 0 }),
-    bottomLeft: project({ largo: -radiusR, ancho: 0, profundidad: profundidadR }),
-    bottomRight: project({ largo: radiusR, ancho: 0, profundidad: profundidadR }),
-    bottomCenter: project({ largo: 0, ancho: 0, profundidad: profundidadR }),
-    rx,
-    ry,
+    topLeft: [topCenter[0] - A, topCenter[1]],
+    topRight: [topCenter[0] + A, topCenter[1]],
+    topCenter,
+    bottomLeft: [bottomCenter[0] - A, bottomCenter[1]],
+    bottomRight: [bottomCenter[0] + A, bottomCenter[1]],
+    bottomCenter,
+    rx: A,
+    ry: B,
   };
 }
 
