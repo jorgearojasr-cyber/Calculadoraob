@@ -121,6 +121,12 @@ model Module {
   // Texto libre opcional para mejorar el buscador de la Home sin depender
   // solo del nombre/descripción exactos (ej. "radier patio piso hormigón").
   searchKeywords String?
+  // Imagen de portada del proyecto/calculadora, reutilizada por igual en
+  // Inicio, categorías, búsqueda y cualquier otra tarjeta que lo represente
+  // — un solo campo por módulo en vez de una imagen distinta por página.
+  // Null hasta que exista contenido fotográfico real (fase 2, fuera de
+  // alcance de esta homogeneización visual).
+  imageUrl       String?
   version        Int      @default(1)
   published      Boolean  @default(false)
   category       Category @relation(fields: [categoryId], references: [id], onDelete: Restrict)
@@ -1020,4 +1026,173 @@ model RegularizationRule {
 
   @@index([enabled, priority])
   @@map("regularization_rules")
+}
+
+// ============================================================
+// Asesor de Ejecución — motor de recomendación de método de trabajo
+// (03-ago-2026). Construido SOLO para Excavación; nombrado de forma
+// genérica (sin "excavación" en el schema) porque el motor podría
+// reutilizarse para otro módulo en el futuro, pero no se agregó ningún
+// campo/mecanismo pensando en esos módulos futuros — todo acá responde
+// a una necesidad concreta de Excavación hoy. No toca Regularización
+// (RegularizationRule arriba) ni ningún modelo del motor de fórmulas.
+// ============================================================
+
+enum ExecutionAdvisorEstado {
+  PENDIENTE_VALIDACION
+  VALIDADO
+}
+
+enum ExecutionAdvisorConfianza {
+  ALTA
+  MEDIA
+  BAJA
+}
+
+// Etiqueta de una "consideración" en la explicación de la recomendación —
+// nunca "advertencia" (ver Fase 4, UI): son 3 niveles de énfasis textual,
+// no severidad de error.
+enum ExecutionAdvisorTipoConsideracion {
+  TEN_PRESENTE
+  CONSIDERACION_IMPORTANTE
+  REVISA_ANTES_CONTRATAR
+}
+
+// Un asesor por módulo (moduleSlug plano, no relación a Module — el motor
+// es intencionalmente independiente del schema del wizard/motor de
+// fórmulas, ver decisión de Fase 0: separa "cálculo técnico" de "consejo
+// de ejecución"). Hoy solo existirá el registro moduleSlug="excavacion".
+model ExecutionAdvisor {
+  id         String                 @id @default(cuid())
+  moduleSlug String                 @unique
+  nombre     String
+  estado     ExecutionAdvisorEstado @default(PENDIENTE_VALIDACION)
+
+  options            ExecutionAdvisorOption[]
+  rules              ExecutionAdvisorRule[]
+  factorExplanations ExecutionAdvisorFactorExplanation[]
+  tips               ExecutionAdvisorTip[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("execution_advisors")
+}
+
+// Catálogo de opciones relevantes para el asesor — inicialmente pensado
+// solo como "catálogo de métodos" (manual/mini_excavadora/
+// retroexcavadora/excavadora), pero `reduceConfidence` (04-ago-2026)
+// obliga a ampliar su alcance: para que el motor pueda leer si LA
+// RESPUESTA QUE ACTIVÓ el factor decisivo (ej. acceso="no_seguro") baja
+// la confianza, esa opción también tiene que existir acá con su flag —
+// no solo las opciones de método. El nombre describe el EFECTO sobre el
+// motor (baja confianza si esta opción fue la respuesta decisiva), no
+// interpreta el significado de la respuesta (deliberadamente no se llama
+// "esIncierto" — ver auditoría 04-ago-2026 sobre variantes de
+// incertidumbre en el proyecto, ninguna coincide con este concepto).
+//
+// Actualización (04-ago-2026, Fase 4): la restricción anterior ("no tiene
+// ni tendrá un campo tipo/categoria") queda revertida — apareció un
+// consumidor real. El fallback de Fase 4 (ver action.ts) necesita
+// distinguir "el usuario eligió un método real que ninguna regla
+// recomienda" (mostrar un mensaje amistoso) de "la respuesta no es un
+// método reconocible en absoluto" (inconsistencia de configuración, no
+// renderizar nada) — `evaluate.ts:detectarEleccionUsuario` (que deriva
+// "método válido" de qué reglas existen) no puede hacer esa distinción,
+// porque ambos casos le dan el mismo `null`. `tipo` SOLO se usa en
+// action.ts (capa de ensamblaje, Fase 4) — evaluate.ts (el motor puro de
+// Fase 2) no lo lee y no cambió.
+enum ExecutionAdvisorOptionTipo {
+  METODO
+  ACCESO
+  TERRENO
+}
+
+model ExecutionAdvisorOption {
+  id          String                     @id @default(cuid())
+  advisor     ExecutionAdvisor           @relation(fields: [advisorId], references: [id], onDelete: Cascade)
+  advisorId   String
+  key         String
+  label       String
+  descripcion String?
+  tipo        ExecutionAdvisorOptionTipo
+  // Si esta opción fue la respuesta que activó el factor de mayor peso
+  // (el "factor decisivo"), el motor baja la confianza un nivel respecto
+  // al techo de la regla (ver evaluarAsesorEjecucion). No aplica a menos
+  // que esta opción sea justo la decisiva — no es una propiedad "de
+  // fábrica" de la opción en abstracto.
+  reduceConfidence Boolean                     @default(false)
+
+  @@unique([advisorId, key])
+  @@map("execution_advisor_options")
+}
+
+// Regla de recomendación — se evalúan en cascada por `prioridad` (no en
+// paralelo, ver motor de Fase 2): la primera cuyas `condiciones` calcen
+// TODAS (AND) decide la recomendación. `condiciones` es una lista plana
+// — NO reutiliza el árbol de nodos DSL de Formula.condition/
+// RegularizationRule.condition (ver comentario en RegularizationRule
+// arriba) porque lo que hace falta acá es más simple: una lista de
+// comparaciones AND-eadas, no expresiones anidadas. Formato de cada
+// elemento: { questionKey: string, operador: "equals" | "in", valor:
+// string | string[] }.
+model ExecutionAdvisorRule {
+  id                   String                    @id @default(cuid())
+  advisor              ExecutionAdvisor          @relation(fields: [advisorId], references: [id], onDelete: Cascade)
+  advisorId            String
+  prioridad            Int
+  condiciones          Json
+  opcionRecomendadaKey String
+  // Techo de confianza — el motor (Fase 2) puede bajarla un nivel según el
+  // factor decisivo, nunca subirla por sobre este valor.
+  confianzaBase        ExecutionAdvisorConfianza
+  estado               ExecutionAdvisorEstado    @default(PENDIENTE_VALIDACION)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([advisorId, prioridad])
+  @@map("execution_advisor_rules")
+}
+
+// Fragmento de explicación por factor (ej. "el acceso es solo peatonal" /
+// "el terreno tiene arcilla") — el motor arma `recomendacion.explicacion`
+// ordenando estos fragmentos por `peso` (mayor peso = factor más decisivo,
+// también el que determina si la confianza baja un nivel, ver
+// ExecutionAdvisorRule.confianzaBase). `condicion` usa el mismo formato
+// de comparación simple que ExecutionAdvisorRule.condiciones (un único
+// elemento, no una lista), no el árbol de Formula.condition.
+model ExecutionAdvisorFactorExplanation {
+  id                String                             @id @default(cuid())
+  advisor           ExecutionAdvisor                   @relation(fields: [advisorId], references: [id], onDelete: Cascade)
+  advisorId         String
+  factorQuestionKey String
+  condicion         Json
+  fragmentoTexto    String
+  peso              Int
+  tipoConsideracion ExecutionAdvisorTipoConsideracion?
+  textoConsideracion String?
+  estado            ExecutionAdvisorEstado             @default(PENDIENTE_VALIDACION)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([advisorId, peso])
+  @@map("execution_advisor_factor_explanations")
+}
+
+// Tips de "antes de comenzar" — se filtran SIEMPRE por la elección REAL
+// del usuario (aplicaAOpcionKey === eleccionUsuario.metodoKey), nunca por
+// la recomendación (ver Fase 2, antesDeComenzar.tips).
+model ExecutionAdvisorTip {
+  id               String                 @id @default(cuid())
+  advisor          ExecutionAdvisor       @relation(fields: [advisorId], references: [id], onDelete: Cascade)
+  advisorId        String
+  aplicaAOpcionKey String
+  texto            String
+  orden            Int                    @default(0)
+  estado           ExecutionAdvisorEstado @default(PENDIENTE_VALIDACION)
+
+  @@index([advisorId, aplicaAOpcionKey])
+  @@map("execution_advisor_tips")
 }
