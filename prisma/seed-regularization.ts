@@ -61,6 +61,26 @@ const MADERA_SEGUNDO_PISO = {
   ],
 };
 
+// Fase 16B (corrección de Fase 16A, hallazgo "Antecedentes que acrediten
+// antigüedad" — antes dependeDe: null, se mostraba siempre sin importar
+// anioConstruccion). Se mantiene visible salvo cuando el año es
+// explícitamente posterior a 2016 — nunca se oculta por descarte
+// implícito de un dato ausente, y el caso exacto 2016 se trata igual que
+// "antes" (se sigue pidiendo el antecedente, sin inventar una
+// interpretación normativa de qué significa exactamente esa fecha límite
+// — ver instrucción explícita de Fase 16B de no asumir esa lectura).
+//   anioConstruccion no informado -> se muestra (prudencia, no se
+//     descarta el requisito por falta de dato)
+//   anioConstruccion <= 2016 -> se muestra
+//   anioConstruccion > 2016 -> se oculta
+const ANTIGUEDAD_APLICA = {
+  op: "or",
+  args: [
+    { op: "not", value: { op: "defined", key: "anioConstruccion" } },
+    { op: "<=", args: [{ var: "anioConstruccion" }, 2016] },
+  ],
+};
+
 // --- Norm: valor de referencia de la UF histórica ---
 // Idempotente por upsert sobre `code` (@unique) — nunca inserta una
 // segunda fila para el mismo código, sin importar cuántas veces se
@@ -209,7 +229,7 @@ export async function seedRegularizationDocuments(prisma: PrismaClient) {
       soporteObraBien: "GESTION_EXTERNA",
       citaNormativa: "Formulario 12.1, sección 6",
       estadoValidacion: "VALIDADO",
-      dependeDe: null,
+      dependeDe: ANTIGUEDAD_APLICA,
     },
     {
       documento: "Certificado de recepción municipal anterior (si existe)",

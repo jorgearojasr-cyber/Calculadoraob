@@ -39,6 +39,7 @@ function mapDocument(
     soporteObraBien: string;
     citaNormativa: string;
     estadoValidacion: string;
+    dependeDe: unknown;
   },
   checkedByDocumentId: Set<string>
 ): RegularizationDocumentItem {
@@ -55,6 +56,9 @@ function mapDocument(
     citaNormativa: doc.citaNormativa,
     estadoValidacion: doc.estadoValidacion as RegularizationDocumentItem["estadoValidacion"],
     checked: checkedByDocumentId.has(doc.id),
+    // Fase 16B — deriva del `dependeDe` crudo de BD, nunca expuesto tal
+    // cual al cliente (queda como boolean, no como el nodo DSL completo).
+    tieneCondicionAutomatica: doc.dependeDe !== null && doc.dependeDe !== undefined,
   };
 }
 
