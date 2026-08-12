@@ -145,6 +145,18 @@ _Ninguno detectado en la auditoría funcional de ObraBien Calcula V1 (02-ago-202
 **Dependencias:** Ninguna.
 **Notas:** Hallazgo de la auditoría funcional (02-ago-2026). Severidad baja: no afecta el resultado final ni permite un cálculo incorrecto. Corregido anticipadamente en Grupo 2 (`toNum` en `dimension-utils/parsing.ts`), transversal a todas las calculadoras con campos de medida.
 
+## UX-002
+**Título:** `Variable.isResult` usado como "eco literal" de una respuesta del usuario, mostrado como si fuera un dato calculado
+**Prioridad:** Baja
+**Estado:** Descartado (evaluado y cerrado, 07-ago-2026)
+**Versión objetivo:** Sprint Producto V1.4
+**Descripción:** Se identificó que algunas `Variable` con `isResult:true` no aportan una transformación real — simplemente reflejan (LOOKUP/QUESTION directo) una respuesta que el usuario ya escribió, mostrada igualmente como tarjeta de resultado en `infoResults` (mecanismo análogo al de las Formula "aviso como material" corregido en Fase 1-2 de V1.4, pero en el modelo `Variable`, vía `ResultHero`/`result-screen.tsx` en vez de `PricedResults`).
+**Dependencias:** Ninguna.
+**Motivo del cierre:** Auditoría fresca (07-ago-2026) contra el estado actual de la app mostró que esto **no es un patrón sistemático pendiente** de corregir:
+- Los 4 casos de mayor volumen (`espesor-muro-cm` y `espesor-fondo-cm` en ambas Piscinas) corresponden a una **decisión de diseño intencional ya evaluada**: el propio código (`result-screen.tsx`, línea ~219) documenta que se probó ocultar este eco en una fase anterior ("se probó en vivo con Piscina circular"), pero como son la mitad de un par relacionado, ocultar solo uno de los dos se veía visualmente incoherente/asimétrico — se optó deliberadamente por aceptar la pequeña duplicación (mismo dato en el subtítulo del resultado protagonista y en su propia tarjeta) antes que esa asimetría. Reabrir esto sin una razón nueva revertiría una decisión de UX ya probada y documentada.
+- El único caso restante sin ese antecedente (`tabiques-y-cielos` → `tipo-de-instalacion`, una sola variable en un solo módulo) es aislado y de impacto menor — insuficiente en volumen para justificar una fase propia.
+**Notas:** Investigado durante la propuesta de Fase 5 del Sprint Producto V1.4, tras cerrar el Mecanismo A (`Formula.note` faltante). No se implementó ningún cambio de código — cierre puramente documental, decisión del usuario.
+
 ---
 
 # Nuevas funcionalidades
@@ -155,4 +167,7 @@ _Sin ítems registrados aún. Ver ROADMAP.md V2.0/V3.0 para dirección propuesta
 
 # Ideas futuras
 
-_Sin ítems registrados aún._
+## Base de Precios de Referencia
+**Origen:** hallazgo de auditoría durante el cierre del Sprint Producto V1.4 (07-ago-2026) — `Material.referencePrice` solo cargado en 7 de 127 materiales usados en módulos publicados, con cobertura desigual dentro de la misma categoría.
+**Estado:** documento de diseño listo para revisión de producto, sin implementar. Ver `BASE_PRECIOS_REFERENCIA_DISENO.md` (objetivo, alcance, criterio de precio, proveedores, región, vigencia, estrategia de actualización, materiales equivalentes, y qué hacer cuando no hay un precio confiable).
+**Por qué no es una fase de sprint:** requiere investigación externa de precios de mercado (curación y mantenimiento de datos), a diferencia del resto de V1.3/V1.4, que fue consistencia interna de datos ya existentes en el código.

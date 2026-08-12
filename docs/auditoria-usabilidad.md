@@ -36,6 +36,22 @@ Veredicto posible: **MANTENER** / **MEJORAR** / **FUSIONAR CON OTRO** / **ELIMIN
 
 ## Hallazgo transversal confirmado: severidad visual de disclaimers
 
+> **✅ RESUELTO / OBSOLETO (revalidado 04-ago-2026, Sprint Producto V1.3, Fase 3).**
+> Este hallazgo ya no refleja el estado real del código. Al abrir la Fase 3 ("reinforcedWarning
+> sin efecto visual") se releyó `norms-disclaimer.tsx` completo ANTES de implementar
+> cualquier cambio, y se encontró que el componente **ya distingue `reinforcedWarning`**: una
+> tarjeta roja específica (`bg-danger-tint border-danger`, ícono `TriangleAlert` rojo, texto
+> "Riesgo estructural o de seguridad — no determina la especificación final"), separada de la
+> tarjeta ámbar genérica de "valores no verificados". Se confirmó además que el dato fluye sin
+> pérdida desde la base de datos (`actions.ts`, `calculateModuleAction`) y que, en la BD real,
+> 23 normas tienen `reinforcedWarning: true` hoy, incluidas ambas normas de Gas
+> (`OBRA-GAS-CONVERSION`, `OBRA-CALEFON-GAS-INSTALACION`). **Prueba E2E realizada en el módulo
+> exacto citado abajo** (Cañería de gas visible): la tarjeta roja distintiva aparece
+> correctamente en el resultado. No se determinó en qué momento se corrigió — probablemente
+> entre la fecha de esta auditoría (02-ago-2026) y el cierre de V1.1/V1.2 — pero el bug no
+> existe en el código actual. **No se implementó ningún cambio en esta fase.** Se deja el
+> texto original íntegro abajo solo como registro histórico de lo que se reportó en su momento.
+
 Investigado a fondo antes de la categoría 2 (no es un hallazgo de un módulo puntual, se
 documenta una sola vez acá). Componente: `src/components/module/norms-disclaimer.tsx`
 (`NormsDisclaimer`). **`reinforcedWarning` no se lee en absoluto en este componente** — el
@@ -241,6 +257,16 @@ selector de electrodomésticos con checkboxes + contador en vivo ya es el apoyo 
 correcto para este caso (sustituye la necesidad de cualquier diagrama). No aplica video —
 es una tarea de cálculo/lectura de etiquetas, no una técnica física con secuencia de
 movimientos.
+
+> **⚠️ OBSOLETO (revalidado 04-ago-2026, Sprint Producto V1.3, Fase 4).** El módulo
+> `calcular-consumo-electrico-de-un-circuito` descrito acá **no existe en la base de datos
+> actual** — confirmado con una búsqueda exacta por ese slug (sin resultado) y una búsqueda
+> amplia de cualquier módulo con "circuito" en `slug` o `name` (sin resultado) contra los 56
+> módulos reales de la app. El único módulo de Electricidad con contenido cercano hoy es
+> `consumo-electrico` ("Consumo eléctrico"), que calcula kWh/mes y costo — no Amperios ni
+> "Automático sugerido" por tipo de circuito. Por decisión explícita, **no se reconstruye
+> esta funcionalidad ni se busca una implementación alternativa** — el hallazgo se cierra
+> como fuera de alcance. No se implementó ningún cambio de código.
 
 ---
 
@@ -1621,6 +1647,12 @@ conversión (largo de pieza comercial para vigas, cobertura por unidad para la c
 
 Recomendación gráfica: ninguna — el diagrama ya es correcto.
 
+> **⚠️ OBSOLETO (revalidado 04-ago-2026, Sprint Producto V1.3, Fase 4).** El módulo
+> `estructura-y-techo` y la categoría "Quinchos" **no existen en la base de datos actual**
+> — confirmado con una búsqueda exacta por slug/categoría (sin resultado) contra los 56
+> módulos reales de la app. Por decisión explícita, este hallazgo se cierra como fuera de
+> alcance/obsoleto — no se implementó ningún cambio de código.
+
 ## Techo de tejas o policarbonato (techo-de-tejas-o-policarbonato)
 
 Categoría: Quinchos
@@ -1655,6 +1687,12 @@ el nombre "teja/tejuela asfáltica" entre ambos módulos de la categoría; agreg
 postes/vigas/planchas.
 
 Recomendación gráfica: ninguna — diagrama correcto.
+
+> **⚠️ OBSOLETO (revalidado 04-ago-2026, Sprint Producto V1.3, Fase 4).** El módulo
+> `techo-de-tejas-o-policarbonato` y la categoría "Quinchos" **no existen en la base de
+> datos actual** — confirmado con una búsqueda exacta por slug/categoría (sin resultado)
+> contra los 56 módulos reales de la app. Por decisión explícita, este hallazgo se cierra
+> como fuera de alcance/obsoleto — no se implementó ningún cambio de código.
 
 ## Resumen de la tanda
 
@@ -1890,6 +1928,15 @@ automáticamente, o cambiar a 'm² directo' si ya tienes el área calculada").
 
 Recomendación gráfica: ninguna — el diagrama y el descuento de vanos ya son correctos.
 
+> **✅ RESUELTO / OBSOLETO (revalidado 04-ago-2026, Sprint Producto V1.3, Fase 4).** Se
+> verificó el `helpText` real de la pregunta en la BD antes de tocar código: ya dice
+> textualmente "Ingresa largo × alto — puedes agregar puertas y ventanas para descontarlas
+> automáticamente, o cambiar a 'm² directo' si ya tienes el área calculada" — exactamente la
+> recomendación de arriba, ya aplicada. La pluralización ("3 galón"/"1 manos") también quedó
+> resuelta de forma centralizada (ver hallazgo de pluralización, verificado con un escaneo
+> completo de los 289 `Formula.unit` reales el 04-ago-2026: todos en singular correcto). No
+> se implementó ningún cambio de código en esta fase.
+
 ## Pintar una fachada exterior (pintar-fachada-exterior)
 
 Categoría: Pintura
@@ -1908,6 +1955,10 @@ manos, primera vez: "2 galón" — bug de pluralización.
 Recomendación concreta: mismo ajuste de `helpText` que Pintura (interior).
 
 Recomendación gráfica: ninguna necesaria.
+
+> **✅ RESUELTO / OBSOLETO (revalidado 04-ago-2026, Sprint Producto V1.3, Fase 4).** Mismo
+> hallazgo que Pintura (interior) — ya resuelto, ver nota ahí. `helpText` verificado en la BD
+> real, ya actualizado. No se implementó ningún cambio de código en esta fase.
 
 ## Preparar y estucar un muro antes de pintar (preparar-y-estucar-un-muro)
 
@@ -2388,7 +2439,12 @@ el 40% en MEJORAR son en su mayoría fixes puntuales y acotados, no rediseños.
 ## Los 5 hallazgos de mayor impacto (ordenados por severidad real, no por orden de aparición)
 
 **1. `reinforcedWarning` no tiene ningún efecto visual en pantalla — afecta a toda la app,
-incluido Gas.** (`src/components/module/norms-disclaimer.tsx`) El único branching visual
+incluido Gas.** ✅ **RESUELTO / OBSOLETO (revalidado 04-ago-2026, ver detalle completo en
+"Hallazgo transversal confirmado: severidad visual de disclaimers" más arriba)** —
+`norms-disclaimer.tsx` ya distingue `reinforcedWarning` con una tarjeta roja específica,
+confirmado contra el código, la base de datos y una prueba E2E en Cañería de gas visible. No
+se implementó ningún cambio de código en esta fase, solo se documentó el cierre.
+(`src/components/module/norms-disclaimer.tsx`) El único branching visual
 del disclaimer (ícono, color) depende de `verificationStatus`, nunca de
 `reinforcedWarning`. Un aviso de **gas** con `reinforcedWarning: true` se ve
 pixel-idéntico a un aviso de bajo riesgo con `reinforcedWarning: false` — mismo ícono
