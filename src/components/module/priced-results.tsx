@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { formatQuantity } from "@/lib/format-number";
 import { pluralizeUnit } from "@/lib/pluralize";
+import { CollapsibleHelp } from "./collapsible-help";
 import type { CalculationResult } from "@/lib/formula-engine";
 
 const currencyFormatter = new Intl.NumberFormat("es-CL", { maximumFractionDigits: 0 });
@@ -37,6 +38,7 @@ export function PricedResults({
   onPricesChange,
   hideFeatured,
   hideTotal,
+  suppressNoteForKeys,
 }: {
   results: CalculationResult[];
   onPricesChange?: (results: CalculationResult[]) => void;
@@ -48,6 +50,12 @@ export function PricedResults({
   // Mismo criterio: si ResultHero ya muestra "Total aproximado" (mismo
   // computeApproxTotal), este footer quedaría duplicado más abajo.
   hideTotal?: boolean;
+  // Fase 5 (Radier): oculta el "¿Cómo calculamos esta cantidad?" de estos
+  // Formula.key puntuales — para cuando el caller ya muestra esas mismas
+  // notas consolidadas en otro lugar (ver TechnicalNotesSection), evitando
+  // la duplicación. Sin este prop (la mayoría de los módulos), cada
+  // resultado sigue mostrando su propia nota colapsable como siempre.
+  suppressNoteForKeys?: string[];
 }) {
   const [prices, setPrices] = useState<Record<string, string>>(() =>
     Object.fromEntries(
@@ -132,7 +140,20 @@ export function PricedResults({
           {result.materialName && (
             <p className="mt-1 text-xs font-medium text-ink-muted">{result.materialName}</p>
           )}
-          {result.note && <p className="mt-2 text-xs text-ink-muted">{result.note}</p>}
+          {/* Fase 2 (Radier): la nota técnica (fuente, dosificación,
+              fórmula) queda colapsada por defecto — la tarjeta prioriza
+              material + cantidad + unidad, la explicación queda a un
+              clic, sin perder el dato ni la fuente. Cambio en un
+              componente compartido (usado por ~57 módulos), puramente
+              aditivo: antes el texto era siempre visible, ahora sigue
+              existiendo igual, solo colapsado hasta que se pide. */}
+          {result.note && !suppressNoteForKeys?.includes(result.key) && (
+            <div className="mt-2">
+              <CollapsibleHelp label="¿Cómo calculamos esta cantidad?" ariaLabel={`Cómo se calcula ${result.label}`}>
+                <p className="text-xs text-ink-muted">{result.note}</p>
+              </CollapsibleHelp>
+            </div>
+          )}
 
           {result.materialName && (
             <div className="mt-3 pt-3 border-t border-border">

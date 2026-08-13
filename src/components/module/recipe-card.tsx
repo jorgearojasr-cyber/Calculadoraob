@@ -54,6 +54,17 @@ export function RecipeCard({
           ))}
         </div>
       )}
+
+      {/* Fase 2 (Radier): esta receta es una proporción práctica de
+          preparación en obra, no una certificación de resistencia — la
+          resistencia final depende también de granulometría, agua
+          agregada, compactación y curado. Genérico, sin nada de Radier
+          hardcodeado, para que cualquier futuro módulo con RecipeCard
+          herede la misma aclaración. */}
+      <p className="mt-4 pt-3 border-t border-border/60 text-[11px] text-ink-faint">
+        Dosificación de referencia para la preparación en obra — no es una garantía automática de la resistencia
+        final, que también depende de la granulometría de los áridos, el agua agregada, la compactación y el curado.
+      </p>
     </div>
   );
 }

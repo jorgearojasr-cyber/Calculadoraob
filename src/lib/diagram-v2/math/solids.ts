@@ -62,6 +62,37 @@ export function boxAllPoints(b: BoxProjected): Vec2[] {
   return [b.P0, b.P1, b.P2, b.P3, b.P0d, b.P1d, b.P2d];
 }
 
+export type SlabTopProjected = {
+  P0: Vec2; // esquina cercana (largo=0, ancho=0)
+  P1: Vec2; // + largo
+  P2: Vec2; // + ancho
+  P3: Vec2; // + largo + ancho (esquina lejana)
+};
+
+// Fase 7 (Radier, 13-ago-2026) — geometría propia de "slab", DELIBERADAMENTE
+// separada de buildBox: solo construye la cara SUPERIOR (planta), sin
+// ningún punto de profundidad. 3 fases (2, 4, 5, 6) intentando que el
+// espesor de un buildBox genérico se vea "delgado" vía ratios/potencias/
+// pisos no bastaron — el problema de fondo es que fitToSilhouette
+// escalaba el sólido completo (incluida la profundidad) al panel, así que
+// la cara superior nunca ocupaba TODO el espacio posible por sí sola. Acá
+// el llamador (DiagramV2.tsx, kind="slab") ajusta el panel usando SOLO
+// estos 4 puntos — la cara superior queda con el máximo tamaño posible
+// dentro del panel — y agrega el espesor DESPUÉS, en píxeles fijos
+// (ver EDGE_PX en DiagramV2.tsx), completamente desacoplado de cualquier
+// ratio geométrico. Reutiliza `project()` (la misma cámara congelada de
+// siempre, sin tocarla) — nada de esto afecta a buildBox/boxFaces, usados
+// tal cual por Fundación/Muro/Losa/Pilar/Piscinas/Cadena/Viga/Jardinera.
+export function buildSlabTop(largoR: number, anchoR: number): SlabTopProjected {
+  const p = (largo: number, ancho: number) => project({ largo, ancho, profundidad: 0 });
+  return {
+    P0: p(0, 0),
+    P1: p(largoR, 0),
+    P2: p(0, anchoR),
+    P3: p(largoR, anchoR),
+  };
+}
+
 export type CylinderProjected = {
   topLeft: Vec2;
   topRight: Vec2;

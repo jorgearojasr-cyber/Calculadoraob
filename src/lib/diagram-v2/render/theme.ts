@@ -51,6 +51,13 @@ export const theme = {
     top: { from: "#FAFCFE", to: "#F1F5FB" },
     wallRight: { from: "#B7C5DE", to: "#93A6C9" },
     wallLeft: { from: "#8FA1C4", to: "#6D82AD" },
+    // Fase 5 (Radier, kind="slab") — UN solo tono, claro, cercano al de
+    // `top` (a propósito, sin el contraste fuerte de wallRight/wallLeft):
+    // el objetivo es que el borde se lea como el canto delgado de una
+    // losa, no como una pared con volumen propio. Mismo motivo por el
+    // que SlabSolid pinta AMBOS lados (wallLeft/wallRight) con este único
+    // tono, en vez de 2 tonos distintos — ver render/solid-3d.tsx.
+    slabEdge: { from: "#DCE4F0", to: "#C9D5E8" },
   },
   dimension: {
     active: BRAND_ORANGE, // SOLO la cota que se está escribiendo ahora mismo

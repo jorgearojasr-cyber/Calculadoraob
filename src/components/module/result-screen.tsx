@@ -19,7 +19,10 @@ import { LiveSummaryPanel, type SummaryItem } from "./live-summary-panel";
 import { ExecutionAdvisorPanel } from "./execution-advisor-panel";
 import { getExecutionAdvisorReport, type InformeEjecucionUI } from "@/lib/execution-advisor/action";
 import { RecipeCard } from "./recipe-card";
-import type { RecipeGroupConfig } from "./module-visual-config";
+import { DosificacionCard } from "./dosificacion-card";
+import { RefuerzoCard } from "./refuerzo-card";
+import { TechnicalNotesSection } from "./technical-notes-section";
+import type { RecipeGroupConfig, DosificacionGroupConfig, RefuerzoConfig } from "./module-visual-config";
 import type { WizardAnswers } from "./types";
 
 // Aplica el precio de referencia (sugerencia editable) como unitPrice
@@ -60,6 +63,11 @@ export function ResultScreen({
   onEditField,
   heroResultKey,
   recipeGroups,
+  dosificacionGroups,
+  excludeFromListKeys,
+  consolidateNotesKeys,
+  refuerzoConfig,
+  heroPosition,
 }: {
   moduleId: string;
   // Asesor de Ejecución (Fase 0/4, 04-ago-2026): junto con `answers`, es
@@ -118,6 +126,26 @@ export function ResultScreen({
   // este prop (la mayoría de los módulos), el comportamiento es idéntico
   // al de siempre — ningún resultado se saca de la lista genérica.
   recipeGroups?: RecipeGroupConfig[];
+  // Ver DosificacionGroupConfig — igual criterio que recipeGroups, pero
+  // renderizado ANTES de la lista genérica (ver jerarquía visual: hormigón
+  // recomendado -> dosificación -> volumen -> materiales -> betonera).
+  dosificacionGroups?: DosificacionGroupConfig[];
+  // Ver EXCLUDE_FROM_LIST_KEYS — Formula.key que nunca deben aparecer en
+  // la lista genérica (ej. un resultado ya mostrado en su propia tarjeta
+  // hero, para no duplicarlo).
+  excludeFromListKeys?: string[];
+  // Ver CONSOLIDATE_NOTES_KEYS — Formula.key cuya nota individual se oculta
+  // de su tarjeta (ver PricedResults' suppressNoteForKeys) y se muestra en
+  // cambio consolidada en un solo TechnicalNotesSection, más abajo.
+  consolidateNotesKeys?: string[];
+  // Ver RefuerzoConfig — arma la RefuerzoCard a partir de 2 InfoResult
+  // (estado + explicación) más una nota estática. Sin este prop (la
+  // mayoría de los módulos), no se renderiza nada nuevo.
+  refuerzoConfig?: RefuerzoConfig;
+  // Ver HERO_POSITIONS — dónde va ResultHero. Default "top" (comportamiento
+  // de siempre); "beforeMaterials" lo mueve justo antes de la lista de
+  // materiales (después de dosificación/refuerzo, ver jerarquía de Radier).
+  heroPosition?: "top" | "beforeMaterials";
 }) {
   const router = useRouter();
   const [promptOpen, setPromptOpen] = useState(false);
@@ -214,7 +242,31 @@ export function ResultScreen({
       items: group.itemKeys.map((k) => seededResults.find((r) => r.key === k)).filter((r) => r !== undefined),
     }))
     .filter((section) => section.primary !== undefined);
-  const recipeKeys = new Set(recipeSections.flatMap((s) => [s.group.primaryKey, ...s.group.itemKeys]));
+  // Mismo criterio que recipeSections, para la DosificacionCard (ver
+  // comentario de dosificacionGroups) — un grupo sin resultado base
+  // (ej. camino premezclado, donde dosif_* ni se calculan) se descarta solo.
+  const dosificacionSections = (dosificacionGroups ?? [])
+    .map((group) => ({
+      group,
+      items: group.itemKeys.map((k) => seededResults.find((r) => r.key === k)).filter((r): r is CalculationResult => r !== undefined),
+    }))
+    .filter((section) => section.items.length === section.group.itemKeys.length);
+
+  // Fase 5 (Radier): arma la RefuerzoCard a partir de 2 InfoResult (estado
+  // + explicación, ver RefuerzoConfig) — se descarta sola si el módulo no
+  // configuró refuerzoConfig o si esas keys no vinieron en infoResults.
+  const refuerzoData = refuerzoConfig
+    ? {
+        estado: infoResults.find((i) => i.key === refuerzoConfig.estadoKey)?.value,
+        explicacion: infoResults.find((i) => i.key === refuerzoConfig.explicacionKey)?.value,
+      }
+    : null;
+
+  const recipeKeys = new Set([
+    ...recipeSections.flatMap((s) => [s.group.primaryKey, ...s.group.itemKeys]),
+    ...dosificacionSections.flatMap((s) => s.group.itemKeys),
+    ...(excludeFromListKeys ?? []),
+  ]);
   const listResults = recipeKeys.size > 0 ? seededResults.filter((r) => !recipeKeys.has(r.key)) : seededResults;
   // Nota: se probó ocultar infoResults[0] de la lista de abajo (ya que se
   // repite en el subtítulo de ResultHero), pero en módulos donde
@@ -315,6 +367,20 @@ export function ResultScreen({
     }
   };
 
+  // Fase 5 (Radier): ResultHero puede ir arriba de todo (default, resto de
+  // los módulos) o justo antes de "Materiales" (ver HERO_POSITIONS) — se
+  // arma UNA vez acá y se inserta en el punto que corresponda, para no
+  // duplicar el JSX.
+  const heroElement = showsHero && heroResult && (
+    <ResultHero
+      moduleName={moduleName}
+      result={heroResult}
+      otherMaterialNames={otherMaterialNames}
+      primaryInfo={infoResults[0] ?? null}
+      total={anyPriced ? approxTotal : null}
+    />
+  );
+
   return (
     <div>
       <p className="font-mono text-xs uppercase tracking-wider mb-2 text-safety">Resultado</p>
@@ -322,15 +388,7 @@ export function ResultScreen({
         Esto es lo que necesitas
       </h2>
 
-      {showsHero && heroResult && (
-        <ResultHero
-          moduleName={moduleName}
-          result={heroResult}
-          otherMaterialNames={otherMaterialNames}
-          primaryInfo={infoResults[0] ?? null}
-          total={anyPriced ? approxTotal : null}
-        />
-      )}
+      {heroPosition !== "beforeMaterials" && heroElement}
 
       {recalculateField && onRecalculate && (
         <RecalculateField
@@ -341,18 +399,27 @@ export function ResultScreen({
         />
       )}
 
-      {infoResults.length > 0 && (
+      {/* Fase 5 (Radier): "estado"/"explicación" del refuerzo se consumen
+          por separado (ver refuerzoData + RefuerzoCard, más abajo) — se
+          sacan del bloque genérico de infoResults para no mostrarlas dos
+          veces. Ningún otro módulo usa estas keys, así que este filtro es
+          un no-op para el resto. */}
+      {infoResults.filter(
+        (info) => info.key !== refuerzoConfig?.estadoKey && info.key !== refuerzoConfig?.explicacionKey
+      ).length > 0 && (
         <div className="grid gap-3 mb-3">
-          {infoResults.map((info) => (
-            <div key={info.key} className="rounded-2xl p-5 bg-white border border-border">
-              <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-                <span className="font-medium text-[15px]">{info.label}</span>
-                <span className="font-display text-lg font-semibold text-right">
-                  {String(info.value)}
-                </span>
+          {infoResults
+            .filter((info) => info.key !== refuerzoConfig?.estadoKey && info.key !== refuerzoConfig?.explicacionKey)
+            .map((info) => (
+              <div key={info.key} className="rounded-2xl p-5 bg-white border border-border">
+                <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+                  <span className="font-medium text-[15px]">{info.label}</span>
+                  <span className="font-display text-lg font-semibold text-right">
+                    {String(info.value)}
+                  </span>
+                </div>
               </div>
-            </div>
-          ))}
+            ))}
         </div>
       )}
 
@@ -374,12 +441,44 @@ export function ResultScreen({
         </div>
       )}
 
+      {dosificacionSections.map(({ group, items }) => (
+        <DosificacionCard
+          key={group.title}
+          title={group.title}
+          subtitle={group.subtitle}
+          baseLabel={group.baseLabel}
+          baseValue={group.baseValue}
+          baseUnit={group.baseUnit}
+          items={items}
+          tip={group.tip}
+          disclaimer={group.disclaimer}
+          sourceLabel={group.sourceLabel}
+        />
+      ))}
+
+      {refuerzoConfig && refuerzoData?.estado !== undefined && refuerzoData?.explicacion !== undefined && (
+        <RefuerzoCard
+          title={refuerzoConfig.title}
+          materialLabel={refuerzoConfig.materialLabel}
+          estado={String(refuerzoData.estado)}
+          explicacion={String(refuerzoData.explicacion)}
+          nota={refuerzoConfig.nota}
+        />
+      )}
+
+      {heroPosition === "beforeMaterials" && heroElement}
+
       <PricedResults
         results={listResults}
         onPricesChange={handlePricesChange}
         hideFeatured={hidesFeaturedInList}
         hideTotal={showsHero && anyPriced}
+        suppressNoteForKeys={consolidateNotesKeys}
       />
+
+      {consolidateNotesKeys && (
+        <TechnicalNotesSection results={listResults.filter((r) => consolidateNotesKeys.includes(r.key))} />
+      )}
 
       {recipeSections.map(({ group, primary, items }) => (
         <RecipeCard key={group.primaryKey} title={group.title} primary={primary!} items={items} />

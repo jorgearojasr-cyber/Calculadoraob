@@ -130,7 +130,7 @@ export function GuideSection({ guide }: { guide: ModuleGuideData }) {
           </div>
 
           <div className="grid gap-3">
-            <GuideDetails id="guia-herramientas" title="Herramientas necesarias" icon={Wrench}>
+            <GuideDetails id="guia-herramientas" title="Herramientas y equipos recomendados" icon={Wrench}>
               <GuideList items={guide.tools} />
             </GuideDetails>
 

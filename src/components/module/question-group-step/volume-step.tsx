@@ -63,14 +63,38 @@ export function VolumeStep({
   // que el usuario eligió. Si el campo de profundidad es un SELECT, se
   // muestra en cm (numericValue × 100) en vez del valor crudo en metros.
   const depthIsSelect = questions[diagram.secondaryLabel ? 2 : 1]?.type === "SELECT";
+  // BUG (hallado en Fase 2, Radier): DiagramV2 NO normaliza unidades entre
+  // ejes — espera que largo/ancho/profundidad lleguen ya en la MISMA
+  // escala numérica (ver `D = profundidad ?? 1.2` en DiagramV2.tsx, usado
+  // directo como geometría). Para un campo de profundidad tipo NUMBER
+  // medido en cm (hoy, único caso: Radier "espesor_cm" — largo/ancho de
+  // Radier son NUMBER en metros), el valor tipeado (ej. "8") se pasaba
+  // crudo, como si fueran 8 METROS de espesor en vez de 0,08 — el espesor
+  // terminaba dibujándose más grande que el largo/ancho. Se agrega esta
+  // conversión igual que ya existía para el caso SELECT (numericValue en
+  // metros × 100 para mostrar cm) — acá es al revés: NUMBER en cm ÷ 100
+  // para la geometría en metros. Verificado que ningún otro módulo con
+  // diagrama profundidad tiene esta combinación (NUMBER + unit "cm" en el
+  // campo de profundidad): los demás son SELECT (Muro, Losa) o NUMBER en
+  // metros (Piscina circular, Excavación circular, Jardinera, Cadena/Viga
+  // vía su campo "largo") — cambio sin impacto fuera de Radier.
+  const depthUnitIsCm = !depthIsSelect && questions[diagram.secondaryLabel ? 2 : 1]?.unit === "cm";
   const toDiagramDepth = (question: WizardQuestion, raw: string | undefined) => {
-    const meters = toFieldNum(question, raw);
-    if (meters === null) return undefined;
-    return depthIsSelect ? meters * 100 : meters;
+    const raw_ = toFieldNum(question, raw);
+    if (raw_ === null) return undefined;
+    if (depthIsSelect) return raw_ * 100; // metros -> cm (mostrar)
+    if (depthUnitIsCm) return raw_ / 100; // cm tipeado -> metros (geometría)
+    return raw_;
   };
-  const diagramDepthUnit = depthIsSelect ? "cm" : undefined;
+  const diagramDepthUnit = depthIsSelect || depthUnitIsCm ? "cm" : undefined;
 
   const isCircular = diagram.shape === "circle-with-depth";
+  // Fase 5 (Radier) — "slab-with-depth" reusa TODO el resto de este
+  // componente (campos, cotas, labels, toDiagramDepth) igual que
+  // "rectangle-with-depth"; la única diferencia es qué `kind` recibe
+  // DiagramV2 más abajo (ver ese archivo, math/scale-engine.ts
+  // compressedSlabRatios y render/solid-3d.tsx SlabSolid).
+  const isSlab = diagram.shape === "slab-with-depth";
   const secondaryQuestion = diagram.secondaryLabel ? questions[1] : undefined;
   const depthQuestion = questions[diagram.secondaryLabel ? 2 : 1];
 
@@ -192,10 +216,16 @@ export function VolumeStep({
           />
         ) : (
           <DiagramV2
-            kind="box"
+            kind={isSlab ? "slab" : "box"}
             largo={toFieldNum(questions[0], values[questions[0].key]) ?? undefined}
             ancho={secondaryQuestion ? (toFieldNum(secondaryQuestion, values[secondaryQuestion.key]) ?? undefined) : undefined}
             profundidad={toDiagramDepth(depthQuestion, values[depthQuestion.key])}
+            // Radier: profundidad ya viene en metros (fix de geometría de
+            // arriba), pero el chip debe mostrar "8 cm", no "0,08 cm" — se
+            // pasa el valor crudo tipeado (sin convertir) solo para el
+            // texto. Sin efecto en otros módulos (prop opcional, undefined
+            // salvo este caso).
+            profundidadDisplay={depthUnitIsCm ? (toFieldNum(depthQuestion, values[depthQuestion.key]) ?? undefined) : undefined}
             labels={{
               largo: capitalize(diagram.primaryLabel),
               ancho: diagram.secondaryLabel ? capitalize(diagram.secondaryLabel) : undefined,

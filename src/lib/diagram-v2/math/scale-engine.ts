@@ -27,15 +27,75 @@ const COMPRESSION_THRESHOLD = 0.3;
 const COMPRESSION_POWER = 0.45;
 const AXIS_RATIO_FLOOR = 0.12;
 
-function compressRatio(ratio: number): number {
+function compressRatioWithPower(ratio: number, power: number): number {
   if (ratio >= COMPRESSION_THRESHOLD) return ratio;
-  return COMPRESSION_THRESHOLD * Math.pow(ratio / COMPRESSION_THRESHOLD, COMPRESSION_POWER);
+  return COMPRESSION_THRESHOLD * Math.pow(ratio / COMPRESSION_THRESHOLD, power);
+}
+
+function compressRatio(ratio: number): number {
+  return compressRatioWithPower(ratio, COMPRESSION_POWER);
 }
 
 export function compressedRatios(dims: number[]): number[] {
   const maxDim = Math.max(...dims);
   return dims.map((d) => clamp(compressRatio(d / maxDim), AXIS_RATIO_FLOOR, 1));
 }
+
+// Fase 2 (Radier, auditoría de proporción del diagrama de caja con
+// profundidad — ej. 6×4×0,08 se veía con el espesor casi tan grueso como
+// el ancho). Piso MÁS BAJO, específico para el eje "profundidad" de una
+// caja (largo/ancho/espesor) — separado de AXIS_RATIO_FLOOR a propósito:
+// ese piso genérico (0.12) sigue usándose tal cual para círculo/foundation
+// (sin tocar esos call sites), pero para una caja la profundidad es
+// conceptualmente distinta de largo/ancho — casi siempre la dimensión más
+// chica por lejos (espesor de radier/losa/muro), y 0.12 (12% del eje
+// dominante) todavía se lee como "una tercera dimensión casi tan grande
+// como el ancho" en proporciones extremas. Verificado que NO afecta casos
+// donde la profundidad ya es proporcionalmente grande (Pilar/columna,
+// Piscinas): ahí compressRatio() da un valor bien por encima de ambos
+// pisos, así que ninguno de los dos clampea — el cambio solo se nota en
+// los casos extremos (espesores finos), igual que ya documentó Sprint UX
+// V1.2 para COMPRESSION_POWER.
+const DEPTH_AXIS_RATIO_FLOOR = 0.045;
+
+// Fase 4 (13-ago-2026): además del piso más bajo (arriba), el eje
+// profundidad de una caja usa una potencia de compresión MÁS ALTA que
+// COMPRESSION_POWER (0.45) — más alta = menos "inflado" hacia el eje
+// dominante = más fiel a la proporción real, MUY chica en una losa
+// delgada. 0.45 es el ajuste genérico ya validado en Sprint UX V1.2 para
+// TODOS los ejes de TODAS las formas (círculo/foundation/box); acá se
+// afina solo el eje profundidad de una caja para que un radier/losa se
+// lea claramente como "losa delgada" y no como "caja/cubo" (auditoría
+// visual Fase 4) — verificado a mano que con Radier (6×4×0,08m) la razón
+// largo:espesor pasa de ~13,5:1 (con COMPRESSION_POWER) a ~18,5:1 con este
+// valor, sin llegar a un hilo invisible (el piso de arriba sigue
+// garantizando un mínimo). Para Jardinera (la única otra caja publicada
+// con profundidad chica, 0,5/4=0,125) el efecto es menor (~0,202 -> ~0,185
+// de proporción, ~8% más delgado) — verificado que sigue viéndose bien.
+const DEPTH_COMPRESSION_POWER = 0.55;
+
+export function compressedBoxRatios(largo: number, ancho: number, profundidad: number): [number, number, number] {
+  const maxDim = Math.max(largo, ancho, profundidad);
+  return [
+    clamp(compressRatio(largo / maxDim), AXIS_RATIO_FLOOR, 1),
+    clamp(compressRatio(ancho / maxDim), AXIS_RATIO_FLOOR, 1),
+    clamp(compressRatioWithPower(profundidad / maxDim, DEPTH_COMPRESSION_POWER), DEPTH_AXIS_RATIO_FLOOR, 1),
+  ];
+}
+
+// Fases 5 y 6 (Radier, 13-ago-2026) intentaron resolver kind="slab" con
+// una función acá (`compressedSlabRatios`, ya retirada) que seguía
+// tratando el espesor como un RATIO dentro del mismo sólido 3D que largo/
+// ancho — 2 rondas de bajar el rango (0,035-0,07 → 0,02-0,045) no
+// bastaron ("sigue pareciendo una caja" — feedback del usuario), porque
+// el problema no era el número: `fitToSilhouette` seguía escalando el
+// sólido COMPLETO (incluida la profundidad) al panel, así que la cara
+// superior nunca llegaba a ocupar el máximo espacio posible por sí sola.
+// Fase 7 cambia de enfoque: kind="slab" ahora arma su cara superior con
+// `buildSlabTop` (math/solids.ts) — SIN ningún punto de profundidad — y
+// el llamador (DiagramV2.tsx) ajusta el panel usando SOLO esa cara,
+// agregando el espesor DESPUÉS en píxeles fijos, fuera de este archivo.
+// compressedRatios (arriba) sigue sirviendo para largo/ancho, sin cambios.
 
 export type Fit = {
   project: (p: Vec2) => Vec2;

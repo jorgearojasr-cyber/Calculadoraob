@@ -114,6 +114,51 @@ export function BoxSolid({
   );
 }
 
+// Fase 5 (Radier) — mismos 3 polígonos que BoxSolid (misma geometría,
+// ver buildBox/boxFaces en math/solids.ts — kind="slab" solo cambia CÓMO
+// se calculan los ratios, no la forma), pero wallLeft/wallRight comparten
+// UN degradado claro (`theme.gradient.slabEdge`) en vez del contraste
+// fuerte oscuro/medio de BoxSolid. Ese contraste es justamente lo que
+// hace que un borde delgado siga leyéndose como "una pared" en vez de
+// "el canto de una losa" — ver auditoría de Fase 5. Sin volver a tocar
+// BoxSolid (Fundación/Muro/Losa/Pilar/Piscinas siguen exactamente igual).
+export function SlabSolid({ wallLeft, wallRight, top }: { wallLeft: Vec2[]; wallRight: Vec2[]; top: Vec2[] }) {
+  const rawId = useId();
+  const gid = (name: string) => `dimv2-grad-${name}-${rawId.replace(/[^a-zA-Z0-9]/g, "")}`;
+  const idTop = gid("top");
+  const idEdge = gid("edge");
+
+  return (
+    <g>
+      <defs>
+        <FaceGradient id={idTop} from={theme.gradient.top.from} to={theme.gradient.top.to} />
+        <FaceGradient id={idEdge} from={theme.gradient.slabEdge.from} to={theme.gradient.slabEdge.to} />
+      </defs>
+      <polygon
+        points={poly(wallLeft)}
+        fill={`url(#${idEdge})`}
+        stroke={theme.stroke.solid}
+        strokeWidth={theme.stroke.width}
+        strokeLinejoin="round"
+      />
+      <polygon
+        points={poly(wallRight)}
+        fill={`url(#${idEdge})`}
+        stroke={theme.stroke.solid}
+        strokeWidth={theme.stroke.width}
+        strokeLinejoin="round"
+      />
+      <polygon
+        points={poly(top)}
+        fill={`url(#${idTop})`}
+        stroke={theme.stroke.solid}
+        strokeWidth={theme.stroke.width}
+        strokeLinejoin="round"
+      />
+    </g>
+  );
+}
+
 export function CylinderSolid({
   topLeft,
   topRight,

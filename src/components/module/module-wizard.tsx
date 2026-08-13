@@ -21,7 +21,17 @@ import { readWizardDraft, writeWizardDraft, clearWizardDraft, type WizardDraft }
 // Configuración por módulo (recálculo, hero, preguntas opcionales) — ver
 // module-visual-config.ts, el registro único (Fase de consolidación,
 // 2026-08-02) que reemplaza los mapas que antes vivían dispersos acá.
-import { RECALCULATE_FIELDS, HERO_RESULT_KEYS, OPTIONAL_QUESTION_KEYS, RECIPE_GROUPS } from "./module-visual-config";
+import {
+  RECALCULATE_FIELDS,
+  HERO_RESULT_KEYS,
+  OPTIONAL_QUESTION_KEYS,
+  RECIPE_GROUPS,
+  DOSIFICACION_GROUPS,
+  EXCLUDE_FROM_LIST_KEYS,
+  CONSOLIDATE_NOTES_KEYS,
+  REFUERZO_CONFIG,
+  HERO_POSITIONS,
+} from "./module-visual-config";
 
 function isQuestionVisible(question: WizardQuestion, answers: WizardAnswers): boolean {
   if (!question.visibleIfQuestionKey) return true;
@@ -599,6 +609,11 @@ export function ModuleWizard({
           onEditField={handleEditField}
           heroResultKey={moduleSlug ? HERO_RESULT_KEYS[moduleSlug] : undefined}
           recipeGroups={moduleSlug ? RECIPE_GROUPS[moduleSlug] : undefined}
+          dosificacionGroups={moduleSlug ? DOSIFICACION_GROUPS[moduleSlug] : undefined}
+          excludeFromListKeys={moduleSlug ? EXCLUDE_FROM_LIST_KEYS[moduleSlug] : undefined}
+          consolidateNotesKeys={moduleSlug ? CONSOLIDATE_NOTES_KEYS[moduleSlug] : undefined}
+          refuerzoConfig={moduleSlug ? REFUERZO_CONFIG[moduleSlug] : undefined}
+          heroPosition={moduleSlug ? HERO_POSITIONS[moduleSlug] : undefined}
         />
       )}
     </div>

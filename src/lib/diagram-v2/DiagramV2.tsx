@@ -5,12 +5,12 @@
 // `kind`. Es el único archivo de este sistema que otros componentes de
 // la app deberían importar.
 
-import { boxAllPoints, boxFaces, buildBox, buildCylinder, cylinderAllPoints, type BoxProjected } from "./math/solids";
-import { compressedRatios, finalizeCanvas, fitToSilhouette } from "./math/scale-engine";
-import type { Vec2 } from "./math/vec2";
+import { boxAllPoints, boxFaces, buildBox, buildCylinder, buildSlabTop, cylinderAllPoints, type BoxProjected } from "./math/solids";
+import { compressedRatios, compressedBoxRatios, finalizeCanvas, fitToSilhouette } from "./math/scale-engine";
+import { clamp, type Vec2 } from "./math/vec2";
 import { buildLane, outwardFromFace, LANE_OFFSET, type Lane } from "./layout/dimension-lane";
 import { buildDepthLane } from "./layout/depth-lane";
-import { BoxSolid, CylinderSolid } from "./render/solid-3d";
+import { BoxSolid, SlabSolid, CylinderSolid } from "./render/solid-3d";
 import { Rect2D, Circle2D, VoidRect } from "./render/shape-2d";
 import { DimensionChip, CHIP_H, estimateChipWidth } from "./render/dimension-chip";
 import { theme } from "./render/theme";
@@ -41,10 +41,22 @@ type Field = "largo" | "ancho" | "profundidad" | "diametro";
 type SteppedField = "largo" | "anchoBase" | "altoBase" | "anchoCuello" | "altoCuello";
 
 export type DiagramV2Props = {
-  kind: "box" | "cylinder" | "rect2d" | "circle2d" | "steppedBox";
+  kind: "box" | "slab" | "cylinder" | "rect2d" | "circle2d" | "steppedBox";
   largo?: number;
   ancho?: number;
   profundidad?: number;
+  // Override SOLO para el texto del chip de profundidad (Fase 2, Radier)
+  // — `profundidad` maneja la geometría real (misma escala que largo/
+  // ancho, ver `D = profundidad ?? ...` más abajo, usado directo por
+  // compressedBoxRatios), pero cuando la unidad de display del eje es
+  // distinta de la unidad de largo/ancho (caso Radier: profundidad en cm,
+  // largo/ancho en m), un solo número no puede servir bien a la vez para
+  // la proporción del dibujo Y para el texto ("8 cm" ≠ "0,08 cm"). Opcional
+  // y no usado por ningún otro caller hoy — sin este prop, el chip sigue
+  // formateando `profundidad` tal cual (comportamiento 100% igual al de
+  // antes para Muro/Losa/Piscinas/Cadena/Viga/Fundación/Jardinera/
+  // Excavación).
+  profundidadDisplay?: number;
   diametro?: number;
   // Solo para kind="steppedBox" — ver SteppedField arriba.
   steppedBox?: {
@@ -178,6 +190,7 @@ export function DiagramV2({
   largo,
   ancho,
   profundidad,
+  profundidadDisplay,
   diametro,
   steppedBox,
   steppedLabels,
@@ -202,7 +215,7 @@ export function DiagramV2({
     const L = largo ?? 4.5;
     const A = ancho ?? 2.8;
     const D = profundidad ?? 1.2;
-    const [lR, aR, dR] = compressedRatios([L, A, D]);
+    const [lR, aR, dR] = compressedBoxRatios(L, A, D);
     const local = buildBox(lR, aR, dR);
     const fit = fitToSilhouette(boxAllPoints(local), PAD, CONTENT_TARGET);
     const P: BoxProjected = {
@@ -218,7 +231,7 @@ export function DiagramV2({
 
     const largoText = fmt(largo, u("largo")) || (labels.largo ?? "");
     const anchoText = fmt(ancho, u("ancho")) || (labels.ancho ?? "");
-    const profundidadText = fmt(profundidad, u("profundidad")) || (labels.profundidad ?? "");
+    const profundidadText = fmt(profundidadDisplay ?? profundidad, u("profundidad")) || (labels.profundidad ?? "");
 
     // El eje "largo" (P1) queda del lado DERECHO de la cámara (AXIS_LARGO
     // apunta abajo-derecha) y el eje "ancho" (P2) del lado IZQUIERDO — ver
@@ -253,6 +266,98 @@ export function DiagramV2({
       >
         <g transform={`translate(${canvas.translate[0]},${canvas.translate[1]})`}>
           <BoxSolid wallLeft={faces.wallLeft} wallRight={faces.wallRight} top={faces.top} waterFill={waterFill} />
+          <DimensionChip lane={laneLargo} label={labels.largo ?? "Largo"} value={largoText} active={activeField === "largo"} />
+          <DimensionChip lane={laneAncho} label={labels.ancho ?? "Ancho"} value={anchoText} active={activeField === "ancho"} />
+          <DimensionChip lane={laneProfundidad} label={labels.profundidad ?? "Profundidad"} value={profundidadText} active={activeField === "profundidad"} />
+        </g>
+      </svg>
+    );
+  }
+
+  // Fase 7 (Radier, 13-ago-2026) — geometría propia, NO derivada de
+  // buildBox: 3 fases (2, 4, 5, 6) ajustando el espesor como un RATIO
+  // dentro del mismo sólido 3D de largo/ancho no bastaron ("sigue
+  // pareciendo una caja" — feedback repetido) porque el problema de fondo
+  // no era el número — era que `fitToSilhouette` escalaba el sólido
+  // COMPLETO (incluida la profundidad) al panel, así que la cara superior
+  // nunca llegaba a ocupar el máximo espacio posible por sí sola, sin
+  // importar cuán chico fuera el ratio de profundidad.
+  //
+  // Acá se ajusta el panel usando SOLO la cara superior (`buildSlabTop`,
+  // math/solids.ts — sin ningún punto de profundidad), así que esa cara
+  // ocupa el ~84% del panel COMPLETO (CONTENT_TARGET), no un porcentaje
+  // repartido con una profundidad que compite por espacio. El espesor se
+  // agrega DESPUÉS, en PÍXELES FIJOS (EDGE_PX, 8-14px según pedido
+  // explícito del usuario en esta fase) — completamente desacoplado de
+  // cualquier ratio real: 8cm y 12cm de espesor dan un EDGE_PX casi
+  // idéntico a propósito (la diferencia real entre 7 y 12cm no se puede
+  // ni se necesita distinguir a esta escala — es una representación
+  // didáctica, no un plano a escala, igual que pide la sección 6 de esta
+  // fase). Mismas cotas/chips/labels que antes (mismo sistema de carriles,
+  // ver dimension-lane.ts), sin ningún cambio en boxFaces/buildBox — cero
+  // impacto en Fundación/Muro/Losa/Pilar/Piscinas/Cadena/Viga/Jardinera.
+  if (kind === "slab") {
+    const L = largo ?? 4.5;
+    const A = ancho ?? 2.8;
+    const D = profundidad ?? 1.2;
+    const [lR, aR] = compressedRatios([L, A]);
+    const top = buildSlabTop(lR, aR);
+    const fit = fitToSilhouette([top.P0, top.P1, top.P2, top.P3], PAD, CONTENT_TARGET);
+    const P0 = fit.project(top.P0);
+    const P1 = fit.project(top.P1);
+    const P2 = fit.project(top.P2);
+    const P3 = fit.project(top.P3);
+
+    // EDGE_PX: franja de espesor en píxeles fijos del panel, NUNCA
+    // derivada de largoR/anchoR/profundidadR — la variación real de
+    // espesor (7-12cm) solo mueve esto dentro de un rango angosto
+    // (8-14px), a propósito, para que SIEMPRE se lea como el canto
+    // delgado de una losa sin importar las medidas ingresadas.
+    const EDGE_PX = clamp(8 + (D / Math.max(L, A)) * 60, 8, 14);
+    const P0d: Vec2 = [P0[0], P0[1] + EDGE_PX];
+    const P1d: Vec2 = [P1[0], P1[1] + EDGE_PX];
+    const P2d: Vec2 = [P2[0], P2[1] + EDGE_PX];
+    const faces = {
+      top: [P0, P1, P3, P2] as Vec2[],
+      wallRight: [P0, P1, P1d, P0d] as Vec2[],
+      wallLeft: [P0, P2, P2d, P0d] as Vec2[],
+    };
+
+    const largoText = fmt(largo, u("largo")) || (labels.largo ?? "");
+    const anchoText = fmt(ancho, u("ancho")) || (labels.ancho ?? "");
+    const profundidadText = fmt(profundidadDisplay ?? profundidad, u("profundidad")) || (labels.profundidad ?? "");
+
+    let laneAncho = buildLane(P0d, P2d, outwardFromFace(P0d, P2d, faces.wallLeft), CHIP_OFFSET, 0.95);
+    let laneLargo = buildLane(P0d, P1d, outwardFromFace(P0d, P1d, faces.wallRight), CHIP_OFFSET, 0.95);
+    const laneProfundidad = buildDepthLane(P1, P1d, CHIP_OFFSET);
+    [laneAncho, laneLargo] = separateChips(laneAncho, [labels.ancho ?? "Ancho", anchoText], laneLargo, [labels.largo ?? "Largo", largoText]);
+
+    const canvas = finalizeCanvas(
+      fit.viewBoxW,
+      fit.viewBoxH,
+      [
+        // P0d/P1d/P2d quedan FUERA del bbox que fitToSilhouette midió
+        // (solo vio la cara superior) — hay que pasarlos acá para que el
+        // panel final crezca lo justo para mostrar el espesor completo,
+        // mismo mecanismo que ya usa este archivo para los chips.
+        P0d,
+        P1d,
+        P2d,
+        ...chipCorners(laneLargo, labels.largo ?? "Largo", largoText),
+        ...chipCorners(laneAncho, labels.ancho ?? "Ancho", anchoText),
+        ...chipCorners(laneProfundidad, labels.profundidad ?? "Profundidad", profundidadText),
+      ],
+      CANVAS_MARGIN
+    );
+
+    return (
+      <svg
+        viewBox={`0 0 ${canvas.viewBoxW} ${canvas.viewBoxH}`}
+        {...svgProps}
+        aria-label={`Diagrama de ${describeField(labels.largo, largoText)}, ${describeField(labels.ancho, anchoText)} y ${describeField(labels.profundidad, profundidadText)}`}
+      >
+        <g transform={`translate(${canvas.translate[0]},${canvas.translate[1]})`}>
+          <SlabSolid wallLeft={faces.wallLeft} wallRight={faces.wallRight} top={faces.top} />
           <DimensionChip lane={laneLargo} label={labels.largo ?? "Largo"} value={largoText} active={activeField === "largo"} />
           <DimensionChip lane={laneAncho} label={labels.ancho ?? "Ancho"} value={anchoText} active={activeField === "ancho"} />
           <DimensionChip lane={laneProfundidad} label={labels.profundidad ?? "Profundidad"} value={profundidadText} active={activeField === "profundidad"} />

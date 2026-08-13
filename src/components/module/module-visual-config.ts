@@ -26,7 +26,14 @@
 // una medida ancho/largo (ej. dos espesores distintos, o una cantidad + una
 // medida).
 export type DiagramConfig = {
-  shape: "rectangle" | "rectangle-with-depth" | "circle" | "circle-with-depth";
+  // "slab-with-depth" (Fase 5, Radier) — mismos campos/labels/cotas que
+  // "rectangle-with-depth", pero DiagramV2 dibuja kind="slab" en vez de
+  // kind="box" (ver volume-step.tsx): una losa delgada con un borde
+  // plano de un solo tono, en vez de una caja isométrica de 2 caras con
+  // contraste fuerte. Ver DiagramV2.tsx y math/scale-engine.ts
+  // (compressedSlabRatios) para el detalle — sin tocar "box" ni ningún
+  // otro módulo que use "rectangle-with-depth".
+  shape: "rectangle" | "rectangle-with-depth" | "slab-with-depth" | "circle" | "circle-with-depth";
   primaryLabel: string;
   secondaryLabel?: string;
   depthLabel?: string;
@@ -98,6 +105,29 @@ export type ModuleVisualConfig = {
   optionalQuestionKeys?: string[];
   // Ver RECIPE_GROUPS.
   recipeGroups?: RecipeGroupConfig[];
+  // Ver DOSIFICACION_GROUPS.
+  dosificacionGroups?: DosificacionGroupConfig[];
+  // Ver CONSOLIDATE_NOTES_KEYS.
+  consolidateNotesKeys?: string[];
+  // Ver EXCLUDE_FROM_LIST_KEYS.
+  excludeFromListKeys?: string[];
+  // Ver HERO_POSITIONS. Default "top" (comportamiento de siempre).
+  heroPosition?: "top" | "beforeMaterials";
+  // Ver REFUERZO_CONFIG.
+  refuerzo?: RefuerzoConfig;
+};
+
+// Fase 5 (Radier) — arma la RefuerzoCard a partir de 2 InfoResult (estado
+// + explicación, ver Variable.key) más una nota estática (no depende de
+// datos, es siempre el mismo texto para cualquier uso). Genérico, sin
+// nada de Radier hardcodeado en el componente — cualquier módulo futuro
+// con el mismo patrón agrega su propia entrada acá.
+export type RefuerzoConfig = {
+  title: string;
+  materialLabel: string;
+  estadoKey: string;
+  explicacionKey: string;
+  nota: string;
 };
 
 // Fase 9B, sprint UX V1.2 (04-ago-2026) — agrupa un resultado "primario"
@@ -112,6 +142,24 @@ export type RecipeGroupConfig = {
   title: string;
   primaryKey: string;
   itemKeys: string[];
+};
+
+// Fase 4 (Radier, 13-ago-2026) — agrupa una "dosificación referencial"
+// (proporción práctica por unidad base, ej. 1 saco de cemento) con sus
+// Formula.key ingrediente, para que ResultScreen los pinte juntos en una
+// DosificacionCard (ámbar, distinta de RecipeCard) en vez de la lista
+// genérica de PricedResults. Genérico, sin nada de Radier hardcodeado —
+// mismo criterio que RecipeGroupConfig.
+export type DosificacionGroupConfig = {
+  title: string;
+  subtitle: string;
+  baseLabel: string;
+  baseValue: string;
+  baseUnit: string;
+  itemKeys: string[];
+  tip: string;
+  disclaimer: string;
+  sourceLabel: string;
 };
 
 // Mismo factor que ya usa la Variable "factor-de-inclinacion" (LOOKUP) en
@@ -144,7 +192,7 @@ export const MODULE_CONFIG: Record<string, ModuleVisualConfig> = {
   radier: {
     diagrams: {
       "radier-medidas": {
-        shape: "rectangle-with-depth",
+        shape: "slab-with-depth",
         primaryLabel: "largo",
         secondaryLabel: "ancho",
         // "Espesor recomendado" (no solo "Espesor") — Fase 1, sprint UX
@@ -166,18 +214,69 @@ export const MODULE_CONFIG: Record<string, ModuleVisualConfig> = {
     // sin volver atrás en el wizard (ver RecalculateField en
     // result-screen.tsx) — mecanismo genérico, por ahora solo conectado acá.
     recalculateField: "espesor_cm",
-    // Fase 9B, sprint UX V1.2 (04-ago-2026): dosificación por carga de
-    // betonera (ver Fase 9A — Formula.key "numero_cargas_betonera" +
-    // "*_por_carga", todas ya condicionadas a metodo_hormigon=manual, así
-    // que en el camino premezclado esta sección simplemente no aparece,
-    // sin necesitar ninguna condición acá).
-    recipeGroups: [
+    // Fase 5 (13-ago-2026): "Volumen de hormigón" pasa a ser el resultado
+    // protagonista (ResultHero, azul) en vez de Cemento — pedido explícito
+    // del usuario ("VOLUMEN DE HORMIGÓN — AZUL" como su propio bloque,
+    // separado de "MATERIALES"). Solo existe bajo metodo_hormigon=manual
+    // (condition de la Formula); con premezclado, "volumen_total" no se
+    // computa, heroResult no encuentra match, showsHero cae a false, y el
+    // comportamiento vuelve a ser exactamente el de siempre para ese
+    // camino (volumen_premezclado como primer ítem destacado de la lista
+    // — ver comentario en result-screen.tsx sobre showsHero). Se excluye
+    // "volumen_total" de la lista genérica para que no aparezca dos veces
+    // (una vez en ResultHero, otra como fila de "Materiales") —
+    // "volumen_premezclado" NO está en esta lista a propósito: bajo
+    // premezclado no hay hero, así que necesita seguir siendo el primer
+    // ítem de la lista para conservar su propio destaque, como antes.
+    heroResultKey: "volumen_total",
+    excludeFromListKeys: ["volumen_total"],
+    heroPosition: "beforeMaterials",
+    refuerzo: {
+      title: "Refuerzo recomendado",
+      materialLabel: "Malla electrosoldada",
+      estadoKey: "refuerzo_estado",
+      explicacionKey: "refuerzo_explicacion",
+      nota: "Esta es una orientación general. El tipo y dimensionamiento definitivo del refuerzo debe definirse según espesor, base, cargas y especificaciones del proyecto. ObraBien no realiza dimensionamiento estructural.",
+    },
+    // Fase 9B (04-ago-2026) agregó una RecipeCard de "Dosificación por
+    // carga de betonera" acá — Fase 5 (13-ago-2026) la retiró del
+    // resultado por pedido explícito (dos "recetas" simultáneas —por saco
+    // y por carga— confundían más de lo que ayudaban). La lógica del
+    // motor sigue intacta (Formula.key "numero_cargas_betonera" +
+    // "*_por_carga" se siguen calculando, solo con isResult:false — ver
+    // db-fixes/fase5-radier-limpieza-refuerzo-betonera.ts): si alguna
+    // vez se necesita mostrarla de nuevo, es solo volver a agregar este
+    // bloque, sin tocar el motor.
+    // Fase 4 (13-ago-2026): dosificación referencial por saco, en baldes de
+    // 10L (ver dosif_arena_baldes/dosif_grava_baldes/dosif_agua_litros,
+    // derivadas de las mismas Variables por m³ que ya alimentan
+    // "materiales totales" — nunca puede quedar matemáticamente
+    // incoherente con esos totales). Se muestra ANTES de "Volumen de
+    // hormigón"/"materiales totales" en ResultScreen (ver ese archivo) —
+    // es la información más práctica para quien prepara el hormigón.
+    dosificacionGroups: [
       {
-        title: "Dosificación por carga de betonera",
-        primaryKey: "numero_cargas_betonera",
-        itemKeys: ["cemento_por_carga", "arena_por_carga", "gravilla_por_carga", "agua_por_carga"],
+        title: "Dosificación referencial estimada",
+        subtitle: "Para preparación manual en obra",
+        baseLabel: "Cemento",
+        baseValue: "1",
+        baseUnit: "saco de 25 kg",
+        itemKeys: ["dosif_arena_baldes", "dosif_grava_baldes", "dosif_agua_litros"],
+        tip: "Usa siempre el mismo recipiente para medir los áridos.",
+        disclaimer:
+          "Referencia práctica. La cantidad real puede variar según los áridos, su humedad y las condiciones de obra. No garantiza por sí sola el grado de resistencia indicado — para mayor exigencia, usa una dosificación diseñada o considera hormigón premezclado.",
+        sourceLabel: "Polpaico (dosificaciones sobre NCh170:2016)",
       },
     ],
+    // Fase 5 (13-ago-2026): las notas técnicas de estos 4 materiales
+    // (fórmula, fuente citada) se sacan de su tarjeta individual (ver
+    // `suppressNoteForKeys` en PricedResults) y se consolidan en un solo
+    // colapsable al final (ver TechnicalNotesSection en result-screen.tsx)
+    // — el pedido explícito fue "no repetir fuentes técnicas dentro de
+    // cada tarjeta". Volumen de hormigón NO está acá a propósito: su nota
+    // (desglose 1,92 -> 3 -> 3,21 m³) es justamente lo que explica ESE
+    // número, tiene sentido quedarse pegada a él.
+    consolidateNotesKeys: ["cemento_manual", "arena_manual", "gravilla_manual", "agua_manual"],
   },
   "ceramica-pisos": {
     diagrams: {
@@ -740,6 +839,55 @@ export const RECIPE_GROUPS: Record<string, RecipeGroupConfig[]> = Object.fromEnt
   Object.entries(MODULE_CONFIG)
     .filter(([, m]) => m.recipeGroups)
     .map(([slug, m]) => [slug, m.recipeGroups!])
+);
+
+// Ver DosificacionGroupConfig — módulos con una tarjeta de "dosificación
+// referencial" además de la lista genérica de PricedResults. Los
+// Formula.key listados en cada grupo se sacan de esa lista genérica (ver
+// ResultScreen) para no duplicarse, mismo criterio que RECIPE_GROUPS.
+export const DOSIFICACION_GROUPS: Record<string, DosificacionGroupConfig[]> = Object.fromEntries(
+  Object.entries(MODULE_CONFIG)
+    .filter(([, m]) => m.dosificacionGroups)
+    .map(([slug, m]) => [slug, m.dosificacionGroups!])
+);
+
+// Fase 5 (Radier) — Formula.key cuyas notas individuales (ver
+// PricedResults' `suppressNoteForKeys`) se ocultan de su tarjeta y se
+// consolidan en un solo TechnicalNotesSection (ver ResultScreen).
+export const CONSOLIDATE_NOTES_KEYS: Record<string, string[]> = Object.fromEntries(
+  Object.entries(MODULE_CONFIG)
+    .filter(([, m]) => m.consolidateNotesKeys)
+    .map(([slug, m]) => [slug, m.consolidateNotesKeys!])
+);
+
+// Fase 5 (Radier) — Formula.key que NUNCA deben aparecer en la lista
+// genérica de PricedResults, sin importar recipeGroups/dosificacionGroups
+// (ej. un resultado que ya se muestra en su propia tarjeta destacada vía
+// heroResultKey — "volumen_total" en Radier, para que no aparezca DOS
+// veces: una vez grande en ResultHero, otra vez como fila normal en
+// "Materiales"). Sin esta entrada (la mayoría de los módulos), el
+// comportamiento es idéntico al de siempre.
+export const EXCLUDE_FROM_LIST_KEYS: Record<string, string[]> = Object.fromEntries(
+  Object.entries(MODULE_CONFIG)
+    .filter(([, m]) => m.excludeFromListKeys)
+    .map(([slug, m]) => [slug, m.excludeFromListKeys!])
+);
+
+// Fase 5 (Radier) — dónde va ResultHero (la tarjeta protagonista azul).
+// Todos los módulos salvo Radier quedan "top" (comportamiento de
+// siempre, sin tocar nada) — Radier pidió el orden Espesor -> Tipo de
+// hormigón -> Dosificación -> Refuerzo -> Volumen (hero) -> Materiales.
+export const HERO_POSITIONS: Record<string, "top" | "beforeMaterials"> = Object.fromEntries(
+  Object.entries(MODULE_CONFIG)
+    .filter(([, m]) => m.heroPosition)
+    .map(([slug, m]) => [slug, m.heroPosition!])
+);
+
+// Ver RefuerzoConfig.
+export const REFUERZO_CONFIG: Record<string, RefuerzoConfig> = Object.fromEntries(
+  Object.entries(MODULE_CONFIG)
+    .filter(([, m]) => m.refuerzo)
+    .map(([slug, m]) => [slug, m.refuerzo!])
 );
 
 // Preguntas NUMBER que el usuario puede dejar en blanco y avanzar igual
