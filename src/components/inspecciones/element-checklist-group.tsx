@@ -30,6 +30,8 @@ export type ElementChecklistData = {
       condicionesCorrectas: string | null;
       comoRevisarlo: string | null;
       senalesDeProblema: string | null;
+      // Fase 11E — ver GuideBlock en checklist-item-row.tsx.
+      porQueImporta: string | null;
     } | null;
   }[];
 };

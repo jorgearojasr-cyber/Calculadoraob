@@ -73,6 +73,7 @@ export function ChecklistItemRow({
     condicionesCorrectas: string | null;
     comoRevisarlo: string | null;
     senalesDeProblema: string | null;
+    porQueImporta: string | null;
   } | null;
 }) {
   // Fase 11B — piloto "guía primero" (docs/FASE11A_DISENO_INSPECCION_TECNICA_GUIADA.md,
@@ -166,6 +167,7 @@ export function ChecklistItemRow({
           comoRevisarlo={technicalArticle.comoRevisarlo}
           condicionesCorrectas={technicalArticle.condicionesCorrectas}
           senalesDeProblema={technicalArticle.senalesDeProblema}
+          porQueImporta={technicalArticle.porQueImporta}
         />
       )}
 
@@ -339,17 +341,22 @@ function GuideBlock({
   comoRevisarlo,
   condicionesCorrectas,
   senalesDeProblema,
+  porQueImporta,
 }: {
   queRevisar: string | null;
   comoRevisarlo: string | null;
   condicionesCorrectas: string | null;
   senalesDeProblema: string | null;
+  porQueImporta: string | null;
 }) {
   const sections = [
     { label: "Qué revisar", value: queRevisar },
     { label: "Cómo revisarlo", value: comoRevisarlo },
     { label: "Qué debería verse", value: condicionesCorrectas },
     { label: "Qué puede ser señal de un problema", value: senalesDeProblema },
+    // Fase 11E — solo se pinta si el artículo la tiene (docs/FASE11D...,
+    // regla "no mostrar 'Por qué importa' si el artículo no lo tiene").
+    { label: "Por qué importa", value: porQueImporta },
   ].filter((s): s is { label: string; value: string } => Boolean(s.value));
 
   if (sections.length === 0) return null;

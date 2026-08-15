@@ -35,16 +35,25 @@ export type KnowledgeEntry = {
   // nuevo renderizado guiado.
   comoRevisarlo: string | null;
   senalesDeProblema: string | null;
+  // Fase 11E — sección nueva del Lote 1 de biblioteca guiada
+  // (docs/FASE11D_DISENO_BIBLIOTECA_TECNICA_GUIADA.md, plantilla
+  // canónica campo F). Mismo patrón aditivo que comoRevisarlo/
+  // senalesDeProblema: null en cualquier artículo que no la tenga.
+  porQueImporta: string | null;
 };
 
 const SECTION_ALIASES: Record<keyof Omit<KnowledgeEntry, "slug" | "title">, string[]> = {
-  queRevisar: ["qué se revisa", "que se revisa"],
+  // "qué revisar" — encabezado de la plantilla canónica Fase 11D/11E;
+  // "qué se revisa" se conserva para no romper Piso (Fase 11B), que ya
+  // está en producción con ese encabezado.
+  queRevisar: ["qué revisar", "que revisar", "qué se revisa", "que se revisa"],
   condicionesCorrectas: ["qué debería observarse", "que deberia observarse", "qué debería observarse"],
   condicionesIncorrectas: ["cuando existe una observación", "cuando existe una observacion"],
   recomendacion: ["recomendación", "recomendacion"],
   fuente: ["fuente"],
   comoRevisarlo: ["cómo revisarlo", "como revisarlo"],
   senalesDeProblema: ["qué señales pueden indicar un problema", "que señales pueden indicar un problema", "que senales pueden indicar un problema"],
+  porQueImporta: ["por qué importa", "por que importa"],
 };
 
 export function parseMarkdownSections(content: string): Map<string, string> {
@@ -94,6 +103,7 @@ export function parseKnowledgeContent(content: string): Omit<KnowledgeEntry, "sl
     fuente: findSection(sections, SECTION_ALIASES.fuente),
     comoRevisarlo: findSection(sections, SECTION_ALIASES.comoRevisarlo),
     senalesDeProblema: findSection(sections, SECTION_ALIASES.senalesDeProblema),
+    porQueImporta: findSection(sections, SECTION_ALIASES.porQueImporta),
   };
 }
 
