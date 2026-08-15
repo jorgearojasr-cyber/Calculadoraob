@@ -4,40 +4,66 @@ import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowRight, Loader2 } from "lucide-react";
 import { WizardHeader } from "@/components/module/wizard-header";
+import { MotivoSelector } from "./motivo-selector";
 import { PropertyTypeSelector } from "./property-type-selector";
-import { SpaceSelectionStep } from "./space-selection-step";
+import { CasaFichaStep, CASA_FICHA_DEFAULT, casaFichaToCounts, type CasaFichaValue } from "./casa-ficha-step";
+import {
+  DepartamentoFichaStep,
+  DEPARTAMENTO_FICHA_DEFAULT,
+  departamentoFichaToCounts,
+  type DepartamentoFichaValue,
+} from "./departamento-ficha-step";
+import {
+  AmpliacionFichaStep,
+  AMPLIACION_FICHA_DEFAULT,
+  ampliacionFichaToCounts,
+  type AmpliacionFichaValue,
+} from "./ampliacion-ficha-step";
 import { createInspectionAndGenerateAction } from "@/app/(app)/inspecciones/actions";
-import type { InspectionPropertyType, InspectionSpaceTemplate } from "@/generated/prisma/client";
+import type { InspectionMotivo, InspectionPropertyType } from "@/generated/prisma/client";
 
-const STEP_COUNT = 3;
+// Fase 11B — nuevo flujo: Motivo → Tipo de inmueble → Ficha específica →
+// Datos (docs/FASE11A_DISENO_INSPECCION_TECNICA_GUIADA.md, sección 1/2).
+// Cuando motivo=REVISION_AMPLIACION el tipo queda fijo en AMPLIACION y el
+// paso de Tipo se salta, por eso el total de pasos varía (4 vs 5).
+type Step = "motivo" | "tipo" | "ficha" | "datos";
 
-export function NewInspectionForm({ spaceTemplates }: { spaceTemplates: InspectionSpaceTemplate[] }) {
+export function NewInspectionForm() {
   const router = useRouter();
-  const [stepIndex, setStepIndex] = useState(0);
+  const [motivo, setMotivo] = useState<InspectionMotivo | null>(null);
   const [tipoInmueble, setTipoInmueble] = useState<InspectionPropertyType | null>(null);
-  const [counts, setCounts] = useState<Record<string, number>>({});
+  const [casaFicha, setCasaFicha] = useState<CasaFichaValue>(CASA_FICHA_DEFAULT);
+  const [depaFicha, setDepaFicha] = useState<DepartamentoFichaValue>(DEPARTAMENTO_FICHA_DEFAULT);
+  const [ampliacionFicha, setAmpliacionFicha] = useState<AmpliacionFichaValue>(AMPLIACION_FICHA_DEFAULT);
   const [name, setName] = useState("");
   const [direccion, setDireccion] = useState("");
   const [fecha, setFecha] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
-  const templatesForType = useMemo(
-    () => (tipoInmueble ? spaceTemplates.filter((t) => t.appliesTo.includes(tipoInmueble)) : []),
-    [spaceTemplates, tipoInmueble]
+  const steps: Step[] = useMemo(
+    () => (motivo === "REVISION_AMPLIACION" ? ["motivo", "ficha", "datos"] : ["motivo", "tipo", "ficha", "datos"]),
+    [motivo]
   );
-  const totalSelected = Object.values(counts).reduce((acc, n) => acc + n, 0);
+  const [stepIndex, setStepIndex] = useState(0);
+  const step = steps[stepIndex];
 
   const goBack = () => setStepIndex((i) => Math.max(0, i - 1));
+  const goNext = () => setStepIndex((i) => Math.min(steps.length - 1, i + 1));
 
-  const handleTipo = (value: InspectionPropertyType) => {
-    setTipoInmueble(value);
-    setCounts({});
+  const handleMotivo = (value: InspectionMotivo) => {
+    setMotivo(value);
+    if (value === "REVISION_AMPLIACION") {
+      setTipoInmueble("AMPLIACION");
+    } else {
+      setTipoInmueble(null);
+    }
     setStepIndex(1);
   };
 
-  const handleCountChange = (templateKey: string, count: number) => {
-    setCounts((prev) => ({ ...prev, [templateKey]: count }));
+  const handleTipo = (value: InspectionPropertyType) => {
+    setTipoInmueble(value);
+    goNext();
   };
 
   const handleSubmit = () => {
@@ -47,12 +73,22 @@ export function NewInspectionForm({ spaceTemplates }: { spaceTemplates: Inspecti
       return;
     }
     setError(null);
+
+    const counts =
+      tipoInmueble === "CASA"
+        ? casaFichaToCounts(casaFicha)
+        : tipoInmueble === "DEPARTAMENTO"
+          ? departamentoFichaToCounts(depaFicha)
+          : ampliacionFichaToCounts(ampliacionFicha);
+
     startTransition(async () => {
       const result = await createInspectionAndGenerateAction({
         name,
         tipoInmueble,
         direccion: direccion.trim() || null,
         fecha: fecha || null,
+        motivo,
+        tipoAmpliacion: tipoInmueble === "AMPLIACION" ? ampliacionFicha.tipo : null,
         spaceSelections: Object.entries(counts).map(([templateKey, count]) => ({ templateKey, count })),
       });
       if (!result.caseId) {
@@ -67,37 +103,50 @@ export function NewInspectionForm({ spaceTemplates }: { spaceTemplates: Inspecti
     <div className="bg-white rounded-2xl border border-border shadow-sm p-5 sm:p-8">
       <WizardHeader
         moduleName="Inspecciones"
-        step={{ index: stepIndex, total: STEP_COUNT }}
+        step={{ index: stepIndex, total: steps.length }}
         back={stepIndex === 0 ? { label: "Inicio", href: "/inspecciones" } : { label: "Atrás", onClick: goBack }}
       />
 
-      {stepIndex === 0 && (
+      {step === "motivo" && (
+        <div>
+          <h2 className="font-display text-[19px] font-semibold tracking-tight mb-2">¿Cuál es el motivo de esta inspección?</h2>
+          <p className="text-sm text-ink-muted mb-6">Esto ayuda a dar el tono correcto al informe final.</p>
+          <MotivoSelector value={motivo} onSelect={handleMotivo} />
+        </div>
+      )}
+
+      {step === "tipo" && (
         <div>
           <h2 className="font-display text-[19px] font-semibold tracking-tight mb-6">¿Qué vas a inspeccionar?</h2>
-          <PropertyTypeSelector value={tipoInmueble} onSelect={handleTipo} />
+          <PropertyTypeSelector value={tipoInmueble} onSelect={handleTipo} allow={["CASA", "DEPARTAMENTO"]} />
         </div>
       )}
 
-      {stepIndex === 1 && (
+      {step === "ficha" && tipoInmueble && (
         <div>
           <h2 className="font-display text-[19px] font-semibold tracking-tight mb-2">Características del inmueble</h2>
-          <p className="text-sm text-ink-muted mb-6">Elige los espacios que quieres incluir en esta inspección.</p>
-          <SpaceSelectionStep templates={templatesForType} counts={counts} onChange={handleCountChange} />
-          {templatesForType.length > 0 && (
-            <button
-              type="button"
-              onClick={() => setStepIndex(2)}
-              disabled={totalSelected === 0}
-              className="mt-6 rounded-full px-6 py-3 text-sm font-semibold text-white flex items-center gap-2 bg-action disabled:opacity-40 disabled:cursor-not-allowed"
-            >
-              Siguiente
-              <ArrowRight className="w-4 h-4" />
-            </button>
+          <p className="text-sm text-ink-muted mb-6">
+            Cuéntanos cómo está distribuido para armar el listado de revisión.
+          </p>
+          {tipoInmueble === "CASA" && <CasaFichaStep value={casaFicha} onChange={setCasaFicha} />}
+          {tipoInmueble === "DEPARTAMENTO" && (
+            <DepartamentoFichaStep value={depaFicha} onChange={setDepaFicha} />
           )}
+          {tipoInmueble === "AMPLIACION" && (
+            <AmpliacionFichaStep value={ampliacionFicha} onChange={setAmpliacionFicha} />
+          )}
+          <button
+            type="button"
+            onClick={goNext}
+            className="mt-6 rounded-full px-6 py-3 text-sm font-semibold text-white flex items-center gap-2 bg-action"
+          >
+            Siguiente
+            <ArrowRight className="w-4 h-4" />
+          </button>
         </div>
       )}
 
-      {stepIndex === 2 && (
+      {step === "datos" && (
         <div>
           <h2 className="font-display text-[19px] font-semibold tracking-tight mb-6">Datos de la inspección</h2>
           <div className="grid gap-4">

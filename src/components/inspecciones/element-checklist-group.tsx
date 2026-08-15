@@ -18,7 +18,19 @@ export type ElementChecklistData = {
     // tiene technicalArticleSlug Y ese slug resuelve a un TechnicalArticle
     // real (resuelto en [id]/page.tsx). null en el resto de las preguntas
     // — la mayoría del catálogo no tiene artículo todavía.
-    technicalArticle: { title: string; content: string } | null;
+    // Fase 11B — queRevisar/comoRevisarlo/condicionesCorrectas/
+    // senalesDeProblema arman el bloque de guía; comoRevisarlo y
+    // senalesDeProblema están presentes solo cuando el artículo tiene esas
+    // 2 secciones nuevas (hoy, solo Piso) — en el resto quedan null y el
+    // checklist se ve exactamente igual que antes (docs/FASE11A..., sección 7).
+    technicalArticle: {
+      title: string;
+      content: string;
+      queRevisar: string | null;
+      condicionesCorrectas: string | null;
+      comoRevisarlo: string | null;
+      senalesDeProblema: string | null;
+    } | null;
   }[];
 };
 

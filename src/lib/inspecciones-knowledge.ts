@@ -27,6 +27,14 @@ export type KnowledgeEntry = {
   // Fuente documental citada por el propio artículo (nunca normativa
   // inventada — mismo texto ya auditado en Fase 5B/6A).
   fuente: string | null;
+  // Fase 11B — secciones nuevas del piloto "guía primero" de Piso
+  // (docs/FASE11A..., sección 7). Aditivo: null en cualquier artículo que
+  // no las tenga (los otros 4 de Fase 5B, o cualquiera futuro que no las
+  // incluya) — el resto de esta librería (composeSuggestedComment) sigue
+  // sin leerlas, así que no hay ningún cambio de comportamiento fuera del
+  // nuevo renderizado guiado.
+  comoRevisarlo: string | null;
+  senalesDeProblema: string | null;
 };
 
 const SECTION_ALIASES: Record<keyof Omit<KnowledgeEntry, "slug" | "title">, string[]> = {
@@ -35,9 +43,11 @@ const SECTION_ALIASES: Record<keyof Omit<KnowledgeEntry, "slug" | "title">, stri
   condicionesIncorrectas: ["cuando existe una observación", "cuando existe una observacion"],
   recomendacion: ["recomendación", "recomendacion"],
   fuente: ["fuente"],
+  comoRevisarlo: ["cómo revisarlo", "como revisarlo"],
+  senalesDeProblema: ["qué señales pueden indicar un problema", "que señales pueden indicar un problema", "que senales pueden indicar un problema"],
 };
 
-function parseMarkdownSections(content: string): Map<string, string> {
+export function parseMarkdownSections(content: string): Map<string, string> {
   const sections = new Map<string, string>();
   let currentHeading: string | null = null;
   let buffer: string[] = [];
@@ -61,12 +71,30 @@ function parseMarkdownSections(content: string): Map<string, string> {
   return sections;
 }
 
-function findSection(sections: Map<string, string>, aliases: string[]): string | null {
+export function findSection(sections: Map<string, string>, aliases: string[]): string | null {
   for (const alias of aliases) {
     const value = sections.get(alias);
     if (value) return value;
   }
   return null;
+}
+
+// Fase 11B — extraída de loadKnowledgeEntry para reutilizarla también en
+// [id]/page.tsx, que ya resuelve `TechnicalArticle` con una query aparte
+// (referencia por slug, no FK) y no necesita una segunda consulta a la
+// base de datos solo para parsear el mismo `content` que ya tiene en
+// memoria.
+export function parseKnowledgeContent(content: string): Omit<KnowledgeEntry, "slug" | "title"> {
+  const sections = parseMarkdownSections(content);
+  return {
+    queRevisar: findSection(sections, SECTION_ALIASES.queRevisar),
+    condicionesCorrectas: findSection(sections, SECTION_ALIASES.condicionesCorrectas),
+    condicionesIncorrectas: findSection(sections, SECTION_ALIASES.condicionesIncorrectas),
+    recomendacion: findSection(sections, SECTION_ALIASES.recomendacion),
+    fuente: findSection(sections, SECTION_ALIASES.fuente),
+    comoRevisarlo: findSection(sections, SECTION_ALIASES.comoRevisarlo),
+    senalesDeProblema: findSection(sections, SECTION_ALIASES.senalesDeProblema),
+  };
 }
 
 // Devuelve null si el ítem no tiene TechnicalArticle vinculado, o si el
@@ -83,15 +111,5 @@ export async function loadKnowledgeEntry(technicalArticleSlug: string | null): P
   });
   if (!article) return null;
 
-  const sections = parseMarkdownSections(article.content);
-
-  return {
-    slug: article.slug,
-    title: article.title,
-    queRevisar: findSection(sections, SECTION_ALIASES.queRevisar),
-    condicionesCorrectas: findSection(sections, SECTION_ALIASES.condicionesCorrectas),
-    condicionesIncorrectas: findSection(sections, SECTION_ALIASES.condicionesIncorrectas),
-    recomendacion: findSection(sections, SECTION_ALIASES.recomendacion),
-    fuente: findSection(sections, SECTION_ALIASES.fuente),
-  };
+  return { slug: article.slug, title: article.title, ...parseKnowledgeContent(article.content) };
 }

@@ -10,6 +10,7 @@ import { SpaceDetailView } from "@/components/inspecciones/space-detail-view";
 import { PhotoUpload } from "@/components/inspecciones/photo-upload";
 import { InspectionNotAvailable } from "@/components/inspecciones/inspection-not-available";
 import { computeProgress, sumProgress } from "@/lib/inspecciones/progress";
+import { parseKnowledgeContent } from "@/lib/inspecciones-knowledge";
 
 export const dynamic = "force-dynamic";
 
@@ -106,7 +107,14 @@ export default async function InspeccionDetallePage({
           select: { slug: true, title: true, content: true },
         })
       : [];
-    const articleBySlug = new Map(articles.map((a) => [a.slug, { title: a.title, content: a.content }]));
+    // Fase 11B — piloto "guía primero" (docs/FASE11A..., sección 7): se
+    // parsean acá también queRevisar/comoRevisarlo/condicionesCorrectas/
+    // senalesDeProblema para armar el bloque de guía; comoRevisarlo y
+    // senalesDeProblema solo existen hoy en los 2 artículos de Piso, en
+    // el resto quedan en null y no cambia nada.
+    const articleBySlug = new Map(
+      articles.map((a) => [a.slug, { title: a.title, content: a.content, ...parseKnowledgeContent(a.content) }])
+    );
 
     return (
       <div className="max-w-3xl mx-auto px-6 py-8">

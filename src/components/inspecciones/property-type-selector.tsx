@@ -18,13 +18,20 @@ const OPTIONS: { value: InspectionPropertyType; label: string; icon: typeof Home
 export function PropertyTypeSelector({
   value,
   onSelect,
+  allow,
 }: {
   value: InspectionPropertyType | null;
   onSelect: (value: InspectionPropertyType) => void;
+  // Fase 11B — cuando el motivo es "Revisar una ampliación", el tipo de
+  // inmueble queda fijo en AMPLIACION (docs/FASE11A..., sección 1/2): este
+  // paso deja de mostrarse en el wizard, pero se restringe acá también
+  // por si el componente se reutiliza en otro flujo.
+  allow?: InspectionPropertyType[];
 }) {
+  const options = allow ? OPTIONS.filter((o) => allow.includes(o.value)) : OPTIONS;
   return (
     <div className="grid gap-3">
-      {OPTIONS.map((option) => {
+      {options.map((option) => {
         const selected = value === option.value;
         const Icon = option.icon;
         return (

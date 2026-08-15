@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Compass, FolderKanban, ShoppingCart, Images, User, LogIn } from "lucide-react";
+import { Home, Compass, FolderKanban, ShoppingCart, Images, User, LogIn, ClipboardCheck } from "lucide-react";
 import { SignOutButton } from "@/components/auth/sign-out-button";
 import { AssistantWidget, type AssistantGroup } from "@/components/assistant/assistant-widget";
 
@@ -48,6 +48,14 @@ export function BottomNav({ user, assistantGroups }: { user: NavUser; assistantG
               >
                 <Images className="w-4 h-4" />
                 Galería de proyectos
+              </Link>
+              <Link
+                href="/inspecciones"
+                onClick={() => setProfileOpen(false)}
+                className="flex items-center gap-2 text-sm font-medium px-2 py-2 rounded-lg hover:bg-concrete transition-colors"
+              >
+                <ClipboardCheck className="w-4 h-4" />
+                Inspecciones
               </Link>
               <SignOutButton className="w-full text-left text-sm font-medium px-2 py-2 rounded-lg hover:bg-concrete transition-colors" />
             </>

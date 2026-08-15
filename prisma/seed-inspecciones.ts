@@ -19,14 +19,36 @@ export async function seedInspeccionesModule(prisma: PrismaClient) {
   // recinto-ampliado: espacio genérico y repetible para Ampliación
   // (Fase 6A, sección D) — reutiliza los elementos ya validados de Casa
   // en vez de inventar espacios sin fuente.
+  // Fase 11B (docs/FASE11A_DISENO_INSPECCION_TECNICA_GUIADA.md) — ficha
+  // de características de Casa/Departamento/Ampliación. `cocina`/
+  // `dormitorio`/`bano` amplían su `appliesTo` a AMPLIACION (tipos
+  // Cocina/Dormitorio/Dormitorio+baño/Segundo piso reutilizan estos
+  // mismos espacios, sin inventar partidas nuevas — sección 5/7 del
+  // diseño). `bodega` ahora también aplica a Casa (la ficha de Casa
+  // pregunta por bodega igual que la de Departamento). Nuevos:
+  // `antejardin`/`acceso-vehicular` (Casa), `comedor`/`living-comedor`
+  // (modo separado/integrado, Casa+Departamento, +AMPLIACION para
+  // "Living-comedor"), `terraza-logia` (Departamento, 🟡 fuente ITO
+  // delgada — reutiliza el set genérico Piso/Muros/Ventana, sin
+  // inventar partidas propias), `terraza-cerrada` (Ampliación, mismo
+  // fallback genérico que "Otro"/`recinto-ampliado`, sin fuente propia
+  // todavía). "Patio trasero" del diseño de Fase 11A queda EXPLÍCITAMENTE
+  // fuera de esta etapa (marcado 🔴 en el diseño, sin fuente) — no se
+  // agrega ninguna fila de catálogo para él.
   const spaceTemplates = [
-    { key: "cocina", label: "Cocina", repeatable: false, order: 0, appliesTo: ["CASA", "DEPARTAMENTO"] },
+    { key: "cocina", label: "Cocina", repeatable: false, order: 0, appliesTo: ["CASA", "DEPARTAMENTO", "AMPLIACION"] },
     { key: "living", label: "Living", repeatable: false, order: 1, appliesTo: ["CASA", "DEPARTAMENTO"] },
-    { key: "dormitorio", label: "Dormitorio", repeatable: true, order: 2, appliesTo: ["CASA", "DEPARTAMENTO"] },
-    { key: "bano", label: "Baño", repeatable: true, order: 3, appliesTo: ["CASA", "DEPARTAMENTO"] },
-    { key: "bodega", label: "Bodega", repeatable: false, order: 4, appliesTo: ["DEPARTAMENTO"] },
+    { key: "dormitorio", label: "Dormitorio", repeatable: true, order: 2, appliesTo: ["CASA", "DEPARTAMENTO", "AMPLIACION"] },
+    { key: "bano", label: "Baño", repeatable: true, order: 3, appliesTo: ["CASA", "DEPARTAMENTO", "AMPLIACION"] },
+    { key: "bodega", label: "Bodega", repeatable: false, order: 4, appliesTo: ["CASA", "DEPARTAMENTO"] },
     { key: "estacionamiento", label: "Estacionamiento", repeatable: false, order: 5, appliesTo: ["DEPARTAMENTO"] },
     { key: "recinto-ampliado", label: "Recinto ampliado", repeatable: true, order: 6, appliesTo: ["AMPLIACION"] },
+    { key: "antejardin", label: "Antejardín", repeatable: false, order: 7, appliesTo: ["CASA"] },
+    { key: "acceso-vehicular", label: "Acceso vehicular", repeatable: false, order: 8, appliesTo: ["CASA"] },
+    { key: "comedor", label: "Comedor", repeatable: false, order: 9, appliesTo: ["CASA", "DEPARTAMENTO"] },
+    { key: "living-comedor", label: "Living-comedor", repeatable: false, order: 10, appliesTo: ["CASA", "DEPARTAMENTO", "AMPLIACION"] },
+    { key: "terraza-logia", label: "Terraza/Logia", repeatable: false, order: 11, appliesTo: ["DEPARTAMENTO"] },
+    { key: "terraza-cerrada", label: "Terraza cerrada", repeatable: false, order: 12, appliesTo: ["AMPLIACION"] },
   ] as const;
 
   const spaceByKey = new Map<string, { id: string }>();
@@ -51,15 +73,24 @@ export async function seedInspeccionesModule(prisma: PrismaClient) {
   // de Departamento — no se comparte el mismo elemento entre ambos
   // espacios porque sus preguntas no son intercambiables (ver informe
   // Fase 6B, sección T).
+  // fachada/reja/porton: nuevos (Fase 11B), Casa únicamente — preguntas
+  // funcionales/visuales que reutilizan LITERALMENTE el mismo patrón ya
+  // validado en Muros ("¿Presenta fisuras o daños visibles?") y
+  // Puerta/Ventana ("¿Abre y cierra correctamente?") — no se inventa
+  // ningún criterio técnico nuevo, solo se extiende el mismo tipo de
+  // pregunta funcional a un elemento exterior distinto.
   const elementTemplates = [
     { key: "piso", label: "Piso", order: 0, appliesTo: ["CASA", "DEPARTAMENTO", "AMPLIACION"] },
     { key: "muros", label: "Muros", order: 1, appliesTo: ["CASA", "DEPARTAMENTO", "AMPLIACION"] },
     { key: "ventana", label: "Ventana", order: 2, appliesTo: ["CASA", "DEPARTAMENTO", "AMPLIACION"] },
     { key: "puerta", label: "Puerta", order: 3, appliesTo: ["CASA", "DEPARTAMENTO", "AMPLIACION"] },
-    { key: "artefactos-sanitarios", label: "Artefactos sanitarios", order: 4, appliesTo: ["CASA", "DEPARTAMENTO"] },
-    { key: "enchufes-interruptores", label: "Enchufes e interruptores", order: 5, appliesTo: ["CASA", "DEPARTAMENTO"] },
-    { key: "bodega", label: "Bodega", order: 6, appliesTo: ["DEPARTAMENTO"] },
+    { key: "artefactos-sanitarios", label: "Artefactos sanitarios", order: 4, appliesTo: ["CASA", "DEPARTAMENTO", "AMPLIACION"] },
+    { key: "enchufes-interruptores", label: "Enchufes e interruptores", order: 5, appliesTo: ["CASA", "DEPARTAMENTO", "AMPLIACION"] },
+    { key: "bodega", label: "Bodega", order: 6, appliesTo: ["CASA", "DEPARTAMENTO"] },
     { key: "estacionamiento", label: "Estacionamiento", order: 7, appliesTo: ["DEPARTAMENTO"] },
+    { key: "fachada", label: "Fachada", order: 8, appliesTo: ["CASA"] },
+    { key: "reja", label: "Reja", order: 9, appliesTo: ["CASA"] },
+    { key: "porton", label: "Portón", order: 10, appliesTo: ["CASA"] },
   ] as const;
 
   const elementByKey = new Map<string, { id: string }>();
@@ -107,6 +138,37 @@ export async function seedInspeccionesModule(prisma: PrismaClient) {
     { spaceKey: "recinto-ampliado", elementKey: "muros", order: 1 },
     { spaceKey: "recinto-ampliado", elementKey: "ventana", order: 2 },
     { spaceKey: "recinto-ampliado", elementKey: "puerta", order: 3 },
+
+    // Fase 11B — Casa: exterior (Fase 11A, sección 3/7).
+    { spaceKey: "antejardin", elementKey: "fachada", order: 0 },
+    { spaceKey: "antejardin", elementKey: "reja", order: 1 },
+    { spaceKey: "acceso-vehicular", elementKey: "porton", order: 0 },
+
+    // Fase 11B — Comedor/Living-comedor comparten el mismo set que
+    // Living (Fase 11A, sección 7: "mismo set de partidas") — no se
+    // duplica contenido, se reutiliza vía el mismo mecanismo N:N.
+    { spaceKey: "comedor", elementKey: "piso", order: 0 },
+    { spaceKey: "comedor", elementKey: "muros", order: 1 },
+    { spaceKey: "comedor", elementKey: "ventana", order: 2 },
+    { spaceKey: "comedor", elementKey: "enchufes-interruptores", order: 3 },
+
+    { spaceKey: "living-comedor", elementKey: "piso", order: 0 },
+    { spaceKey: "living-comedor", elementKey: "muros", order: 1 },
+    { spaceKey: "living-comedor", elementKey: "ventana", order: 2 },
+    { spaceKey: "living-comedor", elementKey: "enchufes-interruptores", order: 3 },
+
+    // Fase 11B — Terraza/Logia (Departamento) y Terraza cerrada
+    // (Ampliación): 🟡/🔴 sin fuente propia todavía (Fase 11A, sección
+    // 7) — reutilizan el set genérico ya validado en vez de inventar
+    // partidas específicas.
+    { spaceKey: "terraza-logia", elementKey: "piso", order: 0 },
+    { spaceKey: "terraza-logia", elementKey: "muros", order: 1 },
+    { spaceKey: "terraza-logia", elementKey: "ventana", order: 2 },
+
+    { spaceKey: "terraza-cerrada", elementKey: "piso", order: 0 },
+    { spaceKey: "terraza-cerrada", elementKey: "muros", order: 1 },
+    { spaceKey: "terraza-cerrada", elementKey: "ventana", order: 2 },
+    { spaceKey: "terraza-cerrada", elementKey: "puerta", order: 3 },
   ];
 
   for (const link of spaceElementLinks) {
@@ -146,6 +208,12 @@ export async function seedInspeccionesModule(prisma: PrismaClient) {
     { elementKey: "enchufes-interruptores", question: "¿Cada enchufe probado funciona con un artefacto real?", order: 0 },
     { elementKey: "bodega", question: "¿La puerta cierra y el candado/cerradura funciona?", order: 0 },
     { elementKey: "estacionamiento", question: "¿La demarcación del espacio es clara y el pavimento está en buen estado?", order: 0 },
+
+    // Fase 11B — mismo patrón de pregunta funcional ya usado en
+    // Muros/Puerta/Ventana, extendido a elementos exteriores nuevos.
+    { elementKey: "fachada", question: "¿Presenta fisuras o daños visibles?", order: 0 },
+    { elementKey: "reja", question: "¿Abre y cierra correctamente, sin forzar?", order: 0 },
+    { elementKey: "porton", question: "¿Abre y cierra correctamente?", order: 0 },
   ];
 
   for (const item of checklistItems) {

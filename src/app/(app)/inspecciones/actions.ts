@@ -3,9 +3,19 @@
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import type { InspectionPropertyType } from "@/generated/prisma/client";
+import type { InspectionMotivo, InspectionPropertyType, InspectionTipoAmpliacion } from "@/generated/prisma/client";
 
 const VALID_PROPERTY_TYPES: InspectionPropertyType[] = ["CASA", "DEPARTAMENTO", "AMPLIACION"];
+const VALID_MOTIVOS: InspectionMotivo[] = ["RECEPCION_PRE_FIRMA", "POST_RECEPCION", "REVISION_AMPLIACION"];
+const VALID_TIPOS_AMPLIACION: InspectionTipoAmpliacion[] = [
+  "COCINA",
+  "DORMITORIO",
+  "DORMITORIO_BANO",
+  "LIVING_COMEDOR",
+  "SEGUNDO_PISO",
+  "TERRAZA_CERRADA",
+  "OTRO",
+];
 // Tope defensivo para templates repeatable (dormitorios, baños, etc.) —
 // evita crear miles de filas por un valor absurdo enviado desde el
 // cliente; no es una regla de producto, solo un límite de sanidad.
@@ -16,6 +26,11 @@ export type CreateInspectionInput = {
   tipoInmueble: string;
   direccion: string | null;
   fecha: string | null;
+  // Fase 11B — ambos opcionales: casos creados antes de esta fase (y
+  // cualquier llamador que no los envíe) siguen funcionando igual, sin
+  // motivo ni tipoAmpliacion (ver docs/FASE11A..., sección 8C).
+  motivo?: string | null;
+  tipoAmpliacion?: string | null;
   // Una entrada por InspectionSpaceTemplate que el usuario marcó/contó en
   // el paso de características — count=0 significa "no incluir".
   spaceSelections: { templateKey: string; count: number }[];
@@ -60,6 +75,24 @@ export async function createInspectionAndGenerateAction(
   }
 
   const direccion = input.direccion?.trim() || null;
+
+  let motivo: InspectionMotivo | null = null;
+  if (input.motivo) {
+    if (!VALID_MOTIVOS.includes(input.motivo as InspectionMotivo)) return { error: "Motivo inválido." };
+    motivo = input.motivo as InspectionMotivo;
+  }
+
+  let tipoAmpliacion: InspectionTipoAmpliacion | null = null;
+  if (input.tipoAmpliacion) {
+    if (!VALID_TIPOS_AMPLIACION.includes(input.tipoAmpliacion as InspectionTipoAmpliacion)) {
+      return { error: "Tipo de ampliación inválido." };
+    }
+    tipoAmpliacion = input.tipoAmpliacion as InspectionTipoAmpliacion;
+  }
+  // tipoAmpliacion solo tiene sentido junto a tipoInmueble=AMPLIACION —
+  // se descarta silenciosamente en cualquier otro caso en vez de fallar,
+  // porque no afecta la generación de espacios (solo es metadata).
+  if (tipoInmueble !== "AMPLIACION") tipoAmpliacion = null;
 
   // Nunca confiar en `templateKey`/`count` enviados desde el cliente sin
   // volver a resolverlos contra el catálogo real — filtra automáticamente
@@ -107,6 +140,8 @@ export async function createInspectionAndGenerateAction(
             fecha,
             bedroomCount,
             bathroomCount,
+            motivo,
+            tipoAmpliacion,
           },
         });
 

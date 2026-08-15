@@ -66,8 +66,21 @@ export function ChecklistItemRow({
   questionSnapshot: string;
   initialStatus: InspectionAnswerStatus | null;
   initialObservations: ObservationDTO[];
-  technicalArticle: { title: string; content: string } | null;
+  technicalArticle: {
+    title: string;
+    content: string;
+    queRevisar: string | null;
+    condicionesCorrectas: string | null;
+    comoRevisarlo: string | null;
+    senalesDeProblema: string | null;
+  } | null;
 }) {
+  // Fase 11B — piloto "guía primero" (docs/FASE11A_DISENO_INSPECCION_TECNICA_GUIADA.md,
+  // sección 7): solo se activa cuando el artículo vinculado tiene alguna
+  // de las 2 secciones nuevas (hoy, únicamente las 2 preguntas de Piso).
+  // El resto del catálogo sigue mostrando el mismo TechnicalArticleLink
+  // colapsado de Fase 5B, sin ningún cambio.
+  const hasGuide = Boolean(technicalArticle?.comoRevisarlo || technicalArticle?.senalesDeProblema);
   const [status, setStatus] = useState(initialStatus);
   const [observations, setObservations] = useState(initialObservations);
   // Pendiente (sin responder) siempre muestra los 3 botones; ya respondido
@@ -135,19 +148,31 @@ export function ChecklistItemRow({
       <div className="flex items-start justify-between gap-3 flex-wrap">
         <p className="text-sm flex-1 min-w-[180px]">{questionSnapshot}</p>
         {status !== null && !editingStatus && (
-          <StatusPill status={status} onClick={() => setEditingStatus(true)} />
+          <StatusPill status={status} hasGuide={hasGuide} onClick={() => setEditingStatus(true)} />
         )}
       </div>
 
       {/* Piloto Fase 5B — solo aparece en las preguntas que ya tienen un
           TechnicalArticle vinculado (5 de momento); el resto del
-          catálogo no muestra nada acá, sin romper nada. */}
-      {technicalArticle && <TechnicalArticleLink title={technicalArticle.title} content={technicalArticle.content} />}
+          catálogo no muestra nada acá, sin romper nada. Piloto Fase 11B
+          (guía primero, Piso): en vez del enlace colapsado, se muestra el
+          bloque de guía abierto por defecto — ver GuideBlock más abajo. */}
+      {technicalArticle && !hasGuide && (
+        <TechnicalArticleLink title={technicalArticle.title} content={technicalArticle.content} />
+      )}
+      {technicalArticle && hasGuide && (status === null || editingStatus) && (
+        <GuideBlock
+          queRevisar={technicalArticle.queRevisar}
+          comoRevisarlo={technicalArticle.comoRevisarlo}
+          condicionesCorrectas={technicalArticle.condicionesCorrectas}
+          senalesDeProblema={technicalArticle.senalesDeProblema}
+        />
+      )}
 
       {(status === null || editingStatus) && (
         <div className="mt-2.5 flex gap-2 flex-wrap">
           <StatusButton
-            label="OK"
+            label={hasGuide ? "Está bien" : "OK"}
             icon={Check}
             tone="bg-success-tint text-success border-success-border"
             selected={status === "OK"}
@@ -155,15 +180,15 @@ export function ChecklistItemRow({
             onClick={() => handleSelectStatus("OK")}
           />
           <StatusButton
-            label="Observación"
+            label={hasGuide ? "Tiene un problema" : "Observación"}
             icon={TriangleAlert}
-            tone={`bg-caution-tint ${OBSERVATION_TEXT} border-caution-border`}
+            tone={hasGuide ? "bg-danger-tint text-danger border-danger/30" : `bg-caution-tint ${OBSERVATION_TEXT} border-caution-border`}
             selected={status === "OBSERVATION" || creatingObservation}
             disabled={isStatusPending}
             onClick={handleClickObservacion}
           />
           <StatusButton
-            label="No aplica"
+            label={hasGuide ? "No corresponde" : "No aplica"}
             icon={X}
             tone="bg-concrete text-ink-muted border-border"
             selected={status === "NOT_APPLICABLE"}
@@ -302,7 +327,54 @@ export function ChecklistItemRow({
   );
 }
 
-function StatusPill({ status, onClick }: { status: InspectionAnswerStatus; onClick: () => void }) {
+// Fase 11B — piloto "guía primero" de Piso (docs/FASE11A..., sección 7):
+// muestra la guía ANTES de los botones de evaluación, en el orden
+// pedido por el diseño (Qué revisar / Cómo revisarlo / Qué debería verse
+// / Qué señales pueden indicar un problema). Cada sección es opcional —
+// solo se pinta si el artículo la tiene, así que este mismo componente
+// también sirve si en el futuro algún artículo trae solo alguna de las 2
+// secciones nuevas.
+function GuideBlock({
+  queRevisar,
+  comoRevisarlo,
+  condicionesCorrectas,
+  senalesDeProblema,
+}: {
+  queRevisar: string | null;
+  comoRevisarlo: string | null;
+  condicionesCorrectas: string | null;
+  senalesDeProblema: string | null;
+}) {
+  const sections = [
+    { label: "Qué revisar", value: queRevisar },
+    { label: "Cómo revisarlo", value: comoRevisarlo },
+    { label: "Qué debería verse", value: condicionesCorrectas },
+    { label: "Qué puede ser señal de un problema", value: senalesDeProblema },
+  ].filter((s): s is { label: string; value: string } => Boolean(s.value));
+
+  if (sections.length === 0) return null;
+
+  return (
+    <div className="mt-2.5 rounded-xl p-4 bg-safety-tint border border-safety/20 grid gap-3">
+      {sections.map((section) => (
+        <div key={section.label}>
+          <p className="text-[11px] font-mono uppercase tracking-wider text-ink-muted mb-1">{section.label}</p>
+          <p className="text-sm text-ink whitespace-pre-wrap">{section.value}</p>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function StatusPill({
+  status,
+  hasGuide,
+  onClick,
+}: {
+  status: InspectionAnswerStatus;
+  hasGuide: boolean;
+  onClick: () => void;
+}) {
   if (status === "OK") {
     return (
       <button
@@ -311,7 +383,7 @@ function StatusPill({ status, onClick }: { status: InspectionAnswerStatus; onCli
         className={`inline-flex items-center gap-1 min-h-11 px-3 py-1.5 rounded-full text-sm font-medium bg-success-tint text-success flex-shrink-0 ${FOCUS_RING}`}
       >
         <Check className="w-3.5 h-3.5" />
-        OK
+        {hasGuide ? "Está bien" : "OK"}
       </button>
     );
   }
@@ -320,10 +392,12 @@ function StatusPill({ status, onClick }: { status: InspectionAnswerStatus; onCli
       <button
         type="button"
         onClick={onClick}
-        className={`inline-flex items-center gap-1 min-h-11 px-3 py-1.5 rounded-full text-sm font-medium bg-caution-tint ${OBSERVATION_TEXT} flex-shrink-0 ${FOCUS_RING}`}
+        className={`inline-flex items-center gap-1 min-h-11 px-3 py-1.5 rounded-full text-sm font-medium flex-shrink-0 ${FOCUS_RING} ${
+          hasGuide ? "bg-danger-tint text-danger" : `bg-caution-tint ${OBSERVATION_TEXT}`
+        }`}
       >
         <TriangleAlert className="w-3.5 h-3.5" />
-        Observación
+        {hasGuide ? "Tiene un problema" : "Observación"}
       </button>
     );
   }
@@ -333,7 +407,7 @@ function StatusPill({ status, onClick }: { status: InspectionAnswerStatus; onCli
       onClick={onClick}
       className={`inline-flex items-center gap-1 min-h-11 px-3 py-1.5 rounded-full text-sm font-medium bg-concrete text-ink-muted flex-shrink-0 ${FOCUS_RING}`}
     >
-      — No aplica
+      — {hasGuide ? "No corresponde" : "No aplica"}
     </button>
   );
 }

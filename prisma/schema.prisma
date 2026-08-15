@@ -1217,6 +1217,31 @@ enum InspectionPropertyType {
   AMPLIACION
 }
 
+// Fase 11B — motivo de la inspección (docs/FASE11A_DISENO_INSPECCION_TECNICA_GUIADA.md,
+// sección 2). Nullable: los casos V1 ya existentes no tienen motivo
+// declarado y deben seguir funcionando exactamente igual (ver informe de
+// Fase 11B, "Compatibilidad con V1") — nunca se retroactivea ni se
+// asume un valor por defecto para datos históricos.
+enum InspectionMotivo {
+  RECEPCION_PRE_FIRMA
+  POST_RECEPCION
+  REVISION_AMPLIACION
+}
+
+// Fase 11B — qué se está ampliando, solo aplica cuando
+// tipoInmueble = AMPLIACION (docs/..., sección 5). Reemplaza el concepto
+// único de "Recinto ampliado" por 7 tipos concretos; OTRO preserva el
+// comportamiento genérico de V1 sin cambios.
+enum InspectionTipoAmpliacion {
+  COCINA
+  DORMITORIO
+  DORMITORIO_BANO
+  LIVING_COMEDOR
+  SEGUNDO_PISO
+  TERRAZA_CERRADA
+  OTRO
+}
+
 enum InspectionCaseStatus {
   DRAFT
   IN_PROGRESS
@@ -1358,6 +1383,13 @@ model InspectionCase {
   tipoInmueble InspectionPropertyType
   fecha        DateTime?
   estado       InspectionCaseStatus   @default(DRAFT)
+
+  // Fase 11B — ver docs/FASE11A_DISENO_INSPECCION_TECNICA_GUIADA.md,
+  // sección 8C: ambos nullable a propósito (compatibilidad con casos V1
+  // ya existentes, que no tienen ninguno de los dos) y porque
+  // `tipoAmpliacion` solo tiene sentido cuando `tipoInmueble = AMPLIACION`.
+  motivo         InspectionMotivo?
+  tipoAmpliacion InspectionTipoAmpliacion?
 
   bedroomCount  Int?
   bathroomCount Int?

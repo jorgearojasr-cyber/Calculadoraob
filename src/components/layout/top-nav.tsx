@@ -10,6 +10,7 @@ const NAV_ITEMS = [
   { href: "/", label: "Inicio", match: (p: string) => p === "/" },
   { href: "/#empezar", label: "Calculadoras", match: () => false },
   { href: "/guias", label: "Guías y consejos", match: (p: string) => p.startsWith("/guias") },
+  { href: "/inspecciones", label: "Inspecciones", match: (p: string) => p.startsWith("/inspecciones") },
   { href: "/galeria", label: "Biblioteca", match: (p: string) => p.startsWith("/galeria") },
   { href: "/acerca-de", label: "Acerca de nosotros", match: (p: string) => p.startsWith("/acerca-de") },
 ];
