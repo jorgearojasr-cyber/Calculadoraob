@@ -161,12 +161,42 @@ export async function deleteObservationAction(
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) return { error: "No hay sesión activa." };
 
-  const observation = await loadObservationWithOwnership(observationId);
+  // Fase 10Q — incluye `photos` acá, en vez de agregarlo a
+  // `loadObservationWithOwnership` (que también usa updateObservationAction
+  // sin necesitarlas) — mantiene el cambio acotado a esta acción.
+  const observation = await prisma.inspectionObservation.findUnique({
+    where: { id: observationId },
+    include: {
+      checklistCheck: { include: { element: { include: { space: { include: { case: true } } } } } },
+      photos: { select: { id: true, url: true } },
+    },
+  });
   if (!observation || observation.checklistCheck.element.space.case.userId !== session.user.id) {
     return { error: "No encontrado." };
   }
 
-  await prisma.inspectionObservation.delete({ where: { id: observationId } });
+  // Borra el blob físico de CADA foto de ESTA observación, identificado
+  // exactamente por `photo.url` (nunca un prefijo ni una búsqueda
+  // ambigua) — no puede afectar fotos de otra observación, elemento,
+  // espacio o caso. Best-effort: mismo criterio ya usado en
+  // deleteInspectionPhotoAction — si Vercel Blob falla o el archivo ya
+  // no existe, no bloquea el borrado de la observación.
+  for (const photo of observation.photos) {
+    try {
+      await del(photo.url);
+    } catch {
+      // Blob ya eliminado o inalcanzable — no bloquea la operación.
+    }
+  }
+
+  // Transacción: borra las filas de foto (en vez de dejarlas huérfanas
+  // con `observationId: null` vía el onDelete: SetNull del schema) y la
+  // observación en un solo paso atómico — ya no queda ninguna fila
+  // apuntando a un blob que se acaba de borrar.
+  await prisma.$transaction([
+    prisma.inspectionPhoto.deleteMany({ where: { observationId } }),
+    prisma.inspectionObservation.delete({ where: { id: observationId } }),
+  ]);
 
   revalidatePath(`/inspecciones/${observation.checklistCheck.element.space.caseId}`);
   return { success: true };
