@@ -112,7 +112,15 @@ export default async function InspeccionResumenPage({ params }: { params: { id: 
           ? articleBySlug.get(check.checklistItem.technicalArticleSlug) ?? null
           : null;
         for (const obs of check.observations) {
-          severityCounts[obs.severity as InspectionSeverity] += 1;
+          // Fase 10N — la severidad del resultado global cuenta SOLO
+          // hallazgos vigentes (check.status === "OBSERVATION"), misma
+          // definición ya establecida en Fase 7B/8/9B — un hallazgo
+          // histórico (check vuelto a OK/No aplica) no debe inflar este
+          // conteo, aunque sigue intacto y visible en su propia sección
+          // más abajo.
+          if (check.status === "OBSERVATION") {
+            severityCounts[obs.severity as InspectionSeverity] += 1;
+          }
           hallazgos.push({
             id: obs.id,
             spaceName: space.name,
@@ -252,7 +260,13 @@ export default async function InspeccionResumenPage({ params }: { params: { id: 
 
       {/* C. Resultado global + severidades (Fase 8, secciones 4/5) — datos
           objetivos, calculados por código. */}
-      <ResumenResultadoGlobal resultado={resultado} severityCounts={severityCounts} totalObservations={hallazgos.length} />
+      {/* Fase 10N — `totalObservations` ahora refleja solo vigentes (antes
+          contaba también históricas), consistente con `severityCounts`:
+          si todos los hallazgos fueron revertidos, este bloque
+          directamente no se muestra (ver `totalObservations > 0` dentro
+          de ResumenResultadoGlobal), en vez de mostrar "Severidad (2)"
+          con las 4 categorías en 0. */}
+      <ResumenResultadoGlobal resultado={resultado} severityCounts={severityCounts} totalObservations={hallazgosVigentes.length} />
 
       {/* Fase 10B — texto compuesto automáticamente a partir de los datos
           reales del caso (sin ningún servicio externo), deliberadamente
