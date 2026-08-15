@@ -1,0 +1,157 @@
+"use server";
+
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
+import type { InspectionPropertyType } from "@/generated/prisma/client";
+
+const VALID_PROPERTY_TYPES: InspectionPropertyType[] = ["CASA", "DEPARTAMENTO", "AMPLIACION"];
+// Tope defensivo para templates repeatable (dormitorios, baños, etc.) —
+// evita crear miles de filas por un valor absurdo enviado desde el
+// cliente; no es una regla de producto, solo un límite de sanidad.
+const MAX_REPEATABLE_COUNT = 20;
+
+export type CreateInspectionInput = {
+  name: string;
+  tipoInmueble: string;
+  direccion: string | null;
+  fecha: string | null;
+  // Una entrada por InspectionSpaceTemplate que el usuario marcó/contó en
+  // el paso de características — count=0 significa "no incluir".
+  spaceSelections: { templateKey: string; count: number }[];
+};
+
+export type CreateInspectionResult = { caseId: string; error?: undefined } | { error: string; caseId?: undefined };
+
+// Mismo patrón de sesión + ownership que createRegularizationCaseAction
+// (src/app/(app)/regularizacion/actions.ts) y createSavedProjectAction
+// (src/app/(app)/proyectos/actions.ts): sin sesión activa, no se crea
+// nada; `userId` SIEMPRE sale de la sesión del servidor, nunca del input
+// del cliente (ver Fase 2, punto 7/12 — ownership no confiable desde el
+// cliente).
+//
+// No usa `redirect()` acá dentro (a diferencia de lo que sugiere el
+// enunciado de la fase) — sigue el mismo patrón ya establecido en
+// RegularizationWizard: la Action devuelve el id creado y el componente
+// cliente navega con router.push. `redirect()` lanzado dentro de un
+// try/catch (necesario acá para envolver la transacción) se comporta mal
+// con el mecanismo interno de Next (NEXT_REDIRECT viaja como un throw),
+// así que se evita ese riesgo replicando el patrón que ya funciona en
+// Regularización.
+export async function createInspectionAndGenerateAction(
+  input: CreateInspectionInput
+): Promise<CreateInspectionResult> {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.id) return { error: "No hay sesión activa." };
+
+  const name = input.name.trim();
+  if (!name) return { error: "Ingresa un nombre o referencia para la inspección." };
+
+  if (!VALID_PROPERTY_TYPES.includes(input.tipoInmueble as InspectionPropertyType)) {
+    return { error: "Tipo de inmueble inválido." };
+  }
+  const tipoInmueble = input.tipoInmueble as InspectionPropertyType;
+
+  let fecha: Date | null = null;
+  if (input.fecha) {
+    const parsed = new Date(input.fecha);
+    if (Number.isNaN(parsed.getTime())) return { error: "Fecha inválida." };
+    fecha = parsed;
+  }
+
+  const direccion = input.direccion?.trim() || null;
+
+  // Nunca confiar en `templateKey`/`count` enviados desde el cliente sin
+  // volver a resolverlos contra el catálogo real — filtra automáticamente
+  // cualquier key inventada o que no aplique a este tipoInmueble (ver
+  // Fase 2, punto 8).
+  const requestedKeys = input.spaceSelections.filter((s) => s.count > 0).map((s) => s.templateKey);
+  if (requestedKeys.length === 0) {
+    return { error: "Selecciona al menos un espacio para continuar." };
+  }
+
+  const templates = await prisma.inspectionSpaceTemplate.findMany({
+    where: { active: true, key: { in: requestedKeys }, appliesTo: { has: tipoInmueble } },
+  });
+  const templateByKey = new Map(templates.map((t) => [t.key, t]));
+
+  const validatedSelections = input.spaceSelections
+    .map((s) => {
+      const template = templateByKey.get(s.templateKey);
+      if (!template) return null;
+      const clampedCount = template.repeatable
+        ? Math.max(0, Math.min(MAX_REPEATABLE_COUNT, Math.floor(s.count)))
+        : s.count > 0
+          ? 1
+          : 0;
+      return clampedCount > 0 ? { template, count: clampedCount } : null;
+    })
+    .filter((s): s is { template: (typeof templates)[number]; count: number } => s !== null);
+
+  if (validatedSelections.length === 0) {
+    return { error: "Selecciona al menos un espacio válido para este tipo de inmueble." };
+  }
+
+  const bedroomCount = validatedSelections.find((s) => s.template.key === "dormitorio")?.count ?? null;
+  const bathroomCount = validatedSelections.find((s) => s.template.key === "bano")?.count ?? null;
+
+  try {
+    const caseId = await prisma.$transaction(
+      async (tx) => {
+        const createdCase = await tx.inspectionCase.create({
+          data: {
+            userId: session.user.id,
+            name,
+            direccion,
+            tipoInmueble,
+            fecha,
+            bedroomCount,
+            bathroomCount,
+          },
+        });
+
+        for (const { template, count } of validatedSelections) {
+          for (let i = 1; i <= count; i++) {
+            const spaceName = template.repeatable ? `${template.label} ${i}` : template.label;
+            const space = await tx.inspectionSpace.create({
+              data: { caseId: createdCase.id, spaceTemplateId: template.id, name: spaceName },
+            });
+
+            // Elementos: SIEMPRE vía la tabla puente InspectionElementTemplateSpace
+            // (nunca una FK directa antigua) — un mismo "Piso" puede
+            // aplicar a varios espacios distintos (ver Fase 2, punto 9).
+            const elementLinks = await tx.inspectionElementTemplateSpace.findMany({
+              where: { spaceTemplateId: template.id, elementTemplate: { active: true } },
+              include: { elementTemplate: true },
+              orderBy: { order: "asc" },
+            });
+
+            for (const link of elementLinks) {
+              const element = await tx.inspectionElement.create({
+                data: { spaceId: space.id, elementTemplateId: link.elementTemplateId, name: link.elementTemplate.label },
+              });
+
+              const checklistItems = await tx.inspectionChecklistItem.findMany({
+                where: { elementTemplateId: link.elementTemplateId, active: true },
+                orderBy: { order: "asc" },
+              });
+
+              for (const item of checklistItems) {
+                await tx.inspectionChecklistCheck.create({
+                  data: { elementId: element.id, checklistItemId: item.id, questionSnapshot: item.question },
+                });
+              }
+            }
+          }
+        }
+
+        return createdCase.id;
+      },
+      { timeout: 30000 }
+    );
+
+    return { caseId };
+  } catch {
+    return { error: "No se pudo crear la inspección. Intenta de nuevo." };
+  }
+}

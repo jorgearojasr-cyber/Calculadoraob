@@ -33,6 +33,7 @@ model User {
   regularizationCases           RegularizationCase[]
   regularizationStepCompletions RegularizationStepCompletion[]
   regularizationDocumentChecks  RegularizationDocumentCheck[]
+  inspectionCases               InspectionCase[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -927,11 +928,11 @@ enum RegularizationDocEstadoValidacion {
 // BD, no hardcodeado en componentes (principio Database First). `dependeDe`
 // usa el mismo formato de nodo DSL que RegularizationRule.condition.
 model RegularizationDocumentChecklist {
-  id             String                         @id @default(cuid())
-  documento      String
-  category       RegularizationDocumentCategory
-  paraQueSirve   String
-  dondeSeObtiene String
+  id               String                            @id @default(cuid())
+  documento        String
+  category         RegularizationDocumentCategory
+  paraQueSirve     String
+  dondeSeObtiene   String
   // Ejes normativos — ver enums arriba. obligatoriedad reemplaza al
   // antiguo `obligatorio: Boolean` (Fase 2): MINIMO = lo que antes era
   // `true`, CONDICIONAL = lo que antes era `false`, con el matiz de que
@@ -1109,19 +1110,19 @@ enum ExecutionAdvisorOptionTipo {
 }
 
 model ExecutionAdvisorOption {
-  id          String                     @id @default(cuid())
-  advisor     ExecutionAdvisor           @relation(fields: [advisorId], references: [id], onDelete: Cascade)
-  advisorId   String
-  key         String
-  label       String
-  descripcion String?
-  tipo        ExecutionAdvisorOptionTipo
+  id               String                     @id @default(cuid())
+  advisor          ExecutionAdvisor           @relation(fields: [advisorId], references: [id], onDelete: Cascade)
+  advisorId        String
+  key              String
+  label            String
+  descripcion      String?
+  tipo             ExecutionAdvisorOptionTipo
   // Si esta opción fue la respuesta que activó el factor de mayor peso
   // (el "factor decisivo"), el motor baja la confianza un nivel respecto
   // al techo de la regla (ver evaluarAsesorEjecucion). No aplica a menos
   // que esta opción sea justo la decisiva — no es una propiedad "de
   // fábrica" de la opción en abstracto.
-  reduceConfidence Boolean                     @default(false)
+  reduceConfidence Boolean                    @default(false)
 
   @@unique([advisorId, key])
   @@map("execution_advisor_options")
@@ -1163,16 +1164,16 @@ model ExecutionAdvisorRule {
 // de comparación simple que ExecutionAdvisorRule.condiciones (un único
 // elemento, no una lista), no el árbol de Formula.condition.
 model ExecutionAdvisorFactorExplanation {
-  id                String                             @id @default(cuid())
-  advisor           ExecutionAdvisor                   @relation(fields: [advisorId], references: [id], onDelete: Cascade)
-  advisorId         String
-  factorQuestionKey String
-  condicion         Json
-  fragmentoTexto    String
-  peso              Int
-  tipoConsideracion ExecutionAdvisorTipoConsideracion?
+  id                 String                             @id @default(cuid())
+  advisor            ExecutionAdvisor                   @relation(fields: [advisorId], references: [id], onDelete: Cascade)
+  advisorId          String
+  factorQuestionKey  String
+  condicion          Json
+  fragmentoTexto     String
+  peso               Int
+  tipoConsideracion  ExecutionAdvisorTipoConsideracion?
   textoConsideracion String?
-  estado            ExecutionAdvisorEstado             @default(PENDIENTE_VALIDACION)
+  estado             ExecutionAdvisorEstado             @default(PENDIENTE_VALIDACION)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -1195,4 +1196,328 @@ model ExecutionAdvisorTip {
 
   @@index([advisorId, aplicaAOpcionKey])
   @@map("execution_advisor_tips")
+}
+
+// ============================================================
+// Inspecciones — Fase 1 (14-ago-2026): SOLO capa de datos, aprobada tras
+// diseño v1.1 (revisión que separó explícitamente catálogo vs. instancia
+// real agregando InspectionElement). Sin UI, sin Server Actions de
+// negocio, sin rutas — ver el documento de diseño para el detalle
+// completo de cada decisión si hace falta reconstruir el porqué.
+//
+// Dos árboles sin flechas cruzadas entre sí salvo las relaciones
+// FK-nullable-con-snapshot descritas abajo:
+//   CATÁLOGO:    InspectionSpaceTemplate -> InspectionElementTemplate -> InspectionChecklistItem
+//   INSPECCIÓN:  InspectionCase -> InspectionSpace -> InspectionElement -> InspectionChecklistCheck -> InspectionObservation
+// ============================================================
+
+enum InspectionPropertyType {
+  CASA
+  DEPARTAMENTO
+  AMPLIACION
+}
+
+enum InspectionCaseStatus {
+  DRAFT
+  IN_PROGRESS
+  CLOSED
+}
+
+enum InspectionAnswerStatus {
+  OK
+  OBSERVATION
+  NOT_APPLICABLE
+}
+
+enum InspectionSeverity {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum InspectionObservationStatus {
+  OPEN
+  IN_REVIEW
+  RESOLVED
+}
+
+enum InspectionPhotoKind {
+  GENERAL
+  EVIDENCE
+  GOOD_CONDITION
+  FUTURE_REPAIR
+}
+
+// ---------- CATÁLOGO (qué SE PUEDE inspeccionar) ----------
+
+model InspectionSpaceTemplate {
+  id         String                   @id @default(cuid())
+  key        String                   @unique
+  label      String
+  appliesTo  InspectionPropertyType[]
+  repeatable Boolean                  @default(false)
+  order      Int                      @default(0)
+  // Soft-delete: un template nunca se borra físicamente en operación
+  // normal (rompería onDelete: SetNull de instancias ya generadas y la
+  // integridad histórica de esas inspecciones) — se retira desactivándolo.
+  active     Boolean                  @default(true)
+
+  // N:N con InspectionElementTemplate (ver InspectionElementTemplateSpace)
+  // — "Piso" es UNA fila de catálogo aplicable a Cocina, Dormitorio, Baño
+  // y Living a la vez, no una copia por espacio (decisión confirmada en
+  // Fase 1, 14-ago-2026: la FK simple original no permitía esto).
+  elementTemplateLinks InspectionElementTemplateSpace[]
+  spaces               InspectionSpace[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("inspection_space_templates")
+}
+
+model InspectionElementTemplate {
+  id                String                   @id @default(cuid())
+  key               String                   @unique
+  label             String
+  order             Int                      @default(0)
+  appliesTo         InspectionPropertyType[]
+  // Referencia libre (no FK) al `key` de un elemento "padre" para agrupar
+  // variantes de material (ej. "piso-ceramico"/"piso-flotante" bajo
+  // "piso") — sin tabla de variantes dedicada en v1.
+  materialVariantOf String?
+  active            Boolean                  @default(true)
+
+  spaceTemplateLinks InspectionElementTemplateSpace[]
+  checklistItems     InspectionChecklistItem[]
+  elements           InspectionElement[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("inspection_element_templates")
+}
+
+// Tabla puente N:N — un mismo InspectionElementTemplate ("Piso") puede
+// sugerirse en múltiples InspectionSpaceTemplate ("Cocina", "Dormitorio",
+// "Baño", "Living") sin duplicar la fila de catálogo. Reemplaza la FK
+// simple `InspectionElementTemplate.spaceTemplateId` de la primera
+// versión migrada de este schema (corrección encontrada al construir el
+// seed mínimo — ver Fase 1, 14-ago-2026).
+model InspectionElementTemplateSpace {
+  id                String                    @id @default(cuid())
+  spaceTemplate     InspectionSpaceTemplate   @relation(fields: [spaceTemplateId], references: [id], onDelete: Cascade)
+  spaceTemplateId   String
+  elementTemplate   InspectionElementTemplate @relation(fields: [elementTemplateId], references: [id], onDelete: Cascade)
+  elementTemplateId String
+  // Orden de este elemento DENTRO de este espacio en particular — el
+  // mismo "Piso" puede ir primero en Cocina y tercero en Dormitorio.
+  order             Int                       @default(0)
+
+  createdAt DateTime @default(now())
+
+  @@unique([spaceTemplateId, elementTemplateId])
+  @@index([elementTemplateId])
+  @@map("inspection_element_template_spaces")
+}
+
+model InspectionChecklistItem {
+  id                   String                    @id @default(cuid())
+  elementTemplate      InspectionElementTemplate @relation(fields: [elementTemplateId], references: [id], onDelete: Cascade)
+  elementTemplateId    String
+  question             String
+  helpText             String?
+  order                Int                       @default(0)
+  // Mismo formato de nodo DSL que Formula.condition/RegularizationRule.condition
+  // (ver docs/formula-dsl.md) — opcional, sin uso todavía en el seed mínimo.
+  condition            Json?
+  defaultSeverity      InspectionSeverity?
+  // Referencia libre (no FK) a TechnicalArticle.slug — el catálogo
+  // operativo debe poder existir sin que exista todavía el artículo.
+  technicalArticleSlug String?
+  active               Boolean                   @default(true)
+
+  checks InspectionChecklistCheck[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([elementTemplateId])
+  @@map("inspection_checklist_items")
+}
+
+// ---------- INSPECCIÓN REAL (qué FUE inspeccionado) ----------
+
+model InspectionCase {
+  id     String @id @default(cuid())
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String
+
+  name         String
+  direccion    String?
+  tipoInmueble InspectionPropertyType
+  fecha        DateTime?
+  estado       InspectionCaseStatus   @default(DRAFT)
+
+  bedroomCount  Int?
+  bathroomCount Int?
+
+  observacionesGenerales String?
+
+  spaces InspectionSpace[]
+  photos InspectionPhoto[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@map("inspection_cases")
+}
+
+model InspectionSpace {
+  id     String         @id @default(cuid())
+  case   InspectionCase @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  caseId String
+
+  spaceTemplate   InspectionSpaceTemplate? @relation(fields: [spaceTemplateId], references: [id], onDelete: SetNull)
+  spaceTemplateId String?
+
+  // Snapshot del label del template al generarse ("Dormitorio 1") —
+  // editable después, independiente de lo que le pase al template.
+  name     String
+  order    Int     @default(0)
+  // true si el usuario agregó este espacio sin partir de un template del
+  // catálogo (ver InspectionElement.isCustom, mismo criterio).
+  isCustom Boolean @default(false)
+
+  elements InspectionElement[]
+  photos   InspectionPhoto[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([caseId])
+  @@index([spaceTemplateId])
+  @@map("inspection_spaces")
+}
+
+model InspectionElement {
+  id      String          @id @default(cuid())
+  space   InspectionSpace @relation(fields: [spaceId], references: [id], onDelete: Cascade)
+  spaceId String
+
+  elementTemplate   InspectionElementTemplate? @relation(fields: [elementTemplateId], references: [id], onDelete: SetNull)
+  elementTemplateId String?
+
+  name     String
+  order    Int     @default(0)
+  isCustom Boolean @default(false)
+
+  checks InspectionChecklistCheck[]
+  photos InspectionPhoto[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([spaceId])
+  @@index([elementTemplateId])
+  @@map("inspection_elements")
+}
+
+model InspectionChecklistCheck {
+  id        String            @id @default(cuid())
+  element   InspectionElement @relation(fields: [elementId], references: [id], onDelete: Cascade)
+  elementId String
+
+  checklistItem   InspectionChecklistItem @relation(fields: [checklistItemId], references: [id], onDelete: Restrict)
+  checklistItemId String
+
+  // Texto copiado de InspectionChecklistItem.question al generarse —
+  // estabilidad histórica: si el catálogo cambia después, esta respuesta
+  // ya generada sigue mostrando exactamente lo que se preguntó.
+  questionSnapshot String
+  status           InspectionAnswerStatus?
+  answeredAt       DateTime?
+
+  observations InspectionObservation[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([elementId, checklistItemId])
+  @@index([elementId])
+  @@map("inspection_checklist_checks")
+}
+
+// 1:N respecto a InspectionChecklistCheck (NO @@unique en checklistCheckId)
+// — un mismo punto de inspección puede tener varios hallazgos distintos
+// (ej. fisura + humedad bajo la misma pregunta), cada uno con su propia
+// severidad/recomendación/estado.
+model InspectionObservation {
+  id               String                   @id @default(cuid())
+  checklistCheck   InspectionChecklistCheck @relation(fields: [checklistCheckId], references: [id], onDelete: Cascade)
+  checklistCheckId String
+
+  comment        String
+  severity       InspectionSeverity
+  recommendation String?
+  status         InspectionObservationStatus @default(OPEN)
+
+  photos InspectionPhoto[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([checklistCheckId])
+  @@map("inspection_observations")
+}
+
+// Cuatro niveles de relación, todos opcionales salvo caseId — el nivel
+// más específico presente es el que aplica (ver diseño v1.1, sección de
+// fotografías): esta invariante NO está enforced por la base de datos,
+// queda como responsabilidad de la futura Server Action de subida.
+model InspectionPhoto {
+  id String @id @default(cuid())
+
+  case   InspectionCase @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  caseId String
+
+  space   InspectionSpace? @relation(fields: [spaceId], references: [id], onDelete: SetNull)
+  spaceId String?
+
+  element   InspectionElement? @relation(fields: [elementId], references: [id], onDelete: SetNull)
+  elementId String?
+
+  observation   InspectionObservation? @relation(fields: [observationId], references: [id], onDelete: SetNull)
+  observationId String?
+
+  kind    InspectionPhotoKind
+  url     String
+  caption String?
+  notes   String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([caseId])
+  @@index([spaceId])
+  @@index([elementId])
+  @@index([observationId])
+  @@map("inspection_photos")
+}
+
+// Biblioteca técnica ("cómo se revisa X") — capa separada del catálogo
+// operativo (InspectionChecklistItem.technicalArticleSlug la referencia
+// débilmente) para no repetir el problema de bibliotecas paralelas.
+model TechnicalArticle {
+  id      String @id @default(cuid())
+  slug    String @unique
+  title   String
+  content String
+  order   Int    @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("technical_articles")
 }

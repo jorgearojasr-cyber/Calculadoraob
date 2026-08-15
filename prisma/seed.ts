@@ -3,6 +3,7 @@ import { PrismaClient } from "../src/generated/prisma/client";
 import { seedRadierModule } from "./seed-radier";
 import { seedRegularizationModule } from "./seed-regularization";
 import { seedConcreteMixRatio } from "./seed-concrete-mix-ratio";
+import { seedInspeccionesModule } from "./seed-inspecciones";
 
 const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL });
 const prisma = new PrismaClient({ adapter });
@@ -39,6 +40,7 @@ async function main() {
   await seedRadierModule(prisma);
   await seedRegularizationModule(prisma);
   await seedConcreteMixRatio(prisma);
+  await seedInspeccionesModule(prisma);
 }
 
 main()
