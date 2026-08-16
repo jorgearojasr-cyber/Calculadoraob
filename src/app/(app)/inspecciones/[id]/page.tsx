@@ -123,7 +123,9 @@ export default async function InspeccionDetallePage({
     // parsean acá también queRevisar/comoRevisarlo/condicionesCorrectas/
     // senalesDeProblema para armar el bloque de guía; comoRevisarlo y
     // senalesDeProblema solo existen hoy en los 2 artículos de Piso, en
-    // el resto quedan en null y no cambia nada.
+    // el resto quedan en null y no cambia nada. Fase 11L añade
+    // guiaBreve/recomendacion al mismo spread — sin cambios acá, ya
+    // vienen incluidos por parseKnowledgeContent (docs/FASE11L...).
     const articleBySlug = new Map(
       articles.map((a) => [a.slug, { title: a.title, content: a.content, ...parseKnowledgeContent(a.content) }])
     );

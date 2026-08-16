@@ -40,6 +40,17 @@ export type KnowledgeEntry = {
   // canónica campo F). Mismo patrón aditivo que comoRevisarlo/
   // senalesDeProblema: null en cualquier artículo que no la tenga.
   porQueImporta: string | null;
+  // Fase 11L (docs/FASE11L_INFORME_REDISENO_VISUAL_GUIA.md, sección C) —
+  // línea compacta mostrada por defecto antes de responder, para no
+  // obligar a leer todo el bloque de guía de entrada. Prioridad: (1) si
+  // el artículo tiene un encabezado "# Guía breve" explícito, se usa tal
+  // cual; (2) si no, se deriva de `queRevisar` con `deriveGuiaBreve`
+  // (determinista, sin IA, nunca inventa contenido — solo recorta lo que
+  // ya existe); (3) si tampoco hay `queRevisar`, queda null y el
+  // componente simplemente no muestra la línea compacta. Ningún artículo
+  // existente tiene el encabezado explícito todavía — todos calculan
+  // este campo por derivación.
+  guiaBreve: string | null;
 };
 
 const SECTION_ALIASES: Record<keyof Omit<KnowledgeEntry, "slug" | "title">, string[]> = {
@@ -54,7 +65,31 @@ const SECTION_ALIASES: Record<keyof Omit<KnowledgeEntry, "slug" | "title">, stri
   comoRevisarlo: ["cómo revisarlo", "como revisarlo"],
   senalesDeProblema: ["qué señales pueden indicar un problema", "que señales pueden indicar un problema", "que senales pueden indicar un problema"],
   porQueImporta: ["por qué importa", "por que importa"],
+  // Fase 11L — encabezado explícito opcional; ningún artículo lo trae
+  // todavía (se deriva de queRevisar en ese caso, ver deriveGuiaBreve).
+  guiaBreve: ["guía breve", "guia breve"],
 };
+
+// Fase 11L (sección C) — derivación 100% determinista y auditable, sin
+// ningún servicio externo: toma la primera oración de `queRevisar` (hasta
+// el primer punto/signo de cierre) y, si igual queda demasiado larga,
+// recorta en el último espacio antes del límite y agrega "…". Nunca
+// agrega palabras que no estaban en el texto original — solo extrae o
+// recorta. Si `queRevisar` viene vacío, no hay nada que derivar.
+const GUIA_BREVE_MAX_LENGTH = 160;
+
+export function deriveGuiaBreve(queRevisar: string): string {
+  const trimmed = queRevisar.trim();
+  const firstSentenceMatch = trimmed.match(/^[^.!?]*[.!?]/);
+  const firstSentence = (firstSentenceMatch ? firstSentenceMatch[0] : trimmed).trim();
+
+  if (firstSentence.length <= GUIA_BREVE_MAX_LENGTH) return firstSentence;
+
+  const cut = firstSentence.slice(0, GUIA_BREVE_MAX_LENGTH);
+  const lastSpace = cut.lastIndexOf(" ");
+  const safeCut = lastSpace > 0 ? cut.slice(0, lastSpace) : cut;
+  return `${safeCut.trim()}…`;
+}
 
 export function parseMarkdownSections(content: string): Map<string, string> {
   const sections = new Map<string, string>();
@@ -95,8 +130,11 @@ export function findSection(sections: Map<string, string>, aliases: string[]): s
 // memoria.
 export function parseKnowledgeContent(content: string): Omit<KnowledgeEntry, "slug" | "title"> {
   const sections = parseMarkdownSections(content);
+  const queRevisar = findSection(sections, SECTION_ALIASES.queRevisar);
+  const explicitGuiaBreve = findSection(sections, SECTION_ALIASES.guiaBreve);
+
   return {
-    queRevisar: findSection(sections, SECTION_ALIASES.queRevisar),
+    queRevisar,
     condicionesCorrectas: findSection(sections, SECTION_ALIASES.condicionesCorrectas),
     condicionesIncorrectas: findSection(sections, SECTION_ALIASES.condicionesIncorrectas),
     recomendacion: findSection(sections, SECTION_ALIASES.recomendacion),
@@ -104,6 +142,7 @@ export function parseKnowledgeContent(content: string): Omit<KnowledgeEntry, "sl
     comoRevisarlo: findSection(sections, SECTION_ALIASES.comoRevisarlo),
     senalesDeProblema: findSection(sections, SECTION_ALIASES.senalesDeProblema),
     porQueImporta: findSection(sections, SECTION_ALIASES.porQueImporta),
+    guiaBreve: explicitGuiaBreve ?? (queRevisar ? deriveGuiaBreve(queRevisar) : null),
   };
 }
 

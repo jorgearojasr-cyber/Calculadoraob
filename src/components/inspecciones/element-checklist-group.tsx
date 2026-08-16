@@ -36,6 +36,12 @@ export type ElementChecklistData = {
       senalesDeProblema: string | null;
       // Fase 11E — ver GuideBlock en checklist-item-row.tsx.
       porQueImporta: string | null;
+      // Fase 11L — línea compacta mostrada por defecto (explícita o
+      // derivada, ver inspecciones-knowledge.ts) y la recomendación del
+      // artículo (ya existía en KnowledgeEntry desde Fase 10B, pero no se
+      // mostraba en el flujo "guía primero" hasta ahora).
+      guiaBreve: string | null;
+      recomendacion: string | null;
     } | null;
   }[];
 };

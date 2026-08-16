@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useTransition } from "react";
-import { Camera, Check, ChevronDown, ChevronUp, History, Lightbulb, Pencil, Plus, TriangleAlert, Trash2, X } from "lucide-react";
+import { useEffect, useRef, useState, useTransition } from "react";
+import { BookOpen, Camera, Check, ChevronDown, ChevronUp, History, Lightbulb, Pencil, Plus, TriangleAlert, Trash2, X } from "lucide-react";
 import {
   createObservationAction,
   deleteObservationAction,
@@ -49,6 +49,21 @@ const SEVERITY_TONE: Record<InspectionSeverity, string> = {
   CRITICAL: "bg-danger-tint text-danger",
 };
 
+// Fase 11L (docs/FASE11L_INFORME_REDISENO_VISUAL_GUIA.md, sección H) —
+// "No corresponde" necesitaba un tono seleccionado propio: antes
+// reutilizaba `bg-concrete text-ink-muted border-border`, IDÉNTICO al
+// estado no-seleccionado, así que un check marcado "No corresponde" no
+// se distinguía visualmente de uno sin responder. Se eligió un naranja
+// quemado deliberadamente DISTINTO del ámbar/mostaza que ya usan las
+// severidades Baja/Media (`caution-tint` + OBSERVATION_TEXT arriba) y de
+// "Observación" en preguntas sin guía — mismo motivo que obligó a crear
+// OBSERVATION_TEXT: evitar que dos significados distintos compartan el
+// mismo matiz. #B5480A sobre #FCEAD9 mide ~4.9:1 (AA para texto normal,
+// misma fórmula de luminancia relativa ya usada en OBSERVATION_TEXT).
+const NOT_APPLICABLE_TEXT = "text-[#B5480A]";
+const NOT_APPLICABLE_TINT = "bg-[#FCEAD9]";
+const NOT_APPLICABLE_BORDER = "border-[#F0C9A0]";
+
 // Muestra `questionSnapshot` (NUNCA el texto actual del catálogo) —
 // estabilidad histórica diseñada en Fase 1: aunque el admin edite la
 // pregunta del catálogo después, este check sigue mostrando exactamente
@@ -79,6 +94,9 @@ export function ChecklistItemRow({
     comoRevisarlo: string | null;
     senalesDeProblema: string | null;
     porQueImporta: string | null;
+    // Fase 11L — ver GuideBlock más abajo.
+    guiaBreve: string | null;
+    recomendacion: string | null;
   } | null;
 }) {
   // Fase 11B — piloto "guía primero" (docs/FASE11A_DISENO_INSPECCION_TECNICA_GUIADA.md,
@@ -117,6 +135,20 @@ export function ChecklistItemRow({
   const [notApplicableReason, setNotApplicableReason] = useState(initialNotApplicableReason);
   const [markingNotApplicable, setMarkingNotApplicable] = useState(false);
   const [notApplicableDraft, setNotApplicableDraft] = useState(initialNotApplicableReason ?? "");
+
+  // Fase 11L (docs/FASE11L_INFORME_REDISENO_VISUAL_GUIA.md, sección D) —
+  // el bloque completo de guía (Qué revisar/Cómo revisarlo/Qué debería
+  // verse/Qué puede ser señal de un problema/Por qué importa/
+  // Recomendación) arranca SIEMPRE colapsado, sin importar si el check
+  // está pendiente o en edición — antes se mostraba abierto por defecto
+  // apenas `hasGuide` era true. Estado puramente de presentación: no
+  // toca ni depende de `status`/`editingStatus`, así que expandir o
+  // colapsar nunca pierde ni altera la evaluación ya guardada.
+  const [guideExpanded, setGuideExpanded] = useState(false);
+  // Fase 11L (sección L) — solo se usa para decidir a qué hallazgo recién
+  // guardado darle foco/scroll y el mensaje "Agrega una foto..." una
+  // única vez; no se persiste en ningún lado, es puramente de UX local.
+  const [justSavedObservationId, setJustSavedObservationId] = useState<string | null>(null);
 
   const handleSelectStatus = (next: InspectionAnswerStatus) => {
     setError(null);
@@ -197,21 +229,53 @@ export function ChecklistItemRow({
       </div>
 
       {/* Piloto Fase 5B — solo aparece en las preguntas que ya tienen un
-          TechnicalArticle vinculado (5 de momento); el resto del
-          catálogo no muestra nada acá, sin romper nada. Piloto Fase 11B
-          (guía primero, Piso): en vez del enlace colapsado, se muestra el
-          bloque de guía abierto por defecto — ver GuideBlock más abajo. */}
+          TechnicalArticle vinculado; el resto del catálogo (incluidas
+          Fachada/Reja/Portón, deliberadamente sin guía) no muestra nada
+          acá, sin romper nada — degrada al checklist simple de siempre.
+          TechnicalArticleLink ya arranca colapsado por su cuenta, así
+          que las preguntas legacy sin `hasGuide` no cambian con Fase 11L. */}
       {technicalArticle && !hasGuide && (
         <TechnicalArticleLink title={technicalArticle.title} content={technicalArticle.content} />
       )}
+      {/* Fase 11L (docs/FASE11L_INFORME_REDISENO_VISUAL_GUIA.md, secciones
+          C/D) — "guía primero" (Fase 11B) mostraba SIEMPRE el bloque
+          completo apenas `hasGuide` era true, antes incluso de que la
+          persona pudiera responder. Ahora: una línea compacta ("guía
+          breve", explícita o derivada — ver deriveGuiaBreve en
+          inspecciones-knowledge.ts) siempre visible, y el resto detrás de
+          un expandible que arranca cerrado. Misma condición de
+          visibilidad que los botones de estado (status === null ||
+          editingStatus) — una vez respondido, ni la guía breve ni el
+          expandible se muestran (la pastilla de estado ya resume todo). */}
       {technicalArticle && hasGuide && (status === null || editingStatus) && (
-        <GuideBlock
-          queRevisar={technicalArticle.queRevisar}
-          comoRevisarlo={technicalArticle.comoRevisarlo}
-          condicionesCorrectas={technicalArticle.condicionesCorrectas}
-          senalesDeProblema={technicalArticle.senalesDeProblema}
-          porQueImporta={technicalArticle.porQueImporta}
-        />
+        <>
+          {technicalArticle.guiaBreve && (
+            <p className="mt-1.5 text-sm text-ink-muted">
+              <span className="font-medium text-ink">Revisa: </span>
+              {technicalArticle.guiaBreve}
+            </p>
+          )}
+          <button
+            type="button"
+            onClick={() => setGuideExpanded((v) => !v)}
+            aria-expanded={guideExpanded}
+            className={`mt-1.5 min-h-11 inline-flex items-center gap-1.5 px-1 text-xs font-medium text-safety ${FOCUS_RING}`}
+          >
+            <BookOpen className="w-3.5 h-3.5 flex-shrink-0" />
+            {guideExpanded ? "Ocultar detalle" : "Ver cómo revisarlo"}
+            {guideExpanded ? <ChevronUp className="w-3 h-3 flex-shrink-0" /> : <ChevronDown className="w-3 h-3 flex-shrink-0" />}
+          </button>
+          {guideExpanded && (
+            <GuideBlock
+              queRevisar={technicalArticle.queRevisar}
+              comoRevisarlo={technicalArticle.comoRevisarlo}
+              condicionesCorrectas={technicalArticle.condicionesCorrectas}
+              senalesDeProblema={technicalArticle.senalesDeProblema}
+              porQueImporta={technicalArticle.porQueImporta}
+              recomendacion={technicalArticle.recomendacion}
+            />
+          )}
+        </>
       )}
 
       {(status === null || editingStatus) && (
@@ -235,7 +299,7 @@ export function ChecklistItemRow({
           <StatusButton
             label={hasGuide ? "No corresponde" : "No aplica"}
             icon={X}
-            tone="bg-concrete text-ink-muted border-border"
+            tone={`${NOT_APPLICABLE_TINT} ${NOT_APPLICABLE_TEXT} ${NOT_APPLICABLE_BORDER}`}
             selected={status === "NOT_APPLICABLE" || markingNotApplicable}
             disabled={isStatusPending}
             onClick={handleClickNotApplicable}
@@ -298,6 +362,7 @@ export function ChecklistItemRow({
             onSaved={(created) => {
               setObservations((prev) => [...prev, created]);
               setCreatingObservation(false);
+              setJustSavedObservationId(created.id);
               // Recién ahora hay un hallazgo real que respalda el estado
               // "Observación" — se persiste junto con la creación, nunca
               // antes (ver Corrección 2: "no debe persistirse un estado
@@ -382,6 +447,7 @@ export function ChecklistItemRow({
                 observation={obs}
                 onEdit={() => setEditingObservationId(obs.id)}
                 onDelete={() => setObservations((prev) => prev.filter((o) => o.id !== obs.id))}
+                highlightPhotos={obs.id === justSavedObservationId}
               />
             )
           )}
@@ -393,6 +459,7 @@ export function ChecklistItemRow({
               onSaved={(created) => {
                 setObservations((prev) => [...prev, created]);
                 setShowAddForm(false);
+                setJustSavedObservationId(created.id);
               }}
               onCancel={() => setShowAddForm(false)}
             />
@@ -425,12 +492,18 @@ function GuideBlock({
   condicionesCorrectas,
   senalesDeProblema,
   porQueImporta,
+  recomendacion,
 }: {
   queRevisar: string | null;
   comoRevisarlo: string | null;
   condicionesCorrectas: string | null;
   senalesDeProblema: string | null;
   porQueImporta: string | null;
+  // Fase 11L — ya existía en KnowledgeEntry desde Fase 10B (alias
+  // "recomendación"/"recomendacion"), pero no se mostraba en el flujo
+  // "guía primero" hasta ahora; se agrega al detalle expandido, mismo
+  // criterio "solo se pinta si el artículo la tiene" que porQueImporta.
+  recomendacion: string | null;
 }) {
   const sections = [
     { label: "Qué revisar", value: queRevisar },
@@ -440,6 +513,7 @@ function GuideBlock({
     // Fase 11E — solo se pinta si el artículo la tiene (docs/FASE11D...,
     // regla "no mostrar 'Por qué importa' si el artículo no lo tiene").
     { label: "Por qué importa", value: porQueImporta },
+    { label: "Recomendación", value: recomendacion },
   ].filter((s): s is { label: string; value: string } => Boolean(s.value));
 
   if (sections.length === 0) return null;
@@ -495,9 +569,10 @@ function StatusPill({
     <button
       type="button"
       onClick={onClick}
-      className={`inline-flex items-center gap-1 min-h-11 px-3 py-1.5 rounded-full text-sm font-medium bg-concrete text-ink-muted flex-shrink-0 ${FOCUS_RING}`}
+      className={`inline-flex items-center gap-1 min-h-11 px-3 py-1.5 rounded-full text-sm font-medium ${NOT_APPLICABLE_TINT} ${NOT_APPLICABLE_TEXT} flex-shrink-0 ${FOCUS_RING}`}
     >
-      — {hasGuide ? "No corresponde" : "No aplica"}
+      <X className="w-3.5 h-3.5" />
+      {hasGuide ? "No corresponde" : "No aplica"}
     </button>
   );
 }
@@ -540,14 +615,32 @@ function ObservationRow({
   observation,
   onEdit,
   onDelete,
+  highlightPhotos,
 }: {
   caseId: string;
   observation: ObservationDTO;
   onEdit: () => void;
   onDelete: () => void;
+  // Fase 11L (sección L) — true solo para el hallazgo recién guardado en
+  // ESTE render (la foto necesita `observationId`, así que solo puede
+  // agregarse después de guardar — invariante ya existente, no se toca).
+  // Hace foco/scroll suave hacia la zona de fotos y muestra un aviso una
+  // sola vez; nunca sube nada automáticamente ni crea almacenamiento
+  // temporal — sigue siendo el mismo <PhotoUpload> de siempre.
+  highlightPhotos?: boolean;
 }) {
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const photoSectionRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (highlightPhotos) {
+      photoSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }
+    // Solo debe correr una vez, cuando este observation pasa a ser el
+    // recién guardado — no en cada re-render del componente.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [highlightPhotos]);
 
   const handleDelete = () => {
     setError(null);
@@ -596,12 +689,18 @@ function ObservationRow({
 
       {/* Fotografías del hallazgo (Fase 4, punto 1) — asociadas SOLO a
           esta observación, no al check ni al elemento (ver
-          PhotoUploadContext, "exactamente un nivel por foto"). */}
-      <div className="mt-2.5 pt-2.5 border-t border-border">
+          PhotoUploadContext, "exactamente un nivel por foto"). Fase 11L
+          — foco/scroll + aviso cuando este hallazgo se acaba de guardar
+          (ver highlightPhotos arriba); la foto sigue subiéndose recién
+          acá, nunca antes de que exista `observation.id`. */}
+      <div ref={photoSectionRef} className="mt-2.5 pt-2.5 border-t border-border">
         <p className="text-[11px] font-mono uppercase tracking-wider text-ink-faint mb-2 flex items-center gap-1">
           <Camera className="w-3 h-3" />
           Fotografías
         </p>
+        {highlightPhotos && (
+          <p className="mb-2 text-xs font-medium text-safety">Agrega una foto del problema, si puedes.</p>
+        )}
         <PhotoUpload
           caseId={caseId}
           context={{ level: "observation", observationId: observation.id }}
@@ -750,7 +849,16 @@ function ObservationForm({
       </div>
 
       <label className="grid gap-1">
-        <span className="text-xs font-medium text-ink-muted">Severidad</span>
+        {/* Fase 11L (docs/FASE11L_INFORME_REDISENO_VISUAL_GUIA.md, sección
+            K) — "Severidad" (jerga técnica) pasa a "Nivel del problema"
+            SOLO en la etiqueta visible. `severity`/InspectionSeverity/
+            LOW-MEDIUM-HIGH-CRITICAL no cambian en ningún lado (BD, tipos,
+            Server Actions, PDF). Las 4 opciones (Baja/Media/Alta/Crítica)
+            se dejaron intactas — "Crítica" en particular se documenta
+            como candidato a revisar en una fase futura, pero NO se
+            cambia acá sin decisión explícita previa (instrucción
+            expresa de esta fase). */}
+        <span className="text-xs font-medium text-ink-muted">Nivel del problema</span>
         <select
           value={severity}
           onChange={(e) => setSeverity(e.target.value as InspectionSeverity)}
