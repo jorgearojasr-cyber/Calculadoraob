@@ -13,6 +13,10 @@ export type ElementChecklistData = {
     id: string;
     questionSnapshot: string;
     status: InspectionAnswerStatus | null;
+    // Fase 11K — ver docs/FASE11J..., sección Q. Solo tiene sentido
+    // cuando status === "NOT_APPLICABLE"; en cualquier otro caso siempre
+    // viene null (la Server Action lo garantiza).
+    notApplicableReason: string | null;
     observations: ObservationDTO[];
     // Piloto Fase 5B — presente solo cuando el InspectionChecklistItem
     // tiene technicalArticleSlug Y ese slug resuelve a un TechnicalArticle
@@ -61,6 +65,7 @@ export function ElementChecklistGroup({ caseId, element }: { caseId: string; ele
             checkId={check.id}
             questionSnapshot={check.questionSnapshot}
             initialStatus={check.status}
+            initialNotApplicableReason={check.notApplicableReason}
             initialObservations={check.observations}
             technicalArticle={check.technicalArticle}
           />

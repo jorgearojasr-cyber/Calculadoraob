@@ -1272,6 +1272,13 @@ enum InspectionPhotoKind {
   EVIDENCE
   GOOD_CONDITION
   FUTURE_REPAIR
+  // Fase 11K (docs/FASE11J_REDISENO_PROFUNDO_INSPECCION_GUIADA.md,
+  // sección E) — foto de portada del caso, siempre a nivel `case` (spaceId/
+  // elementId/observationId null). A lo más 1 activa por caso — invariante
+  // aplicada en la Server Action (mismo criterio ya usado en el resto del
+  // módulo: "el nivel más específico presente es el que aplica" nunca se
+  // hizo cumplir en el schema, solo en la capa de aplicación).
+  COVER
 }
 
 // ---------- CATÁLOGO (qué SE PUEDE inspeccionar) ----------
@@ -1470,6 +1477,13 @@ model InspectionChecklistCheck {
   questionSnapshot String
   status           InspectionAnswerStatus?
   answeredAt       DateTime?
+  // Fase 11K (docs/FASE11J_REDISENO_PROFUNDO_INSPECCION_GUIADA.md,
+  // sección Q) — motivo opcional cuando status = NOT_APPLICABLE. Nunca se
+  // modela como InspectionObservation (esa trae severidad/estado que no
+  // aplican semánticamente a "no corresponde"). Se limpia explícitamente
+  // en la Server Action cada vez que el status cambia a otro valor, para
+  // que nunca quede un motivo huérfano de un estado distinto.
+  notApplicableReason String?
 
   observations InspectionObservation[]
 

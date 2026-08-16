@@ -7,23 +7,28 @@ import type { InspectionMotivo } from "@/generated/prisma/client";
 // sección 1/2). El motivo no cambia qué se revisa técnicamente, solo el
 // tono del informe más adelante — nunca se convierte en una conclusión
 // legal ("apto para firmar"), ver informe de Fase 11B.
+// Fase 11K (docs/FASE11J_REDISENO_PROFUNDO_INSPECCION_GUIADA.md, sección
+// D) — copy más humano y con mejor cobertura de casos reales (vivienda
+// comprada/arrendada/revisión voluntaria, todas caben en `label`/
+// `description` de POST_RECEPCION sin cambiar el enum). Los 3 `value`
+// NO cambian — solo el texto visible.
 const OPTIONS: { value: InspectionMotivo; label: string; description: string; icon: typeof ClipboardCheck }[] = [
   {
     value: "RECEPCION_PRE_FIRMA",
-    label: "Recepción antes de firmar",
-    description: "Vas a revisar la vivienda antes de aceptar la entrega.",
+    label: "Recibo una vivienda nueva",
+    description: "Quiero revisarla antes de aceptar o firmar la entrega.",
     icon: ClipboardCheck,
   },
   {
     value: "POST_RECEPCION",
-    label: "Ya recibí la vivienda y quiero revisar",
-    description: "Ya te entregaron la vivienda y quieres dejar constancia de su estado.",
+    label: "Quiero revisar una vivienda",
+    description: "Ya vivo en ella, la compré, la arriendo o simplemente quiero conocer su estado.",
     icon: CheckCircle2,
   },
   {
     value: "REVISION_AMPLIACION",
-    label: "Revisar una ampliación",
-    description: "Vas a revisar una obra nueva o ampliación específica.",
+    label: "Quiero revisar una ampliación",
+    description: "Quiero revisar una obra nueva o ampliación realizada en la vivienda.",
     icon: Hammer,
   },
 ];

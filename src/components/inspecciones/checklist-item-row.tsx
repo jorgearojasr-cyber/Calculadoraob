@@ -58,6 +58,7 @@ export function ChecklistItemRow({
   checkId,
   questionSnapshot,
   initialStatus,
+  initialNotApplicableReason,
   initialObservations,
   technicalArticle,
 }: {
@@ -65,6 +66,10 @@ export function ChecklistItemRow({
   checkId: string;
   questionSnapshot: string;
   initialStatus: InspectionAnswerStatus | null;
+  // Fase 11K — ver docs/FASE11J..., sección Q. Solo relevante cuando
+  // initialStatus === "NOT_APPLICABLE"; la Server Action garantiza null
+  // en cualquier otro caso.
+  initialNotApplicableReason: string | null;
   initialObservations: ObservationDTO[];
   technicalArticle: {
     title: string;
@@ -103,9 +108,20 @@ export function ChecklistItemRow({
   const [error, setError] = useState<string | null>(null);
   const [isStatusPending, startStatusTransition] = useTransition();
 
+  // Fase 11K (docs/FASE11J..., sección Q) — "No corresponde" NUNCA crea
+  // un InspectionObservation (severidad/recomendación no aplican
+  // semánticamente acá): un motivo opcional y breve, guardado
+  // directamente en el check. Mismo criterio de "no bloquear" que el
+  // resto del checklist — el motivo es opcional, "Guardar" funciona
+  // igual con el campo vacío.
+  const [notApplicableReason, setNotApplicableReason] = useState(initialNotApplicableReason);
+  const [markingNotApplicable, setMarkingNotApplicable] = useState(false);
+  const [notApplicableDraft, setNotApplicableDraft] = useState(initialNotApplicableReason ?? "");
+
   const handleSelectStatus = (next: InspectionAnswerStatus) => {
     setError(null);
     setCreatingObservation(false);
+    setMarkingNotApplicable(false);
     startStatusTransition(async () => {
       const result = await updateInspectionChecklistCheckAction(checkId, next);
       if (!result.status) {
@@ -113,6 +129,33 @@ export function ChecklistItemRow({
         return;
       }
       setStatus(result.status);
+      // La Server Action limpia el motivo en el servidor apenas el
+      // status deja de ser NOT_APPLICABLE — acá solo se refleja lo que
+      // ya volvió (nunca queda un motivo incoherente con el estado
+      // actual, ver sección Q del informe).
+      setNotApplicableReason(result.notApplicableReason);
+      setEditingStatus(false);
+    });
+  };
+
+  const handleClickNotApplicable = () => {
+    setError(null);
+    setCreatingObservation(false);
+    setNotApplicableDraft(notApplicableReason ?? "");
+    setMarkingNotApplicable(true);
+  };
+
+  const handleSaveNotApplicable = () => {
+    setError(null);
+    startStatusTransition(async () => {
+      const result = await updateInspectionChecklistCheckAction(checkId, "NOT_APPLICABLE", notApplicableDraft);
+      if (!result.status) {
+        setError(result.error ?? "No se pudo guardar.");
+        return;
+      }
+      setStatus(result.status);
+      setNotApplicableReason(result.notApplicableReason);
+      setMarkingNotApplicable(false);
       setEditingStatus(false);
     });
   };
@@ -193,11 +236,51 @@ export function ChecklistItemRow({
             label={hasGuide ? "No corresponde" : "No aplica"}
             icon={X}
             tone="bg-concrete text-ink-muted border-border"
-            selected={status === "NOT_APPLICABLE"}
+            selected={status === "NOT_APPLICABLE" || markingNotApplicable}
             disabled={isStatusPending}
-            onClick={() => handleSelectStatus("NOT_APPLICABLE")}
+            onClick={handleClickNotApplicable}
           />
         </div>
+      )}
+
+      {/* Fase 11K — motivo opcional de "No corresponde" (docs/FASE11J...,
+          sección Q). Nunca crea un InspectionObservation: sin severidad,
+          sin recomendación, sin fotografía — solo un texto breve y
+          opcional guardado directamente en el check. */}
+      {markingNotApplicable && (
+        <div className="mt-3 rounded-xl p-3 bg-concrete/60 border border-border grid gap-2">
+          <label className="grid gap-1">
+            <span className="text-xs font-medium text-ink-muted">¿Por qué no corresponde? (opcional)</span>
+            <textarea
+              value={notApplicableDraft}
+              onChange={(e) => setNotApplicableDraft(e.target.value)}
+              rows={2}
+              placeholder="Ej. Este recinto no tiene ventana"
+              className="rounded-lg px-3 py-2 text-sm bg-white border border-border outline-none focus:border-ink resize-none"
+            />
+          </label>
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={handleSaveNotApplicable}
+              disabled={isStatusPending}
+              className={`min-h-11 inline-flex items-center justify-center rounded-full px-4 py-2 text-sm font-semibold text-white bg-action disabled:opacity-50 ${FOCUS_RING}`}
+            >
+              {isStatusPending ? "Guardando…" : "Guardar"}
+            </button>
+            <button
+              type="button"
+              onClick={() => setMarkingNotApplicable(false)}
+              className={`min-h-11 inline-flex items-center px-2 -mx-2 text-sm font-medium text-ink-muted hover:text-ink ${FOCUS_RING}`}
+            >
+              Cancelar
+            </button>
+          </div>
+        </div>
+      )}
+
+      {status === "NOT_APPLICABLE" && !editingStatus && !markingNotApplicable && notApplicableReason && (
+        <p className="mt-1.5 text-xs text-ink-muted">Motivo: {notApplicableReason}</p>
       )}
 
       {error && <p className="mt-2 text-xs text-safety">{error}</p>}

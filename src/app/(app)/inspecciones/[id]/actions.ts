@@ -59,14 +59,31 @@ async function loadObservationWithOwnership(observationId: string) {
   });
 }
 
+// Tope de sanidad simple para el motivo opcional de "No corresponde" —
+// mismo criterio de "límite defensivo, no regla de producto" ya usado en
+// MAX_REPEATABLE_COUNT (src/app/(app)/inspecciones/actions.ts).
+const MAX_NOT_APPLICABLE_REASON_LENGTH = 300;
+
 // Server Action de respuesta — mismo patrón de sesión+ownership que
 // createInspectionAndGenerateAction (src/app/(app)/inspecciones/actions.ts)
 // y createRegularizationCaseAction. `answeredAt` se fija a `new Date()` en
 // el servidor, nunca se recibe del cliente.
+//
+// Fase 11K (docs/FASE11J..., sección Q) — `notApplicableReason` es
+// opcional y SOLO tiene sentido cuando `status === "NOT_APPLICABLE"`:
+// para cualquier otro status, se fuerza a `null` acá mismo,
+// incondicionalmente — así nunca puede quedar un motivo "huérfano" de un
+// estado anterior distinto (ej. si el usuario escribió un motivo, guardó
+// como No corresponde, y después cambia a OK, el motivo desaparece solo,
+// sin que el cliente tenga que acordarse de limpiarlo).
 export async function updateInspectionChecklistCheckAction(
   checkId: string,
-  status: string
-): Promise<{ status: InspectionAnswerStatus; answeredAt: string; error?: undefined } | { error: string; status?: undefined }> {
+  status: string,
+  notApplicableReason?: string | null
+): Promise<
+  | { status: InspectionAnswerStatus; answeredAt: string; notApplicableReason: string | null; error?: undefined }
+  | { error: string; status?: undefined }
+> {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) return { error: "No hay sesión activa." };
 
@@ -79,13 +96,22 @@ export async function updateInspectionChecklistCheckAction(
     return { error: "No encontrado." };
   }
 
+  const reason =
+    status === "NOT_APPLICABLE"
+      ? (notApplicableReason?.trim().slice(0, MAX_NOT_APPLICABLE_REASON_LENGTH) || null)
+      : null;
+
   const updated = await prisma.inspectionChecklistCheck.update({
     where: { id: checkId },
-    data: { status: status as InspectionAnswerStatus, answeredAt: new Date() },
+    data: { status: status as InspectionAnswerStatus, answeredAt: new Date(), notApplicableReason: reason },
   });
 
   revalidatePath(`/inspecciones/${check.element.space.caseId}`);
-  return { status: updated.status as InspectionAnswerStatus, answeredAt: updated.answeredAt!.toISOString() };
+  return {
+    status: updated.status as InspectionAnswerStatus,
+    answeredAt: updated.answeredAt!.toISOString(),
+    notApplicableReason: updated.notApplicableReason,
+  };
 }
 
 // Una pregunta puede tener varias observaciones (InspectionObservation[],
@@ -307,6 +333,65 @@ export async function uploadInspectionPhotoAction(
 
   revalidatePath(`/inspecciones/${caseId}`);
   return { id: photo.id, url: photo.url, kind: photo.kind };
+}
+
+// Fase 11K (docs/FASE11J_REDISENO_PROFUNDO_INSPECCION_GUIADA.md, sección
+// E) — foto de portada del caso. Reutiliza InspectionPhoto a nivel `case`
+// (spaceId/elementId/observationId null), con `kind: "COVER"`. A lo más
+// 1 fila COVER por caso — invariante aplicada acá (no en el schema),
+// mismo criterio que el resto del módulo. Semántica de reemplazo segura:
+// se sube el blob nuevo y se crea la fila nueva ANTES de tocar la
+// portada anterior — si algo falla en el camino, la portada anterior
+// queda intacta. Recién con la fila nueva ya persistida se borra la fila
+// vieja y se intenta borrar su blob físico (best-effort, mismo patrón
+// que deleteObservationAction/deleteInspectionPhotoAction — un fallo acá
+// nunca revierte ni bloquea el reemplazo, que ya es válido en base de
+// datos).
+export async function uploadInspectionCoverPhotoAction(
+  caseId: string,
+  formData: FormData
+): Promise<{ url: string; error?: undefined } | { error: string; url?: undefined }> {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.id) return { error: "No hay sesión activa." };
+
+  const insCase = await prisma.inspectionCase.findUnique({ where: { id: caseId } });
+  if (!insCase || insCase.userId !== session.user.id) return { error: "Inspección no encontrada." };
+
+  const file = formData.get("photo");
+  if (!(file instanceof File) || file.size === 0) return { error: "Elige una foto primero." };
+  if (!isAllowedPhotoType(file.type)) {
+    return { error: "Formato no admitido. Sube una foto en JPG, PNG o WEBP." };
+  }
+  if (file.size > MAX_PHOTO_SIZE_BYTES) {
+    return { error: `La foto pesa demasiado (máximo ${MAX_PHOTO_SIZE_BYTES / 1024 / 1024}MB).` };
+  }
+
+  let blob;
+  try {
+    blob = await put(`inspection-photos/${caseId}-cover-${Date.now()}-${file.name}`, file, { access: "public" });
+  } catch {
+    return { error: "No pudimos subir la foto (almacenamiento no disponible). Inténtalo más tarde." };
+  }
+
+  const previousCover = await prisma.inspectionPhoto.findFirst({ where: { caseId, kind: "COVER" } });
+
+  const newCover = await prisma.inspectionPhoto.create({
+    data: { caseId, kind: "COVER", url: blob.url },
+  });
+
+  if (previousCover) {
+    await prisma.inspectionPhoto.delete({ where: { id: previousCover.id } });
+    try {
+      await del(previousCover.url);
+    } catch {
+      // Blob ya eliminado o inalcanzable — no bloquea el reemplazo, que
+      // ya está persistido correctamente en base de datos.
+    }
+  }
+
+  revalidatePath("/inspecciones");
+  revalidatePath(`/inspecciones/${caseId}`);
+  return { url: newCover.url };
 }
 
 export async function deleteInspectionPhotoAction(

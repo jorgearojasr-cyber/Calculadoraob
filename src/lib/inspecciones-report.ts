@@ -86,7 +86,12 @@ export async function loadInspectionReportData(caseId: string, userId: string): 
     where: { id: caseId },
     include: {
       user: { select: { name: true, email: true } },
-      photos: { where: { spaceId: null, elementId: null, observationId: null }, orderBy: { createdAt: "asc" } },
+      // Fase 11K — `kind: "GENERAL"` excluye la portada (`COVER`), que
+      // tiene su propio ciclo de vida (reemplazo, no lista) y no debería
+      // aparecer mezclada en "fotos generales" del informe. Ver
+      // docs/FASE11J..., sección E — PDF/resumen quedan deliberadamente
+      // sin portada en esta fase (ver informe Fase 11K).
+      photos: { where: { spaceId: null, elementId: null, observationId: null, kind: "GENERAL" }, orderBy: { createdAt: "asc" } },
       spaces: {
         orderBy: { order: "asc" },
         include: {

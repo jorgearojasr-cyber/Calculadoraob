@@ -46,11 +46,23 @@ export default async function InspeccionDetallePage({
       },
       // Fotos "generales de la inspección" (Fase 4, punto 2) — las
       // únicas SIN ningún otro FK de nivel seteado (ver PhotoUploadContext,
-      // "exactamente un nivel por foto").
-      photos: { where: { spaceId: null, elementId: null, observationId: null }, orderBy: { createdAt: "asc" } },
+      // "exactamente un nivel por foto"). `kind: "GENERAL"` las separa
+      // explícitamente de la portada (Fase 11K, `kind: "COVER"`, ver abajo)
+      // — antes de esta fase toda foto de nivel `case` era GENERAL, así
+      // que este filtro no excluye nada de los casos ya existentes.
+      photos: { where: { spaceId: null, elementId: null, observationId: null, kind: "GENERAL" }, orderBy: { createdAt: "asc" } },
     },
   });
   if (!insCase || insCase.userId !== session.user.id) return <InspectionNotAvailable />;
+
+  // Fase 11K — portada opcional, resuelta aparte para no mezclar su
+  // ciclo de vida (reemplazo, no lista) con las fotos generales de
+  // arriba. `findFirst` porque la invariante "a lo más 1 COVER" se aplica
+  // en la Server Action, no en el schema.
+  const coverPhoto = await prisma.inspectionPhoto.findFirst({
+    where: { caseId: params.id, kind: "COVER" },
+    select: { url: true },
+  });
 
   const selectedSpaceId = searchParams.space;
   const selectedSpaceIndex = selectedSpaceId ? insCase.spaces.findIndex((s) => s.id === selectedSpaceId) : -1;
@@ -131,6 +143,7 @@ export default async function InspeccionDetallePage({
               id: c.id,
               questionSnapshot: c.questionSnapshot,
               status: c.status,
+              notApplicableReason: c.notApplicableReason,
               technicalArticle: c.checklistItem.technicalArticleSlug
                 ? articleBySlug.get(c.checklistItem.technicalArticleSlug) ?? null
                 : null,
@@ -179,11 +192,13 @@ export default async function InspeccionDetallePage({
       </div>
 
       <InspectionCaseHeader
+        caseId={insCase.id}
         name={insCase.name}
         tipoInmueble={insCase.tipoInmueble}
         direccion={insCase.direccion}
         estado={insCase.estado}
         progress={overallProgress}
+        coverPhotoUrl={coverPhoto?.url ?? null}
       />
 
       <div className="rounded-2xl p-5 bg-white border border-border">

@@ -49,7 +49,9 @@ export default async function InspeccionResumenPage({ params }: { params: { id: 
   const insCase = await prisma.inspectionCase.findUnique({
     where: { id: params.id },
     include: {
-      photos: { where: { spaceId: null, elementId: null, observationId: null }, orderBy: { createdAt: "asc" } },
+      // Fase 11K — excluye la portada (`kind: "COVER"`), que no debería
+      // mezclarse con las fotos generales listadas acá.
+      photos: { where: { spaceId: null, elementId: null, observationId: null, kind: "GENERAL" }, orderBy: { createdAt: "asc" } },
       spaces: {
         orderBy: { order: "asc" },
         include: {

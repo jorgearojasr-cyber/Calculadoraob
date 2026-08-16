@@ -1,6 +1,7 @@
 import { MapPin } from "lucide-react";
 import type { InspectionCaseStatus, InspectionPropertyType } from "@/generated/prisma/client";
 import type { ProgressCount } from "@/lib/inspecciones/progress";
+import { CoverPhotoUpload } from "./cover-photo-upload";
 
 const PROPERTY_TYPE_LABELS: Record<InspectionPropertyType, string> = {
   CASA: "Casa",
@@ -21,12 +22,15 @@ const STATUS_TONE: Record<InspectionCaseStatus, string> = {
 };
 
 export function InspectionCaseHeader({
+  caseId,
   name,
   tipoInmueble,
   direccion,
   estado,
   progress,
+  coverPhotoUrl,
 }: {
+  caseId: string;
   name: string;
   tipoInmueble: InspectionPropertyType;
   direccion: string | null;
@@ -35,10 +39,15 @@ export function InspectionCaseHeader({
   // criterio que en la lista: sin checks generados, no hay nada que
   // calcular, así que el caller (page.tsx) pasa null en ese caso.
   progress: ProgressCount | null;
+  // Fase 11K — ver docs/FASE11J..., sección E. Opcional, nunca bloquea
+  // nada del resto del caso.
+  coverPhotoUrl: string | null;
 }) {
   return (
     <div className="rounded-2xl p-6 bg-white border border-border">
-      <div className="flex items-start justify-between gap-4 flex-wrap">
+      <CoverPhotoUpload caseId={caseId} initialUrl={coverPhotoUrl} />
+
+      <div className="mt-5 flex items-start justify-between gap-4 flex-wrap">
         <div className="min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
             <h1 className="font-display text-xl font-semibold tracking-tight">{name}</h1>

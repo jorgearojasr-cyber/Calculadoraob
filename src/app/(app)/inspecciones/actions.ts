@@ -1,6 +1,8 @@
 "use server";
 
+import { del } from "@vercel/blob";
 import { getServerSession } from "next-auth";
+import { revalidatePath } from "next/cache";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import type { InspectionMotivo, InspectionPropertyType, InspectionTipoAmpliacion } from "@/generated/prisma/client";
@@ -189,4 +191,47 @@ export async function createInspectionAndGenerateAction(
   } catch {
     return { error: "No se pudo crear la inspección. Intenta de nuevo." };
   }
+}
+
+// Fase 11K (docs/FASE11J_REDISENO_PROFUNDO_INSPECCION_GUIADA.md, sección
+// F) — eliminación completa de un caso. Ownership resuelto igual que el
+// resto del módulo: `caseId` nunca se confía sin verificar contra la
+// sesión. Orden EXACTO ya validado por `deleteObservationAction` (Fase
+// 10Q, src/app/(app)/inspecciones/[id]/actions.ts): 1) recolectar TODAS
+// las InspectionPhoto.url de este caso (los 4 niveles, porque `caseId`
+// es obligatorio en todas — nunca un prefijo ni una búsqueda ambigua),
+// 2) borrar los blobs físicos uno por uno, best-effort (un `del()` que
+// falla NUNCA bloquea ni revierte nada, ni puede afectar otro caso: cada
+// llamada usa la URL exacta ya guardada en BD), 3) recién ahí borrar el
+// `InspectionCase` — el cascade ya declarado en el schema
+// (Space/Element/Check/Observation/Photo, todos `onDelete: Cascade`
+// hacia arriba en la cadena) elimina TODAS las filas dependientes en un
+// solo `delete`, sin necesidad de borrarlas una por una a mano.
+export async function deleteInspectionCaseAction(
+  caseId: string
+): Promise<{ success: true; error?: undefined } | { error: string; success?: undefined }> {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.id) return { error: "No hay sesión activa." };
+
+  const insCase = await prisma.inspectionCase.findUnique({ where: { id: caseId } });
+  if (!insCase || insCase.userId !== session.user.id) return { error: "Inspección no encontrada." };
+
+  const photos = await prisma.inspectionPhoto.findMany({ where: { caseId }, select: { url: true } });
+
+  for (const photo of photos) {
+    try {
+      await del(photo.url);
+    } catch {
+      // Blob ya eliminado o inalcanzable — no bloquea el borrado del
+      // caso. Nunca puede afectar otra inspección: cada `del()` usa
+      // exclusivamente la URL real de ESTA foto, nunca un prefijo.
+    }
+  }
+
+  // Cascade real del schema — ver comentario arriba. No se borra ninguna
+  // fila hija a mano acá.
+  await prisma.inspectionCase.delete({ where: { id: caseId } });
+
+  revalidatePath("/inspecciones");
+  return { success: true };
 }

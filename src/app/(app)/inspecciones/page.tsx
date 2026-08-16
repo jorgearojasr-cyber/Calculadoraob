@@ -23,6 +23,10 @@ export default async function InspeccionesPage() {
     orderBy: { createdAt: "desc" },
     include: {
       spaces: { include: { elements: { include: { checks: { select: { status: true } } } } } },
+      // Fase 11K (docs/FASE11J..., sección E) — a lo más 1 fila por caso
+      // (invariante aplicada en la Server Action), `take: 1` es solo una
+      // salvaguarda defensiva adicional, no la fuente de la invariante.
+      photos: { where: { kind: "COVER" }, select: { url: true }, take: 1 },
     },
   });
 
@@ -40,6 +44,7 @@ export default async function InspeccionesPage() {
       createdAt: c.createdAt,
       estado: c.estado,
       progress: total > 0 ? sumProgress(spaceProgresses) : null,
+      coverPhotoUrl: c.photos[0]?.url ?? null,
     };
   });
 
