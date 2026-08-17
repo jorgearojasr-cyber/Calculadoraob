@@ -3,7 +3,7 @@ import { ChecklistItemRow } from "./checklist-item-row";
 import { PhotoUpload, type InspectionPhotoItem } from "./photo-upload";
 import { computeProgress } from "@/lib/inspecciones/progress";
 import type { ObservationDTO } from "@/app/(app)/inspecciones/[id]/actions";
-import type { InspectionAnswerStatus } from "@/generated/prisma/client";
+import type { InspectionAnswerStatus, InspectionReferenceImageKind } from "@/generated/prisma/client";
 
 export type ElementChecklistData = {
   id: string;
@@ -43,6 +43,19 @@ export type ElementChecklistData = {
       guiaBreve: string | null;
       recomendacion: string | null;
     } | null;
+    // Fase 11Q (docs/FASE11O_INFORME_MODELO_REFERENCIAS_VISUALES.md,
+    // docs/FASE11Q_INFORME_...) — imágenes de referencia BIEN/MAL de ESTA
+    // revisión puntual (InspectionChecklistItem.referenceImages), no del
+    // TechnicalArticle. Vacío en casi todo el catálogo hoy (solo existe el
+    // consumidor; ningún InspectionReferenceImage real insertado aún) —
+    // el control "Ver ejemplos" se oculta por completo con length 0.
+    referenceImages: {
+      id: string;
+      kind: InspectionReferenceImageKind;
+      url: string;
+      alt: string;
+      caption: string | null;
+    }[];
   }[];
 };
 
@@ -74,6 +87,7 @@ export function ElementChecklistGroup({ caseId, element }: { caseId: string; ele
             initialNotApplicableReason={check.notApplicableReason}
             initialObservations={check.observations}
             technicalArticle={check.technicalArticle}
+            referenceImages={check.referenceImages}
           />
         ))}
       </div>

@@ -58,7 +58,11 @@ const SECTION_ALIASES: Record<keyof Omit<KnowledgeEntry, "slug" | "title">, stri
   // "qué se revisa" se conserva para no romper Piso (Fase 11B), que ya
   // está en producción con ese encabezado.
   queRevisar: ["qué revisar", "que revisar", "qué se revisa", "que se revisa"],
-  condicionesCorrectas: ["qué debería observarse", "que deberia observarse", "qué debería observarse"],
+  // Fase 11Q — "qué debería verse" es el encabezado usado por los 3
+  // artículos nuevos de Ventana (docs/FASE11Q_INFORME_...); alias
+  // aditivo, no reemplaza "qué debería observarse" de los artículos ya
+  // existentes.
+  condicionesCorrectas: ["qué debería observarse", "que deberia observarse", "qué debería verse", "que deberia verse"],
   condicionesIncorrectas: ["cuando existe una observación", "cuando existe una observacion"],
   recomendacion: ["recomendación", "recomendacion"],
   fuente: ["fuente"],

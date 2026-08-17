@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useTransition } from "react";
-import { BookOpen, Camera, Check, ChevronDown, ChevronUp, History, Lightbulb, Pencil, Plus, TriangleAlert, Trash2, X } from "lucide-react";
+import { BookOpen, Camera, Check, ChevronDown, ChevronUp, History, Images, Lightbulb, Pencil, Plus, TriangleAlert, Trash2, X } from "lucide-react";
 import {
   createObservationAction,
   deleteObservationAction,
@@ -12,7 +12,7 @@ import {
 import { suggestObservationCommentAction } from "@/app/(app)/inspecciones/[id]/redaccion-actions";
 import { PhotoUpload } from "./photo-upload";
 import { TechnicalArticleLink } from "./technical-article-link";
-import type { InspectionAnswerStatus, InspectionSeverity } from "@/generated/prisma/client";
+import type { InspectionAnswerStatus, InspectionReferenceImageKind, InspectionSeverity } from "@/generated/prisma/client";
 
 const SEVERITY_LABELS: Record<InspectionSeverity, string> = {
   LOW: "Baja",
@@ -76,6 +76,7 @@ export function ChecklistItemRow({
   initialNotApplicableReason,
   initialObservations,
   technicalArticle,
+  referenceImages,
 }: {
   caseId: string;
   checkId: string;
@@ -98,6 +99,16 @@ export function ChecklistItemRow({
     guiaBreve: string | null;
     recomendacion: string | null;
   } | null;
+  // Fase 11Q (docs/FASE11Q_INFORME_...) — imágenes BIEN/MAL de ESTA
+  // revisión puntual. Vacío en casi todo el catálogo hoy — el control
+  // "Ver ejemplos" no se renderiza en absoluto con length 0.
+  referenceImages: {
+    id: string;
+    kind: InspectionReferenceImageKind;
+    url: string;
+    alt: string;
+    caption: string | null;
+  }[];
 }) {
   // Fase 11B — piloto "guía primero" (docs/FASE11A_DISENO_INSPECCION_TECNICA_GUIADA.md,
   // sección 7): solo se activa cuando el artículo vinculado tiene alguna
@@ -145,6 +156,10 @@ export function ChecklistItemRow({
   // toca ni depende de `status`/`editingStatus`, así que expandir o
   // colapsar nunca pierde ni altera la evaluación ya guardada.
   const [guideExpanded, setGuideExpanded] = useState(false);
+  // Fase 11Q — mismo criterio "colapsado por defecto" que guideExpanded,
+  // pero independiente: puede abrirse/cerrarse sin afectar la guía
+  // técnica (son 2 recursos distintos, ver docs/FASE11Q_INFORME_...).
+  const [referencesExpanded, setReferencesExpanded] = useState(false);
   // Fase 11L (sección L) — solo se usa para decidir a qué hallazgo recién
   // guardado darle foco/scroll y el mensaje "Agrega una foto..." una
   // única vez; no se persiste en ningún lado, es puramente de UX local.
@@ -254,6 +269,25 @@ export function ChecklistItemRow({
               <span className="font-medium text-ink">Revisa: </span>
               {technicalArticle.guiaBreve}
             </p>
+          )}
+          {/* Fase 11Q — recurso distinto de "Ver cómo revisarlo" (imagen
+              vs. texto extendido): a propósito NO va dentro del
+              expandible técnico. Se oculta por completo si no hay
+              InspectionReferenceImage para este check. */}
+          {referenceImages.length > 0 && (
+            <>
+              <button
+                type="button"
+                onClick={() => setReferencesExpanded((v) => !v)}
+                aria-expanded={referencesExpanded}
+                className={`mt-1.5 min-h-11 inline-flex items-center gap-1.5 px-1 text-xs font-medium text-safety ${FOCUS_RING}`}
+              >
+                <Images className="w-3.5 h-3.5 flex-shrink-0" />
+                {referencesExpanded ? "Ocultar ejemplos" : "Ver ejemplos"}
+                {referencesExpanded ? <ChevronUp className="w-3 h-3 flex-shrink-0" /> : <ChevronDown className="w-3 h-3 flex-shrink-0" />}
+              </button>
+              {referencesExpanded && <ReferenceImagesBlock images={referenceImages} />}
+            </>
           )}
           <button
             type="button"
@@ -525,6 +559,54 @@ function GuideBlock({
           <p className="text-[11px] font-mono uppercase tracking-wider text-ink-muted mb-1">{section.label}</p>
           <p className="text-sm text-ink whitespace-pre-wrap">{section.value}</p>
         </div>
+      ))}
+    </div>
+  );
+}
+
+// Fase 11Q (docs/FASE11Q_INFORME_...) — "Así puede verse": columnas BIEN
+// / MAL separadas espacialmente a propósito, para no confundirlas con la
+// foto real del hallazgo (que vive más abajo, dentro de la observación).
+// 1 columna en mobile angosto (evita miniaturas ilegibles a 375px), 2 en
+// desktop/tablet — mismo breakpoint `sm:` que el resto del checklist.
+function ReferenceImagesBlock({
+  images,
+}: {
+  images: { id: string; kind: InspectionReferenceImageKind; url: string; alt: string; caption: string | null }[];
+}) {
+  const good = images.filter((img) => img.kind === "GOOD");
+  const bad = images.filter((img) => img.kind === "BAD");
+
+  return (
+    <div className="mt-2.5 rounded-xl p-4 bg-safety-tint border border-safety/20">
+      <p className="text-[11px] font-mono uppercase tracking-wider text-ink-muted mb-3">Así puede verse</p>
+      <div className="grid gap-3 sm:grid-cols-2">
+        {good.length > 0 && <ReferenceImageColumn label="BIEN" tone="text-success" images={good} />}
+        {bad.length > 0 && <ReferenceImageColumn label="MAL" tone="text-danger" images={bad} />}
+      </div>
+    </div>
+  );
+}
+
+function ReferenceImageColumn({
+  label,
+  tone,
+  images,
+}: {
+  label: string;
+  tone: string;
+  images: { id: string; url: string; alt: string; caption: string | null }[];
+}) {
+  return (
+    <div className="grid gap-2">
+      <span className={`text-xs font-semibold ${tone}`}>{label}</span>
+      {images.map((img) => (
+        <figure key={img.id} className="grid gap-1">
+          {/* eslint-disable-next-line @next/next/no-img-element -- imagen
+              educativa de catálogo, no forma parte de next/image config */}
+          <img src={img.url} alt={img.alt} className="w-full rounded-lg border border-border object-cover" />
+          {img.caption && <figcaption className="text-xs text-ink-muted">{img.caption}</figcaption>}
+        </figure>
       ))}
     </div>
   );

@@ -85,7 +85,19 @@ export default async function InspeccionDetallePage({
                 // Piloto Fase 5B — solo se necesita el slug para resolver
                 // contra TechnicalArticle más abajo; no se trae el modelo
                 // completo (no hay @relation, es una referencia libre).
-                checklistItem: { select: { technicalArticleSlug: true } },
+                // Fase 11Q — referenceImages SÍ es una relación real
+                // (InspectionReferenceImage.checklistItemId), así que se
+                // incluye directo acá (sin consulta aparte, sin N+1: viene
+                // resuelta en el mismo include anidado que el resto).
+                checklistItem: {
+                  select: {
+                    technicalArticleSlug: true,
+                    referenceImages: {
+                      orderBy: { order: "asc" },
+                      select: { id: true, kind: true, url: true, alt: true, caption: true },
+                    },
+                  },
+                },
                 observations: {
                   orderBy: { createdAt: "asc" },
                   include: { photos: { orderBy: { createdAt: "asc" } } },
@@ -149,6 +161,7 @@ export default async function InspeccionDetallePage({
               technicalArticle: c.checklistItem.technicalArticleSlug
                 ? articleBySlug.get(c.checklistItem.technicalArticleSlug) ?? null
                 : null,
+              referenceImages: c.checklistItem.referenceImages,
               observations: c.observations.map((o) => ({
                 id: o.id,
                 comment: o.comment,

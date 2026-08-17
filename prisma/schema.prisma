@@ -1370,6 +1370,12 @@ model InspectionChecklistItem {
   active               Boolean                   @default(true)
 
   checks InspectionChecklistCheck[]
+  // Fase 11O (docs/FASE11O_INFORME_MODELO_REFERENCIAS_VISUALES.md) —
+  // contenido educativo BIEN/MAL de esta revisión específica. Separado a
+  // propósito de InspectionPhoto (ver esa nota en InspectionReferenceImage
+  // más abajo). FK directa al checklist item, no al elemento completo:
+  // la imagen ilustra UNA revisión puntual ("Vidrio"), no todo "Ventana".
+  referenceImages InspectionReferenceImage[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -1566,4 +1572,55 @@ model TechnicalArticle {
   updatedAt DateTime @updatedAt
 
   @@map("technical_articles")
+}
+
+// Fase 11O (docs/FASE11M_DISENO_MOTOR_REVISIONES_VARIANTES.md, sección L;
+// docs/FASE11O_INFORME_MODELO_REFERENCIAS_VISUALES.md) — contenido
+// educativo BIEN/MAL del catálogo, deliberadamente SEPARADO de
+// InspectionPhoto:
+//   InspectionPhoto          = evidencia tomada por el usuario DURANTE una
+//                              inspección real (ligada a case/space/
+//                              element/observation, sube el inspector).
+//   InspectionReferenceImage = material curado por el equipo, IGUAL para
+//                              todos los usuarios que revisen ese mismo
+//                              InspectionChecklistItem — vive en el
+//                              catálogo, nunca en una inspección real.
+// Nunca deben mezclarse en la misma tabla ni en el mismo flujo de subida.
+enum InspectionReferenceImageKind {
+  GOOD
+  BAD
+}
+
+model InspectionReferenceImage {
+  id              String                        @id @default(cuid())
+  // FK directa al checklist item (no al elemento completo) — la imagen
+  // ilustra UNA revisión específica, mismo criterio de granularidad de
+  // Fase 11M. Cascade: si se elimina la pregunta del catálogo, sus
+  // referencias visuales dejan de tener sentido y se eliminan con ella
+  // (mismo patrón ya usado por InspectionChecklistItem → elementTemplate).
+  // Esto borra FILAS de BD, nunca el blob físico — cualquier UI futura
+  // que permita borrar una referencia deberá llamar del(url) antes o
+  // durante el borrado, igual que el patrón ya validado para
+  // InspectionPhoto (deleteObservationAction, Fase 10Q).
+  checklistItem   InspectionChecklistItem       @relation(fields: [checklistItemId], references: [id], onDelete: Cascade)
+  checklistItemId String
+  kind            InspectionReferenceImageKind
+  url             String
+  // Obligatorio a propósito: contenido educativo, debe ser accesible
+  // (ej. "Ventana con sello continuo entre hoja y marco").
+  alt             String
+  // Opcional — leyenda breve mostrada junto a la imagen (ej. "Sello
+  // continuo, sin separación visible"). NO reemplaza a TechnicalArticle:
+  // TechnicalArticle explica, ReferenceImage ilustra — no se mezclan.
+  caption         String?
+  // Sin @@unique([checklistItemId, kind]) a propósito — permite más de
+  // una imagen GOOD y más de una BAD por revisión; `order` da el orden
+  // estable entre ellas dentro del mismo kind.
+  order           Int                           @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([checklistItemId])
+  @@map("inspection_reference_images")
 }
