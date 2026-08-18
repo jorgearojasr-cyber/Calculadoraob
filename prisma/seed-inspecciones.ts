@@ -118,14 +118,23 @@ export async function seedInspeccionesModule(prisma: PrismaClient) {
     // 2), reutilizables por otros recintos en fases futuras.
     { key: "cielo", label: "Cielo", order: 11, appliesTo: ["CASA", "DEPARTAMENTO", "AMPLIACION"] },
     { key: "iluminacion", label: "Iluminación", order: 12, appliesTo: ["CASA", "DEPARTAMENTO", "AMPLIACION"] },
+    // Fase 11AB (docs/FASE11AB_INFORME_COCINA_LOTE_B.md) — derivados de
+    // terminación, keys GENÉRICAS sin sufijo de recinto (reutilizables
+    // por Baño u otro recinto futuro). 100% Nivel 2, igual que Puerta:
+    // sin vínculo InspectionElementTemplateSpace (ver spaceElementLinks
+    // más abajo, donde deliberadamente NO aparecen).
+    { key: "revestimiento-ceramico-piso", label: "Revestimiento cerámico de piso", order: 13, appliesTo: ["CASA", "DEPARTAMENTO", "AMPLIACION"], materialVariantOf: "piso" },
+    { key: "pintura-muro", label: "Pintura de muro", order: 14, appliesTo: ["CASA", "DEPARTAMENTO", "AMPLIACION"], materialVariantOf: "muros" },
+    { key: "revestimiento-ceramico-muro", label: "Revestimiento cerámico de muro", order: 15, appliesTo: ["CASA", "DEPARTAMENTO", "AMPLIACION"], materialVariantOf: "muros" },
   ] as const;
 
   const elementByKey = new Map<string, { id: string }>();
   for (const e of elementTemplates) {
+    const materialVariantOf = "materialVariantOf" in e ? e.materialVariantOf : undefined;
     const row = await prisma.inspectionElementTemplate.upsert({
       where: { key: e.key },
-      update: { label: e.label, order: e.order, appliesTo: [...e.appliesTo], active: true },
-      create: { key: e.key, label: e.label, order: e.order, appliesTo: [...e.appliesTo] },
+      update: { label: e.label, order: e.order, appliesTo: [...e.appliesTo], materialVariantOf, active: true },
+      create: { key: e.key, label: e.label, order: e.order, appliesTo: [...e.appliesTo], materialVariantOf },
     });
     elementByKey.set(e.key, row);
   }
@@ -270,6 +279,18 @@ export async function seedInspeccionesModule(prisma: PrismaClient) {
     { elementKey: "cielo", question: "¿El cielo presenta manchas, grietas u otros daños visibles?", order: 0, technicalArticleSlug: "cielo-como-revisar-manchas-grietas" },
     { elementKey: "cielo", question: "¿Se observan manchas de humedad en el cielo?", order: 1, technicalArticleSlug: "cielo-como-revisar-manchas-humedad" },
     { elementKey: "iluminacion", question: "¿La iluminación de la cocina enciende correctamente y el elemento visible se encuentra firme?", order: 0, technicalArticleSlug: "iluminacion-como-revisar-encendido-fijacion" },
+
+    // Fase 11AB — derivados de terminación (Cocina, 100% Nivel 2, sin
+    // vínculo de catálogo — ver spaceElementLinks, deliberadamente
+    // ausentes ahí). Igual que Cielo/Iluminación, nace completo en el
+    // seed con su `technicalArticleSlug` para que una instalación nueva
+    // quede igual a la BD compartida ya parchada por
+    // `prisma/db-fixes/fase11ab-cocina-lote-b.ts`.
+    { elementKey: "revestimiento-ceramico-piso", question: "¿Hay palmetas quebradas, trisadas o despuntadas?", order: 0, technicalArticleSlug: "revestimiento-ceramico-piso-palmetas-quebradas" },
+    { elementKey: "revestimiento-ceramico-piso", question: "¿Se observan defectos visibles en el esmalte o superficie de las palmetas?", order: 1, technicalArticleSlug: "revestimiento-ceramico-piso-defectos-esmalte" },
+    { elementKey: "pintura-muro", question: "¿Se observan manchas, marcas o defectos visibles en la pintura?", order: 0, technicalArticleSlug: "pintura-muro-manchas-defectos" },
+    { elementKey: "revestimiento-ceramico-muro", question: "¿Hay palmetas quebradas, trisadas o despuntadas?", order: 0, technicalArticleSlug: "revestimiento-ceramico-muro-palmetas-quebradas" },
+    { elementKey: "revestimiento-ceramico-muro", question: "¿Se observan defectos visibles en el esmalte o superficie de las palmetas?", order: 1, technicalArticleSlug: "revestimiento-ceramico-muro-defectos-esmalte" },
   ];
 
   for (const item of checklistItems) {
@@ -423,6 +444,191 @@ No toques el cableado, no abras el artefacto ni el tablero eléctrico, y no inte
 - **Criterio interno**: revisión funcional y visual básica, mismo estándar ya usado en Enchufes e interruptores.
 
 Sin referencia normativa verificada para esta revisión específica.`,
+    },
+    // Fase 11AB — mismos 5 artículos ya aplicados a la BD compartida vía
+    // `prisma/db-fixes/fase11ab-cocina-lote-b.ts`, reproducidos acá
+    // verbatim para que una instalación nueva quede idéntica.
+    {
+      slug: "revestimiento-ceramico-piso-palmetas-quebradas",
+      title: "Cómo revisar palmetas quebradas en el piso cerámico",
+      content: `# Qué revisar
+
+Si las palmetas (piezas) del piso de cerámica o porcelanato están quebradas, trisadas o con bordes despuntados.
+
+# Cómo revisarlo
+
+Recorre el piso caminando lentamente, con buena luz (natural o artificial normal), observando cada palmeta. Presta especial atención a los bordes, esquinas y zonas de paso frecuente, que es donde más comúnmente se despuntan o quiebran.
+
+# Qué debería verse
+
+Palmetas enteras, sin grietas visibles y con los bordes y esquinas completos, sin faltantes.
+
+# Qué señales pueden indicar un problema
+
+- Una grieta que cruza parte o toda la palmeta.
+- Un borde o esquina despuntada (con un trozo faltante).
+- Una palmeta partida en dos o más pedazos.
+
+# Por qué importa
+
+Una palmeta quebrada no mejora con el tiempo — al contrario, suele agrandarse o desprenderse con el uso normal del piso, y además es un riesgo de corte si el borde queda filoso.
+
+# Recomendación
+
+Registra cada palmeta dañada con una foto clara del sector. No es necesario que intentes repararla o reemplazarla tú mismo.
+
+# Fuente
+
+- **Manual técnico de referencia**: Manual de Tolerancias para Edificaciones (CDT/CChC, 3ª edición 2018), capítulo 10, Revestimientos Cerámicos — no se aceptan piezas quebradas, despuntadas o con grietas.
+
+Sin referencia normativa verificada más allá del Manual de Tolerancias.`,
+    },
+    {
+      slug: "revestimiento-ceramico-piso-defectos-esmalte",
+      title: "Cómo revisar defectos de esmalte en el piso cerámico",
+      content: `# Qué revisar
+
+Si se observan defectos visibles en el esmalte o la superficie de las palmetas del piso cerámico o porcelanato.
+
+# Cómo revisarlo
+
+Con luz normal, recorre visualmente el piso observando la superficie de las palmetas — no solo los bordes, sino el centro de cada pieza.
+
+# Qué debería verse
+
+Una superficie lisa y uniforme en todas las palmetas, sin marcas, hundimientos ni irregularidades evidentes.
+
+# Qué señales pueden indicar un problema
+
+- Esmalte saltado, descascarado o con burbujas.
+- Raspaduras o rayas profundas visibles.
+- Cráteres o pequeños hundimientos en la superficie.
+- Manchas permanentes que no corresponden a suciedad superficial.
+
+Ninguna de estas señales determina por sí sola la causa — conviene registrarla igual.
+
+# Por qué importa
+
+Un defecto de esmalte es un problema de terminación visible, ya presente en la pieza — no es algo que "se limpie" ni que mejore con el tiempo.
+
+# Recomendación
+
+Registra con foto el sector específico afectado, indicando qué palmeta o zona presenta el defecto.
+
+# Fuente
+
+- **Manual técnico de referencia**: Manual de Tolerancias para Edificaciones (CDT/CChC, 3ª edición 2018), capítulo 10, Revestimientos Cerámicos.
+
+Sin referencia normativa verificada más allá del Manual de Tolerancias.`,
+    },
+    {
+      slug: "pintura-muro-manchas-defectos",
+      title: "Cómo revisar manchas o defectos en la pintura del muro",
+      content: `# Qué revisar
+
+Si se observan manchas, marcas o defectos visibles en la pintura del muro.
+
+# Cómo revisarlo
+
+Párate a una distancia razonable del muro (aproximadamente 1 metro), con buena iluminación, y recorre visualmente todo el paño de arriba a abajo.
+
+# Qué debería verse
+
+Un color uniforme en toda la superficie, sin manchas, sin marcas y sin diferencias de tono evidentes entre distintas zonas del mismo muro.
+
+# Qué señales pueden indicar un problema
+
+- Manchas de un color distinto al resto del muro.
+- Marcas, rayones o golpes visibles.
+- Zonas donde se alcanza a ver la base (yeso o material bajo la pintura).
+- Diferencias de tono notorias entre secciones del mismo muro (por ejemplo, un parche mal igualado).
+
+# Por qué importa
+
+Una mancha o defecto de pintura suele ser económico y rápido de corregir si se detecta a tiempo, y en algunos casos puede ser señal de un problema debajo (un golpe, una filtración previa) que conviene documentar.
+
+# Recomendación
+
+Registra el sector concreto con una foto. Ten en cuenta que la luz y las sombras pueden exagerar diferencias de tono que no son un defecto real — si tienes dudas, mira el muro desde más de un ángulo antes de registrar una observación.
+
+# Fuente
+
+- **Manual técnico de referencia**: Manual de Tolerancias para Edificaciones (CDT/CChC, 3ª edición 2018), capítulo 23, Pinturas — observación visual a distancia normal de uso.
+
+Sin referencia normativa verificada más allá del Manual de Tolerancias.`,
+    },
+    {
+      slug: "revestimiento-ceramico-muro-palmetas-quebradas",
+      title: "Cómo revisar palmetas quebradas en el revestimiento cerámico de muro",
+      content: `# Qué revisar
+
+Si las palmetas (piezas) del revestimiento cerámico o porcelanato del muro están quebradas, trisadas o con bordes despuntados.
+
+# Cómo revisarlo
+
+Recorre el muro con la vista, con buena luz, revisando la superficie completa del revestimiento. Presta especial atención a esquinas, encuentros con otros materiales y zonas bajas más expuestas a golpes.
+
+# Qué debería verse
+
+Palmetas enteras, sin grietas visibles y con los bordes y esquinas completos, sin faltantes.
+
+# Qué señales pueden indicar un problema
+
+- Una grieta que cruza parte o toda la palmeta.
+- Un borde o esquina despuntada (con un trozo faltante).
+- Una palmeta partida en dos o más pedazos.
+
+# Por qué importa
+
+Una palmeta quebrada en un muro no mejora con el tiempo, y en zonas bajas o de paso puede empeorar con roces o golpes adicionales.
+
+# Recomendación
+
+Registra cada palmeta dañada con una foto clara del sector. No es necesario que intentes repararla tú mismo.
+
+# Fuente
+
+- **Manual técnico de referencia**: Manual de Tolerancias para Edificaciones (CDT/CChC, 3ª edición 2018), capítulo 10, Revestimientos Cerámicos — mismo criterio aplicado a superficie vertical.
+
+Sin referencia normativa verificada más allá del Manual de Tolerancias.`,
+    },
+    {
+      slug: "revestimiento-ceramico-muro-defectos-esmalte",
+      title: "Cómo revisar defectos de esmalte en el revestimiento cerámico de muro",
+      content: `# Qué revisar
+
+Si se observan defectos visibles en el esmalte o la superficie de las palmetas del revestimiento cerámico o porcelanato del muro.
+
+# Cómo revisarlo
+
+Con luz normal, recorre visualmente el muro observando la superficie de las palmetas — no solo los bordes, sino el centro de cada pieza.
+
+# Qué debería verse
+
+Una superficie lisa y uniforme en todas las palmetas, sin marcas, hundimientos ni irregularidades evidentes.
+
+# Qué señales pueden indicar un problema
+
+- Esmalte saltado, descascarado o con burbujas.
+- Raspaduras o rayas profundas visibles.
+- Cráteres o pequeños hundimientos en la superficie.
+- Manchas permanentes que no corresponden a suciedad superficial.
+
+Ninguna de estas señales determina por sí sola la causa — conviene registrarla igual.
+
+# Por qué importa
+
+Un defecto de esmalte es un problema de terminación visible, ya presente en la pieza — no es algo que mejore con el tiempo ni con la limpieza.
+
+# Recomendación
+
+Registra con foto el sector específico afectado, indicando qué palmeta o zona del muro presenta el defecto.
+
+# Fuente
+
+- **Manual técnico de referencia**: Manual de Tolerancias para Edificaciones (CDT/CChC, 3ª edición 2018), capítulo 10, Revestimientos Cerámicos — mismo criterio aplicado a superficie vertical.
+
+Sin referencia normativa verificada más allá del Manual de Tolerancias.`,
     },
   ];
 

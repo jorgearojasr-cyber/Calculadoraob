@@ -547,8 +547,22 @@ export async function saveSpaceLevel2ConfigAction(
           where: { key: a.componentKey },
         });
         if (elementTemplate && elementTemplate.active) {
+          // Fase 11AB — `order` explícito y determinista (ver
+          // SpaceConfigurableComponent.order en space-config.ts): sin
+          // esto, todo elemento creado por Nivel 2 caía al default de
+          // schema (0), indistinguible entre sí para el `orderBy` de la
+          // pantalla de checklist. Reja/Portón/Ventana/Puerta (Fases
+          // 11Y/11AA) no lo necesitaban por ser 1-2 componentes sin orden
+          // relativo relevante; con los 5 componentes de Cocina Lote B sí
+          // importa. `?? 0` preserva el comportamiento anterior para
+          // cualquier componente que no lo declare.
           const newElement = await prisma.inspectionElement.create({
-            data: { spaceId: space.id, elementTemplateId: elementTemplate.id, name: elementTemplate.label },
+            data: {
+              spaceId: space.id,
+              elementTemplateId: elementTemplate.id,
+              name: elementTemplate.label,
+              order: allowedByKey.get(a.componentKey)?.order ?? 0,
+            },
           });
           const checklistItems = await prisma.inspectionChecklistItem.findMany({
             where: { elementTemplateId: elementTemplate.id, active: true },
