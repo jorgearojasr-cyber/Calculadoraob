@@ -6,13 +6,20 @@ import { FichaCheckbox, FichaCounter, FichaToggle } from "./ficha-fields";
 // sección 4). Igual criterio que Casa: piso/torre es informativo y NO se
 // pregunta en esta etapa (sin consumidor funcional todavía); cocina se
 // incluye siempre sin preguntar.
+// Fase 11X (docs/FASE11X_INFORME_..., sección F) — el antiguo checkbox
+// combinado "Terraza/Logia" se reemplaza para casos NUEVOS por 2
+// checkboxes independientes (Terraza / Logia-Lavandería), selección NO
+// excluyente (el usuario puede marcar ninguna, una o ambas). El template
+// histórico `terraza-logia` sigue existiendo en catálogo (Fase 11W
+// sección G/J, 🟢 separar) — solo deja de ofrecerse en este formulario.
 export type DepartamentoFichaValue = {
   dormitorios: number;
   banos: number;
   livingComedor: "integrado" | "separado";
   bodega: boolean;
   estacionamiento: boolean;
-  terrazaLogia: boolean;
+  terraza: boolean;
+  logiaLavanderia: boolean;
 };
 
 export const DEPARTAMENTO_FICHA_DEFAULT: DepartamentoFichaValue = {
@@ -21,7 +28,8 @@ export const DEPARTAMENTO_FICHA_DEFAULT: DepartamentoFichaValue = {
   livingComedor: "integrado",
   bodega: false,
   estacionamiento: false,
-  terrazaLogia: false,
+  terraza: false,
+  logiaLavanderia: false,
 };
 
 export function departamentoFichaToCounts(value: DepartamentoFichaValue): Record<string, number> {
@@ -38,7 +46,8 @@ export function departamentoFichaToCounts(value: DepartamentoFichaValue): Record
   }
   if (value.bodega) counts["bodega"] = 1;
   if (value.estacionamiento) counts["estacionamiento"] = 1;
-  if (value.terrazaLogia) counts["terraza-logia"] = 1;
+  if (value.terraza) counts["terraza"] = 1;
+  if (value.logiaLavanderia) counts["logia-lavanderia"] = 1;
   return counts;
 }
 
@@ -85,9 +94,14 @@ export function DepartamentoFichaStep({
         onChange={(estacionamiento) => onChange({ ...value, estacionamiento })}
       />
       <FichaCheckbox
-        label="Terraza o logia"
-        checked={value.terrazaLogia}
-        onChange={(terrazaLogia) => onChange({ ...value, terrazaLogia })}
+        label="Terraza"
+        checked={value.terraza}
+        onChange={(terraza) => onChange({ ...value, terraza })}
+      />
+      <FichaCheckbox
+        label="Logia / Lavandería"
+        checked={value.logiaLavanderia}
+        onChange={(logiaLavanderia) => onChange({ ...value, logiaLavanderia })}
       />
     </div>
   );

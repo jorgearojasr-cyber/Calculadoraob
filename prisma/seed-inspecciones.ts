@@ -35,28 +35,50 @@ export async function seedInspeccionesModule(prisma: PrismaClient) {
   // todavía). "Patio trasero" del diseño de Fase 11A queda EXPLÍCITAMENTE
   // fuera de esta etapa (marcado 🔴 en el diseño, sin fuente) — no se
   // agrega ninguna fila de catálogo para él.
+  // Fase 11X-P (docs/FASE11XP_INFORME_PUBLICACION_FICHA_ESTRUCTURAL.md) —
+  // agrega `patio-trasero`/`terraza`/`logia-lavanderia` (CASA, y
+  // `terraza`/`logia-lavanderia` también DEPARTAMENTO) para que un
+  // entorno nuevo (migrate + seed) quede con el mismo catálogo estructural
+  // aprobado en Fase 11X, sin depender de recordar ejecutar
+  // `prisma/db-fixes/fase11x-ficha-estructural-recintos.ts` a mano.
+  // `terraza-logia` (Departamento) queda con `active: false` a propósito:
+  // es el ESTADO FINAL deseado post-publicación (el wizard ya no lo
+  // ofrece, ver casa/departamento-ficha-step.tsx) — su key/relaciones
+  // NUNCA se tocan, solo deja de aplicarse a generación futura. Cada
+  // template ahora declara su propio `active` explícito (antes este seed
+  // forzaba `active: true` para todos en el `update`, lo que habría
+  // revertido silenciosamente la desactivación de `terraza-logia` cada
+  // vez que se re-ejecutara `prisma db seed` contra la BD compartida).
   const spaceTemplates = [
-    { key: "cocina", label: "Cocina", repeatable: false, order: 0, appliesTo: ["CASA", "DEPARTAMENTO", "AMPLIACION"] },
-    { key: "living", label: "Living", repeatable: false, order: 1, appliesTo: ["CASA", "DEPARTAMENTO"] },
-    { key: "dormitorio", label: "Dormitorio", repeatable: true, order: 2, appliesTo: ["CASA", "DEPARTAMENTO", "AMPLIACION"] },
-    { key: "bano", label: "Baño", repeatable: true, order: 3, appliesTo: ["CASA", "DEPARTAMENTO", "AMPLIACION"] },
-    { key: "bodega", label: "Bodega", repeatable: false, order: 4, appliesTo: ["CASA", "DEPARTAMENTO"] },
-    { key: "estacionamiento", label: "Estacionamiento", repeatable: false, order: 5, appliesTo: ["DEPARTAMENTO"] },
-    { key: "recinto-ampliado", label: "Recinto ampliado", repeatable: true, order: 6, appliesTo: ["AMPLIACION"] },
-    { key: "antejardin", label: "Antejardín", repeatable: false, order: 7, appliesTo: ["CASA"] },
-    { key: "acceso-vehicular", label: "Acceso vehicular", repeatable: false, order: 8, appliesTo: ["CASA"] },
-    { key: "comedor", label: "Comedor", repeatable: false, order: 9, appliesTo: ["CASA", "DEPARTAMENTO"] },
-    { key: "living-comedor", label: "Living-comedor", repeatable: false, order: 10, appliesTo: ["CASA", "DEPARTAMENTO", "AMPLIACION"] },
-    { key: "terraza-logia", label: "Terraza/Logia", repeatable: false, order: 11, appliesTo: ["DEPARTAMENTO"] },
-    { key: "terraza-cerrada", label: "Terraza cerrada", repeatable: false, order: 12, appliesTo: ["AMPLIACION"] },
+    { key: "cocina", label: "Cocina", repeatable: false, order: 0, appliesTo: ["CASA", "DEPARTAMENTO", "AMPLIACION"], active: true },
+    { key: "living", label: "Living", repeatable: false, order: 1, appliesTo: ["CASA", "DEPARTAMENTO"], active: true },
+    { key: "dormitorio", label: "Dormitorio", repeatable: true, order: 2, appliesTo: ["CASA", "DEPARTAMENTO", "AMPLIACION"], active: true },
+    { key: "bano", label: "Baño", repeatable: true, order: 3, appliesTo: ["CASA", "DEPARTAMENTO", "AMPLIACION"], active: true },
+    { key: "bodega", label: "Bodega", repeatable: false, order: 4, appliesTo: ["CASA", "DEPARTAMENTO"], active: true },
+    { key: "estacionamiento", label: "Estacionamiento", repeatable: false, order: 5, appliesTo: ["DEPARTAMENTO"], active: true },
+    { key: "recinto-ampliado", label: "Recinto ampliado", repeatable: true, order: 6, appliesTo: ["AMPLIACION"], active: true },
+    { key: "antejardin", label: "Antejardín", repeatable: false, order: 7, appliesTo: ["CASA"], active: true },
+    { key: "acceso-vehicular", label: "Acceso vehicular", repeatable: false, order: 8, appliesTo: ["CASA"], active: true },
+    { key: "comedor", label: "Comedor", repeatable: false, order: 9, appliesTo: ["CASA", "DEPARTAMENTO"], active: true },
+    { key: "living-comedor", label: "Living-comedor", repeatable: false, order: 10, appliesTo: ["CASA", "DEPARTAMENTO", "AMPLIACION"], active: true },
+    // Histórico — deja de ofrecerse para generación NUEVA (Fase 11X-P),
+    // pero su key y relaciones se preservan intactas para casos ya
+    // existentes que lo referencian (ver InspectionSpace.spaceTemplateId).
+    { key: "terraza-logia", label: "Terraza/Logia", repeatable: false, order: 11, appliesTo: ["DEPARTAMENTO"], active: false },
+    { key: "terraza-cerrada", label: "Terraza cerrada", repeatable: false, order: 12, appliesTo: ["AMPLIACION"], active: true },
+    // Fase 11X — recintos nuevos aprobados en
+    // docs/FASE11W_CIERRE_ARQUITECTURA_FICHA_INSPECCION.md.
+    { key: "patio-trasero", label: "Patio trasero", repeatable: false, order: 13, appliesTo: ["CASA"], active: true },
+    { key: "terraza", label: "Terraza", repeatable: false, order: 14, appliesTo: ["CASA", "DEPARTAMENTO"], active: true },
+    { key: "logia-lavanderia", label: "Logia / Lavandería", repeatable: false, order: 15, appliesTo: ["CASA", "DEPARTAMENTO"], active: true },
   ] as const;
 
   const spaceByKey = new Map<string, { id: string }>();
   for (const s of spaceTemplates) {
     const row = await prisma.inspectionSpaceTemplate.upsert({
       where: { key: s.key },
-      update: { label: s.label, repeatable: s.repeatable, order: s.order, appliesTo: [...s.appliesTo], active: true },
-      create: { key: s.key, label: s.label, repeatable: s.repeatable, order: s.order, appliesTo: [...s.appliesTo] },
+      update: { label: s.label, repeatable: s.repeatable, order: s.order, appliesTo: [...s.appliesTo], active: s.active },
+      create: { key: s.key, label: s.label, repeatable: s.repeatable, order: s.order, appliesTo: [...s.appliesTo], active: s.active },
     });
     spaceByKey.set(s.key, row);
   }
@@ -169,6 +191,18 @@ export async function seedInspeccionesModule(prisma: PrismaClient) {
     { spaceKey: "terraza-cerrada", elementKey: "muros", order: 1 },
     { spaceKey: "terraza-cerrada", elementKey: "ventana", order: 2 },
     { spaceKey: "terraza-cerrada", elementKey: "puerta", order: 3 },
+
+    // Fase 11X — Patio trasero (Casa): reutiliza Piso, ya auditado como
+    // válido para contexto exterior (ver informe de Fase 11X, sección I).
+    { spaceKey: "patio-trasero", elementKey: "piso", order: 0 },
+
+    // Fase 11X — Terraza (Casa/Departamento): reutiliza los mismos 3
+    // componentes ya validados en `terraza-logia` (ver informe de Fase
+    // 11X, sección J). `logia-lavanderia` queda sin componentes en esta
+    // fase a propósito (sección K del mismo informe).
+    { spaceKey: "terraza", elementKey: "piso", order: 0 },
+    { spaceKey: "terraza", elementKey: "muros", order: 1 },
+    { spaceKey: "terraza", elementKey: "ventana", order: 2 },
   ];
 
   for (const link of spaceElementLinks) {

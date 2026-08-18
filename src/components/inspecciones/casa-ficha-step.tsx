@@ -5,15 +5,24 @@ import { FichaCheckbox, FichaCounter, FichaToggle } from "./ficha-fields";
 // Fase 11B — ficha de Casa (docs/FASE11A_DISENO_INSPECCION_TECNICA_GUIADA.md,
 // sección 3). Distingue campos que generan recintos (dormitorios, baños,
 // living-comedor, bodega, antejardín, acceso vehicular) de características
-// puramente informativas que esta etapa NO pregunta (cantidad de pisos,
-// patio trasero — sin contenido de fuente, ver sección 3 🔴): cocina se
-// incluye siempre sin preguntar, igual que en V1.
+// puramente informativas que esta etapa NO pregunta (cantidad de pisos —
+// ver docs/FASE11W_CIERRE_ARQUITECTURA_FICHA_INSPECCION.md, sección M):
+// cocina se incluye siempre sin preguntar, igual que en V1.
+// Fase 11X (docs/FASE11X_INFORME_..., NIVEL 1 únicamente) — agrega Patio
+// trasero, Terraza y Logia/Lavandería como checkboxes independientes,
+// exactamente el mismo patrón que Bodega/Antejardín/Acceso vehicular.
+// Reja/Portón NO se agregan acá a propósito — quedan en Nivel 2
+// (Configuración del recinto), todavía sin implementar (deuda
+// transitoria documentada, sección V del informe).
 export type CasaFichaValue = {
   dormitorios: number;
   banos: number;
   livingComedor: "integrado" | "separado";
   bodega: boolean;
   antejardin: boolean;
+  patioTrasero: boolean;
+  terraza: boolean;
+  logiaLavanderia: boolean;
   accesoVehicular: boolean;
 };
 
@@ -23,6 +32,9 @@ export const CASA_FICHA_DEFAULT: CasaFichaValue = {
   livingComedor: "integrado",
   bodega: false,
   antejardin: false,
+  patioTrasero: false,
+  terraza: false,
+  logiaLavanderia: false,
   accesoVehicular: false,
 };
 
@@ -44,6 +56,9 @@ export function casaFichaToCounts(value: CasaFichaValue): Record<string, number>
   }
   if (value.bodega) counts["bodega"] = 1;
   if (value.antejardin) counts["antejardin"] = 1;
+  if (value.patioTrasero) counts["patio-trasero"] = 1;
+  if (value.terraza) counts["terraza"] = 1;
+  if (value.logiaLavanderia) counts["logia-lavanderia"] = 1;
   if (value.accesoVehicular) counts["acceso-vehicular"] = 1;
   return counts;
 }
@@ -87,6 +102,21 @@ export function CasaFichaStep({
         label="Antejardín"
         checked={value.antejardin}
         onChange={(antejardin) => onChange({ ...value, antejardin })}
+      />
+      <FichaCheckbox
+        label="Patio trasero"
+        checked={value.patioTrasero}
+        onChange={(patioTrasero) => onChange({ ...value, patioTrasero })}
+      />
+      <FichaCheckbox
+        label="Terraza"
+        checked={value.terraza}
+        onChange={(terraza) => onChange({ ...value, terraza })}
+      />
+      <FichaCheckbox
+        label="Logia / Lavandería"
+        checked={value.logiaLavanderia}
+        onChange={(logiaLavanderia) => onChange({ ...value, logiaLavanderia })}
       />
       <FichaCheckbox
         label="Acceso vehicular"
