@@ -28,13 +28,24 @@ const MAX_REPEATABLE_COUNT = 20;
 // caso: ahora se crean solo cuando el usuario confirma "Sí" en la
 // configuración Nivel 2 del recinto (saveSpaceLevel2ConfigAction, en
 // [id]/actions.ts). El vínculo de catálogo InspectionElementTemplateSpace
-// (Reja->Antejardín, Portón->Acceso vehicular) NO se toca todavía — la BD
-// es compartida y producción sigue generándolos automáticamente hasta
-// que este código se publique (mismo criterio que terraza-logia en Fase
-// 11X-P). Este filtro es lo único que efectivamente desacopla la
-// generación para el código local: aunque el vínculo de catálogo siga
-// existiendo, esta acción simplemente ignora esas 2 keys al generar.
-const LEVEL2_GATED_ELEMENT_KEYS = new Set(["reja", "porton"]);
+// (Reja->Antejardín, Portón->Acceso vehicular, Ventana->Cocina) NO se
+// toca todavía — la BD es compartida y producción sigue generándolos
+// automáticamente hasta que este código se publique (mismo criterio que
+// terraza-logia en Fase 11X-P). Este filtro es lo único que
+// efectivamente desacopla la generación para el código local: aunque el
+// vínculo de catálogo siga existiendo, esta acción simplemente ignora
+// esos pares al generar.
+//
+// Fase 11AA (docs/FASE11AA_INFORME_COCINA_LOTE_A.md, sección A —
+// corrección respecto al diseño original de este set) — el gate ya NO
+// puede ser solo por `elementTemplate.key`: Ventana se comparte con
+// Dormitorio/Living/Comedor/Living-comedor/Terraza cerrada/Recinto
+// ampliado, y gatearla globalmente habría detenido su generación
+// automática en TODOS esos recintos, no solo en Cocina (a diferencia de
+// Reja/Portón, que solo estaban vinculados a un único recinto cada uno,
+// así que un Set por key alcanzaba). El gate ahora es por el PAR
+// `spaceTemplate.key:elementTemplate.key`.
+const LEVEL2_GATED_LINKS = new Set(["antejardin:reja", "acceso-vehicular:porton", "cocina:ventana"]);
 
 export type CreateInspectionInput = {
   name: string;
@@ -177,10 +188,13 @@ export async function createInspectionAndGenerateAction(
             });
 
             for (const link of elementLinks) {
-              // Fase 11Y — ver LEVEL2_GATED_ELEMENT_KEYS arriba: Reja/
-              // Portón ya no se generan acá, quedan pendientes de la
-              // configuración Nivel 2 del recinto.
-              if (LEVEL2_GATED_ELEMENT_KEYS.has(link.elementTemplate.key)) continue;
+              // Fase 11Y/11AA — ver LEVEL2_GATED_LINKS arriba: Reja,
+              // Portón y Ventana-de-Cocina ya no se generan acá, quedan
+              // pendientes de la configuración Nivel 2 del recinto. El
+              // gate es por par recinto:componente, no solo por
+              // componente (Ventana sigue generándose automático en
+              // cualquier OTRO recinto que la use).
+              if (LEVEL2_GATED_LINKS.has(`${template.key}:${link.elementTemplate.key}`)) continue;
 
               const element = await tx.inspectionElement.create({
                 data: { spaceId: space.id, elementTemplateId: link.elementTemplateId, name: link.elementTemplate.label },

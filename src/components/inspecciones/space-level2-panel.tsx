@@ -12,6 +12,30 @@ import {
 const FOCUS_RING =
   "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-action";
 
+// Fase 11AA — agrupación visual GENÉRICA por `section` (sección 10/11 de
+// la fase): un recinto con 1 solo componente sin `section` (Reja,
+// Portón) sigue viéndose exactamente igual que antes (1 solo grupo sin
+// encabezado); un recinto con varios componentes puede declarar
+// `section` en su catálogo (`SPACE_LEVEL2_CONFIG`, ver space-config.ts)
+// y este componente los agrupa sin que ningún nombre de grupo esté
+// hardcodeado acá — "EQUIPAMIENTO DEL RECINTO" (Cocina Lote A) vive solo
+// en el catálogo, no en este archivo. Mantiene el orden original de
+// declaración, tanto de grupos como de componentes dentro de cada grupo.
+function groupBySection(
+  components: SpaceConfigurableComponent[]
+): [string | undefined, SpaceConfigurableComponent[]][] {
+  const order: (string | undefined)[] = [];
+  const groups = new Map<string | undefined, SpaceConfigurableComponent[]>();
+  for (const c of components) {
+    if (!groups.has(c.section)) {
+      groups.set(c.section, []);
+      order.push(c.section);
+    }
+    groups.get(c.section)!.push(c);
+  }
+  return order.map((section) => [section, groups.get(section)!]);
+}
+
 // Fase 11Y — bloque de configuración Nivel 2, reutilizado en 2 modos:
 // "onboarding" (bloquea el checklist hasta responder, primera vez que se
 // entra al recinto) y "edit" (panel opcional para cambiar una respuesta
@@ -83,36 +107,45 @@ export function SpaceLevel2Panel({
         </div>
       )}
 
-      <div className="grid gap-4">
-        {components.map((c) => {
-          const value = answers[c.componentKey];
-          const stringValue = value === undefined ? "" : value ? "si" : "no";
-          return (
-            <div key={c.componentKey} className="grid gap-3">
-              <FichaToggle
-                label={c.question}
-                value={stringValue}
-                options={[
-                  { value: "si", label: "Sí" },
-                  { value: "no", label: "No" },
-                ]}
-                onChange={(v) => setAnswers((prev) => ({ ...prev, [c.componentKey]: v === "si" }))}
-              />
-              {value === true &&
-                c.metaOptions?.map((opt) => (
-                  <FichaToggle
-                    key={opt.key}
-                    label={opt.label}
-                    value={meta[c.componentKey]?.[opt.key] ?? ""}
-                    options={opt.options}
-                    onChange={(v) =>
-                      setMeta((prev) => ({ ...prev, [c.componentKey]: { ...(prev[c.componentKey] ?? {}), [opt.key]: v } }))
-                    }
-                  />
-                ))}
+      <div className="grid gap-5">
+        {groupBySection(components).map(([section, group]) => (
+          <div key={section ?? "__ungrouped"} className="grid gap-3">
+            {section && (
+              <p className="text-xs font-mono uppercase tracking-wider text-ink-faint">{section}</p>
+            )}
+            <div className="grid gap-4">
+              {group.map((c) => {
+                const value = answers[c.componentKey];
+                const stringValue = value === undefined ? "" : value ? "si" : "no";
+                return (
+                  <div key={c.componentKey} className="grid gap-3">
+                    <FichaToggle
+                      label={c.question}
+                      value={stringValue}
+                      options={[
+                        { value: "si", label: "Sí" },
+                        { value: "no", label: "No" },
+                      ]}
+                      onChange={(v) => setAnswers((prev) => ({ ...prev, [c.componentKey]: v === "si" }))}
+                    />
+                    {value === true &&
+                      c.metaOptions?.map((opt) => (
+                        <FichaToggle
+                          key={opt.key}
+                          label={opt.label}
+                          value={meta[c.componentKey]?.[opt.key] ?? ""}
+                          options={opt.options}
+                          onChange={(v) =>
+                            setMeta((prev) => ({ ...prev, [c.componentKey]: { ...(prev[c.componentKey] ?? {}), [opt.key]: v } }))
+                          }
+                        />
+                      ))}
+                  </div>
+                );
+              })}
             </div>
-          );
-        })}
+          </div>
+        ))}
       </div>
 
       {error && <p className="text-sm text-danger">{error}</p>}

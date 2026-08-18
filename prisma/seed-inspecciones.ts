@@ -113,6 +113,11 @@ export async function seedInspeccionesModule(prisma: PrismaClient) {
     { key: "fachada", label: "Fachada", order: 8, appliesTo: ["CASA"] },
     { key: "reja", label: "Reja", order: 9, appliesTo: ["CASA"] },
     { key: "porton", label: "Portón", order: 10, appliesTo: ["CASA"] },
+    // Fase 11AA (docs/FASE11AA_INFORME_COCINA_LOTE_A.md) — transversales,
+    // hoy vinculados solo a Cocina (siempre-presente, sin pregunta Nivel
+    // 2), reutilizables por otros recintos en fases futuras.
+    { key: "cielo", label: "Cielo", order: 11, appliesTo: ["CASA", "DEPARTAMENTO", "AMPLIACION"] },
+    { key: "iluminacion", label: "Iluminación", order: 12, appliesTo: ["CASA", "DEPARTAMENTO", "AMPLIACION"] },
   ] as const;
 
   const elementByKey = new Map<string, { id: string }>();
@@ -133,6 +138,13 @@ export async function seedInspeccionesModule(prisma: PrismaClient) {
     { spaceKey: "cocina", elementKey: "muros", order: 1 },
     { spaceKey: "cocina", elementKey: "ventana", order: 2 },
     { spaceKey: "cocina", elementKey: "enchufes-interruptores", order: 3 },
+    // Fase 11AA — Cielo/Iluminación, siempre-presente en Cocina (sin
+    // pregunta Nivel 2). El vínculo a "ventana" de arriba NO se toca: en
+    // casos NUEVOS su generación automática queda bloqueada por código
+    // (LEVEL2_GATED_LINKS en actions.ts), no por remover este vínculo de
+    // catálogo — casos existentes que ya lo usan no se ven afectados.
+    { spaceKey: "cocina", elementKey: "cielo", order: 4 },
+    { spaceKey: "cocina", elementKey: "iluminacion", order: 5 },
 
     { spaceKey: "dormitorio", elementKey: "piso", order: 0 },
     { spaceKey: "dormitorio", elementKey: "muros", order: 1 },
@@ -229,7 +241,7 @@ export async function seedInspeccionesModule(prisma: PrismaClient) {
   // elementos) y agregan Enchufes/interruptores, Bodega y Estacionamiento.
   // Ninguno trae `technicalArticleSlug` (regla Fase 6B punto 10: no crear
   // artículos nuevos en esta fase).
-  const checklistItems: { elementKey: string; question: string; order: number }[] = [
+  const checklistItems: { elementKey: string; question: string; order: number; technicalArticleSlug?: string }[] = [
     { elementKey: "piso", question: "¿Presenta daños visibles?", order: 0 },
     { elementKey: "piso", question: "¿Presenta desniveles?", order: 1 },
     { elementKey: "muros", question: "¿Presenta fisuras visibles?", order: 0 },
@@ -248,6 +260,16 @@ export async function seedInspeccionesModule(prisma: PrismaClient) {
     { elementKey: "fachada", question: "¿Presenta fisuras o daños visibles?", order: 0 },
     { elementKey: "reja", question: "¿Abre y cierra correctamente, sin forzar?", order: 0 },
     { elementKey: "porton", question: "¿Abre y cierra correctamente?", order: 0 },
+
+    // Fase 11AA — Cielo/Iluminación (Cocina, siempre-presente). A
+    // diferencia de Ventana (deuda conocida, no se corrige acá — sección
+    // 21 del informe), este catálogo SÍ nace completo en el seed,
+    // incluido su `technicalArticleSlug`, para que una instalación nueva
+    // (migrate + seed) quede igual a la BD compartida ya parchada por
+    // `prisma/db-fixes/fase11aa-cocina-lote-a.ts`.
+    { elementKey: "cielo", question: "¿El cielo presenta manchas, grietas u otros daños visibles?", order: 0, technicalArticleSlug: "cielo-como-revisar-manchas-grietas" },
+    { elementKey: "cielo", question: "¿Se observan manchas de humedad en el cielo?", order: 1, technicalArticleSlug: "cielo-como-revisar-manchas-humedad" },
+    { elementKey: "iluminacion", question: "¿La iluminación de la cocina enciende correctamente y el elemento visible se encuentra firme?", order: 0, technicalArticleSlug: "iluminacion-como-revisar-encendido-fijacion" },
   ];
 
   for (const item of checklistItems) {
@@ -256,10 +278,13 @@ export async function seedInspeccionesModule(prisma: PrismaClient) {
       where: { elementTemplateId, question: item.question },
     });
     if (existing) {
-      await prisma.inspectionChecklistItem.update({ where: { id: existing.id }, data: { order: item.order } });
+      await prisma.inspectionChecklistItem.update({
+        where: { id: existing.id },
+        data: { order: item.order, ...(item.technicalArticleSlug ? { technicalArticleSlug: item.technicalArticleSlug } : {}) },
+      });
     } else {
       await prisma.inspectionChecklistItem.create({
-        data: { elementTemplateId, question: item.question, order: item.order },
+        data: { elementTemplateId, question: item.question, order: item.order, technicalArticleSlug: item.technicalArticleSlug },
       });
     }
   }
@@ -279,7 +304,137 @@ export async function seedInspeccionesModule(prisma: PrismaClient) {
     },
   });
 
+  // Fase 11AA — mismos 3 artículos ya aplicados a la BD compartida vía
+  // `prisma/db-fixes/fase11aa-cocina-lote-a.ts`, reproducidos acá
+  // verbatim para que una instalación nueva quede idéntica.
+  const level2Articles = [
+    {
+      slug: "cielo-como-revisar-manchas-grietas",
+      title: "Cómo revisar manchas o grietas en el cielo",
+      content: `# Qué revisar
+
+Si el cielo presenta manchas, grietas u otros daños visibles.
+
+# Cómo revisarlo
+
+Desde una posición segura (de pie, sin subirte a sillas, escalas ni ningún elemento inestable), recorre con la vista todo el cielo del recinto, prestando atención a las esquinas y a los encuentros con los muros, que es donde suelen notarse primero los defectos.
+
+# Qué debería verse
+
+Una superficie pareja, sin grietas visibles, sin manchas de color distinto al resto del cielo y sin zonas descascaradas o con pintura levantada.
+
+# Qué señales pueden indicar un problema
+
+- Grietas o fisuras visibles, de cualquier tamaño.
+- Manchas de un color distinto al resto del cielo (amarillentas, oscuras o con un tono diferente).
+- Pintura descascarada, levantada o con burbujas.
+- Zonas hundidas o con una textura distinta al resto de la superficie.
+
+Ninguna de estas señales determina por sí sola la causa — conviene registrarla igual y, si hay dudas, revisarla con más detalle.
+
+# Por qué importa
+
+Una grieta o mancha en el cielo puede ser solo estética, pero también puede ser señal de humedad, filtración o un problema estructural menor — conviene registrarlo para que quede documentado y se pueda revisar con más detalle si corresponde.
+
+# Recomendación
+
+No subas a escaleras ni a ningún elemento inestable para mirar de cerca. Si la zona es difícil de ver bien desde el suelo, toma la foto con el mejor ángulo posible desde una posición segura y describe lo que alcanzas a observar.
+
+# Fuente
+
+- **Manual técnico de referencia**: Manual de Tolerancias CDT (Ficha 7, Cielos Rasos) — el Manual respalda que el cielo es una partida constructiva diferenciada de los muros, con su propio criterio de terminación; no entrega una tabla de manchas/grietas evaluable a simple vista (su contenido es dimensional, en milímetros).
+- **Criterio interno**: la pregunta de manchas/grietas visibles es criterio interno del proyecto, no una tolerancia del Manual.
+
+Sin referencia normativa verificada para esta revisión específica.`,
+    },
+    {
+      slug: "cielo-como-revisar-manchas-humedad",
+      title: "Cómo revisar manchas de humedad en el cielo",
+      content: `# Qué revisar
+
+Si se observan manchas de humedad en el cielo — un tipo de mancha distinto a una mancha de pintura o suciedad común.
+
+# Cómo revisarlo
+
+Desde una posición segura, observa el cielo completo con buena luz. Una mancha de humedad suele verse como un cerco o halo de un color amarillento, café claro o grisáceo, a veces con los bordes más marcados que el centro.
+
+# Qué debería verse
+
+Un cielo sin manchas de este tipo, de color uniforme en toda su superficie.
+
+# Qué señales pueden indicar un problema
+
+- Un cerco o halo de color distinto al resto del cielo, con bordes visibles.
+- Una zona que se ve más oscura u opaca que el resto, especialmente cerca de esquinas o de instalaciones (ventanas, tuberías visibles).
+- Pintura hinchada, con burbujas o que se desprende justo en la zona de la mancha.
+
+Ninguna de estas señales confirma por sí sola que exista una filtración activa — puede ser señal de humedad o filtración y conviene registrarlo para revisarlo con más detalle, incluso si hoy se ve seco.
+
+# Por qué importa
+
+Una mancha de humedad, aunque se vea seca en el momento de la inspección, puede ser señal de una filtración pasada o activa que conviene investigar antes de que empeore o quede oculta detrás de una nueva capa de pintura.
+
+# Recomendación
+
+No perfores ni intentes confirmar si la zona está húmeda tocándola o con ningún instrumento. Registra la ubicación exacta de la mancha con una foto y descríbela — el diagnóstico de la causa (techumbre, cañería, condensación) requiere una revisión aparte.
+
+# Fuente
+
+- **Manual técnico de referencia**: ninguno — el Manual de Tolerancias no cubre manchas de humedad, solo terminación dimensional del cielo.
+- **Criterio interno**: revisión de alto valor práctico basada en criterio interno del proyecto, sin respaldo normativo directo.
+
+Sin referencia normativa verificada para esta revisión específica.`,
+    },
+    {
+      slug: "iluminacion-como-revisar-encendido-fijacion",
+      title: "Cómo revisar que la iluminación encienda y esté firme",
+      content: `# Qué revisar
+
+Si el o los artefactos de iluminación del recinto (ampolleta con portalámparas, plafón, u otro artefacto entregado con la vivienda) encienden correctamente y se ven firmemente instalados.
+
+# Cómo revisarlo
+
+Acciona el interruptor correspondiente y confirma que la luz enciende y apaga con normalidad. Observa el artefacto desde el suelo: revisa que no se vea suelto, colgando, ni con cables a la vista.
+
+# Qué debería verse
+
+La luz enciende y apaga correctamente al usar el interruptor, y el artefacto se ve firme, sin piezas sueltas ni cables expuestos.
+
+# Qué señales pueden indicar un problema
+
+- No enciende al accionar el interruptor.
+- Enciende de forma intermitente o parpadea.
+- El artefacto se ve suelto, inclinado o colgando.
+- Hay cables visibles fuera de la caja o el portalámparas.
+
+Ninguna de estas señales determina por sí sola la causa — conviene registrarla igual.
+
+# Por qué importa
+
+Un artefacto de iluminación mal fijado o que no enciende correctamente afecta el uso normal del recinto y, si está suelto, puede representar un riesgo — conviene registrarlo para que se revise.
+
+# Recomendación
+
+No toques el cableado, no abras el artefacto ni el tablero eléctrico, y no intentes reparar nada tú mismo. Si el artefacto se ve suelto, evita manipularlo — solo regístralo con una foto tomada desde una posición segura.
+
+# Fuente
+
+- **Manual técnico de referencia**: ninguno — el capítulo de Artefactos Eléctricos del Manual de Tolerancias (Ficha 26) trata exclusivamente la alineación milimétrica de cajas de enchufes/interruptores, no la calidad ni instalación de artefactos de iluminación.
+- **Criterio interno**: revisión funcional y visual básica, mismo estándar ya usado en Enchufes e interruptores.
+
+Sin referencia normativa verificada para esta revisión específica.`,
+    },
+  ];
+
+  for (const a of level2Articles) {
+    await prisma.technicalArticle.upsert({
+      where: { slug: a.slug },
+      update: { title: a.title, content: a.content },
+      create: { slug: a.slug, title: a.title, content: a.content },
+    });
+  }
+
   console.log(
-    `Seed de Inspecciones completado: ${spaceTemplates.length} espacios, ${elementTemplates.length} elementos, ${spaceElementLinks.length} vínculos espacio-elemento, ${checklistItems.length} preguntas, 1 artículo técnico.`
+    `Seed de Inspecciones completado: ${spaceTemplates.length} espacios, ${elementTemplates.length} elementos, ${spaceElementLinks.length} vínculos espacio-elemento, ${checklistItems.length} preguntas, ${1 + level2Articles.length} artículos técnicos.`
   );
 }

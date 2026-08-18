@@ -183,6 +183,7 @@ export default async function InspeccionDetallePage({
           }))}
           prev={prevSpace ? { id: prevSpace.id, name: prevSpace.name } : null}
           next={nextSpace ? { id: nextSpace.id, name: nextSpace.name } : null}
+          level2SpaceTemplateKey={space.spaceTemplate?.key ?? null}
           level2Components={getConfigurableComponents(space.spaceTemplate?.key)}
           level2Config={parseSpaceConfig(space.config)}
           level2ExistingElementKeys={space.elements.flatMap((el) => (el.elementTemplate ? [el.elementTemplate.key] : []))}

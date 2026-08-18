@@ -15,6 +15,7 @@ export function SpaceDetailView({
   elements,
   prev,
   next,
+  level2SpaceTemplateKey,
   level2Components,
   level2Config,
   level2ExistingElementKeys,
@@ -26,6 +27,7 @@ export function SpaceDetailView({
   elements: ElementChecklistData[];
   prev: { id: string; name: string } | null;
   next: { id: string; name: string } | null;
+  level2SpaceTemplateKey: string | null;
   level2Components: SpaceConfigurableComponent[];
   level2Config: SpaceConfigJson;
   level2ExistingElementKeys: string[];
@@ -55,6 +57,7 @@ export function SpaceDetailView({
 
       <SpaceLevel2Gate
         spaceId={spaceId}
+        spaceTemplateKey={level2SpaceTemplateKey}
         components={level2Components}
         initialConfig={level2Config}
         existingElementKeys={level2ExistingElementKeys}

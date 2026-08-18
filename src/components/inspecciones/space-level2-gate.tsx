@@ -23,12 +23,14 @@ const FOCUS_RING =
 // (sección 13).
 export function SpaceLevel2Gate({
   spaceId,
+  spaceTemplateKey,
   components,
   initialConfig,
   existingElementKeys,
   children,
 }: {
   spaceId: string;
+  spaceTemplateKey: string | null;
   components: SpaceConfigurableComponent[];
   initialConfig: SpaceConfigJson;
   existingElementKeys: string[];
@@ -40,7 +42,7 @@ export function SpaceLevel2Gate({
 
   if (components.length === 0) return <>{children}</>;
 
-  const needsOnboarding = needsLevel2Onboarding(components, config, new Set(existingElementKeys));
+  const needsOnboarding = needsLevel2Onboarding(spaceTemplateKey, components, config, new Set(existingElementKeys));
 
   if (needsOnboarding) {
     return (
