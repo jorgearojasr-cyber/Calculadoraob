@@ -3,7 +3,9 @@ import { ArrowLeft } from "lucide-react";
 import { ElementChecklistGroup, type ElementChecklistData } from "./element-checklist-group";
 import { SpaceNavFooter } from "./space-nav-footer";
 import { PhotoUpload, type InspectionPhotoItem } from "./photo-upload";
+import { SpaceLevel2Gate } from "./space-level2-gate";
 import { computeProgress } from "@/lib/inspecciones/progress";
+import type { SpaceConfigJson, SpaceConfigurableComponent } from "@/lib/inspecciones/space-config";
 
 export function SpaceDetailView({
   caseId,
@@ -13,6 +15,9 @@ export function SpaceDetailView({
   elements,
   prev,
   next,
+  level2Components,
+  level2Config,
+  level2ExistingElementKeys,
 }: {
   caseId: string;
   spaceId: string;
@@ -21,6 +26,9 @@ export function SpaceDetailView({
   elements: ElementChecklistData[];
   prev: { id: string; name: string } | null;
   next: { id: string; name: string } | null;
+  level2Components: SpaceConfigurableComponent[];
+  level2Config: SpaceConfigJson;
+  level2ExistingElementKeys: string[];
 }) {
   const progress = computeProgress(elements.flatMap((el) => el.checks.map((c) => c.status)));
 
@@ -45,16 +53,25 @@ export function SpaceDetailView({
         </p>
       </div>
 
-      <div className="rounded-2xl p-4 bg-white border border-border">
-        <p className="text-xs font-mono uppercase tracking-wider text-ink-muted mb-3">Fotos del espacio</p>
-        <PhotoUpload caseId={caseId} context={{ level: "space", spaceId }} initialPhotos={spacePhotos} compact />
-      </div>
+      <SpaceLevel2Gate
+        spaceId={spaceId}
+        components={level2Components}
+        initialConfig={level2Config}
+        existingElementKeys={level2ExistingElementKeys}
+      >
+        <div className="grid gap-4">
+          <div className="rounded-2xl p-4 bg-white border border-border">
+            <p className="text-xs font-mono uppercase tracking-wider text-ink-muted mb-3">Fotos del espacio</p>
+            <PhotoUpload caseId={caseId} context={{ level: "space", spaceId }} initialPhotos={spacePhotos} compact />
+          </div>
 
-      <div className="grid gap-3">
-        {elements.map((element) => (
-          <ElementChecklistGroup key={element.id} caseId={caseId} element={element} />
-        ))}
-      </div>
+          <div className="grid gap-3">
+            {elements.map((element) => (
+              <ElementChecklistGroup key={element.id} caseId={caseId} element={element} />
+            ))}
+          </div>
+        </div>
+      </SpaceLevel2Gate>
 
       <SpaceNavFooter caseId={caseId} prev={prev} next={next} />
     </div>

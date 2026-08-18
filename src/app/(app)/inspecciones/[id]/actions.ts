@@ -7,6 +7,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { MAX_PHOTO_SIZE_BYTES, isAllowedPhotoType } from "@/lib/project-photos";
 import { MAX_PHOTOS_PER_CONTEXT, defaultPhotoKind, type PhotoUploadContext } from "@/lib/inspecciones/photos";
+import { getConfigurableComponents, parseSpaceConfig, type SpaceConfigJson } from "@/lib/inspecciones/space-config";
 import type { InspectionAnswerStatus, InspectionObservationStatus, InspectionSeverity } from "@/generated/prisma/client";
 
 const VALID_ANSWER_STATUSES: InspectionAnswerStatus[] = ["OK", "OBSERVATION", "NOT_APPLICABLE"];
@@ -419,4 +420,179 @@ export async function deleteInspectionPhotoAction(
 
   revalidatePath(`/inspecciones/${photo.caseId}`);
   return { success: true };
+}
+
+// --- Configuración Nivel 2 del recinto (Fase 11Y) ---
+//
+// Piloto: Antejardín -> ¿Tiene reja?, Acceso vehicular -> ¿Tiene portón?
+// (docs/FASE11Y_INFORME_PILOTO_CONFIGURACION_NIVEL2.md). Un mismo
+// `InspectionSpace.config` JSON guarda la respuesta de TODOS los
+// componentes configurables de ese espacio — batch, no una acción por
+// componente, para que el bloque "Antes de revisar este espacio" (que en
+// el futuro puede tener varias preguntas, ej. Cocina) se guarde con un
+// solo "Continuar".
+export type SpaceLevel2Answer = { componentKey: string; present: boolean; meta?: Record<string, string> };
+
+export type SaveSpaceLevel2ConfigResult =
+  | { config: SpaceConfigJson; requiresConfirmation?: undefined; error?: undefined }
+  | { requiresConfirmation: true; components: string[]; message: string; config?: undefined; error?: undefined }
+  | { error: string; config?: undefined; requiresConfirmation?: undefined };
+
+async function loadSpaceWithOwnershipForConfig(spaceId: string) {
+  return prisma.inspectionSpace.findUnique({
+    where: { id: spaceId },
+    include: {
+      case: true,
+      spaceTemplate: { select: { key: true } },
+      elements: {
+        include: {
+          elementTemplate: { select: { key: true } },
+          checks: { select: { status: true, observations: { select: { id: true } } } },
+          photos: { select: { id: true, url: true } },
+        },
+      },
+    },
+  });
+}
+
+// Ownership igual al resto del módulo (Fase 3): `spaceId` nunca se
+// confía sin resolver contra `space.case.userId` de la sesión.
+//
+// `confirmedComponentKeys` — política de datos existentes (sección 7 de
+// la fase): si un componente que ya tiene checks respondidos,
+// observaciones o fotos se marca "No", NO se borra silenciosamente. Esta
+// acción devuelve `requiresConfirmation` con la lista de componentes en
+// esa situación y NO aplica ningún cambio (todo o nada); el llamador debe
+// pedir confirmación explícita al usuario y reintentar pasando esos
+// mismos componentKey en `confirmedComponentKeys`. Si el componente no
+// tiene datos, se quita sin pedir confirmación.
+export async function saveSpaceLevel2ConfigAction(
+  spaceId: string,
+  answers: SpaceLevel2Answer[],
+  confirmedComponentKeys: string[] = []
+): Promise<SaveSpaceLevel2ConfigResult> {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.id) return { error: "No hay sesión activa." };
+
+  const space = await loadSpaceWithOwnershipForConfig(spaceId);
+  if (!space || space.case.userId !== session.user.id) return { error: "No encontrado." };
+
+  // Nunca confiar en `componentKey` enviado desde el cliente sin
+  // volver a resolverlo contra el catálogo de componentes configurables
+  // de ESTE espacio (mismo criterio que `spaceSelections` en
+  // createInspectionAndGenerateAction).
+  const allowed = getConfigurableComponents(space.spaceTemplate?.key);
+  const allowedByKey = new Map(allowed.map((c) => [c.componentKey, c]));
+  const validAnswers = answers.filter((a) => allowedByKey.has(a.componentKey));
+  if (validAnswers.length === 0) return { error: "Nada que guardar." };
+
+  const elementByComponentKey = new Map(
+    space.elements.filter((e) => e.elementTemplate).map((e) => [e.elementTemplate!.key, e])
+  );
+  const confirmedSet = new Set(confirmedComponentKeys);
+
+  const needsConfirm: string[] = [];
+  for (const a of validAnswers) {
+    if (a.present) continue;
+    const existing = elementByComponentKey.get(a.componentKey);
+    if (!existing) continue;
+    const hasData =
+      existing.checks.some((c) => c.status !== null || c.observations.length > 0) || existing.photos.length > 0;
+    if (hasData && !confirmedSet.has(a.componentKey)) needsConfirm.push(a.componentKey);
+  }
+  if (needsConfirm.length > 0) {
+    const labels = needsConfirm.map((k) => allowedByKey.get(k)?.label ?? k).join(", ");
+    return {
+      requiresConfirmation: true,
+      components: needsConfirm,
+      message: `Ya hay respuestas, hallazgos o fotos guardadas en ${labels}. Si continúas, se eliminarán junto con el componente.`,
+    };
+  }
+
+  const currentConfig = parseSpaceConfig(space.config);
+  const nextComponents: Record<string, boolean> = { ...(currentConfig.components ?? {}) };
+  const nextMeta: Record<string, Record<string, string>> = { ...(currentConfig.componentMeta ?? {}) };
+
+  for (const a of validAnswers) {
+    nextComponents[a.componentKey] = a.present;
+    if (a.present && a.meta) {
+      // Fase 11Y-P (sección 3) — nunca persistir JSON arbitrario del
+      // cliente sin validar: solo se aceptan las claves declaradas en
+      // `metaOptions` de ESTE componente, y solo si el valor coincide con
+      // una de sus opciones reales (ej. "tipo" de Portón solo puede ser
+      // MANUAL/AUTOMATICO/NO_SE, nunca un string libre inventado).
+      const metaOptions = allowedByKey.get(a.componentKey)?.metaOptions ?? [];
+      const validatedMeta: Record<string, string> = {};
+      for (const opt of metaOptions) {
+        const value = a.meta[opt.key];
+        if (value && opt.options.some((o) => o.value === value)) {
+          validatedMeta[opt.key] = value;
+        }
+      }
+      if (Object.keys(validatedMeta).length > 0) {
+        nextMeta[a.componentKey] = { ...(nextMeta[a.componentKey] ?? {}), ...validatedMeta };
+      }
+    } else if (!a.present) {
+      delete nextMeta[a.componentKey];
+    }
+
+    const existing = elementByComponentKey.get(a.componentKey);
+
+    if (a.present) {
+      // Idempotente: configurar "Sí" dos veces no debe duplicar el
+      // elemento ni sus checks (sección 9 de la fase) — si ya existe, no
+      // se toca.
+      if (!existing) {
+        const elementTemplate = await prisma.inspectionElementTemplate.findUnique({
+          where: { key: a.componentKey },
+        });
+        if (elementTemplate && elementTemplate.active) {
+          const newElement = await prisma.inspectionElement.create({
+            data: { spaceId: space.id, elementTemplateId: elementTemplate.id, name: elementTemplate.label },
+          });
+          const checklistItems = await prisma.inspectionChecklistItem.findMany({
+            where: { elementTemplateId: elementTemplate.id, active: true },
+            orderBy: { order: "asc" },
+          });
+          for (const item of checklistItems) {
+            await prisma.inspectionChecklistCheck.create({
+              data: { elementId: newElement.id, checklistItemId: item.id, questionSnapshot: item.question },
+            });
+          }
+        }
+      }
+    } else if (existing) {
+      // Ya se confirmó arriba (o no había datos) — borrado seguro. Fotos
+      // del elemento y de sus observaciones se borran explícitamente
+      // primero (mismo patrón que deleteObservationAction): su FK usa
+      // onDelete: SetNull, no Cascade, así que quedarían huérfanas
+      // (elementId/observationId null pero caseId válido) si no se
+      // borran acá.
+      const obsIds = existing.checks.flatMap((c) => c.observations.map((o) => o.id));
+      const photosToDelete = await prisma.inspectionPhoto.findMany({
+        where: { OR: [{ elementId: existing.id }, ...(obsIds.length ? [{ observationId: { in: obsIds } }] : [])] },
+        select: { id: true, url: true },
+      });
+      for (const photo of photosToDelete) {
+        try {
+          await del(photo.url);
+        } catch {
+          // Blob ya eliminado o inalcanzable — no bloquea el borrado.
+        }
+      }
+      await prisma.inspectionPhoto.deleteMany({
+        where: { OR: [{ elementId: existing.id }, ...(obsIds.length ? [{ observationId: { in: obsIds } }] : [])] },
+      });
+      // Cascade del schema borra checks (Check.element onDelete: Cascade)
+      // y sus observaciones (Observation.checklistCheck onDelete: Cascade)
+      // en el mismo `delete`.
+      await prisma.inspectionElement.delete({ where: { id: existing.id } });
+    }
+  }
+
+  const nextConfig: SpaceConfigJson = { components: nextComponents, componentMeta: nextMeta };
+  await prisma.inspectionSpace.update({ where: { id: space.id }, data: { config: nextConfig } });
+
+  revalidatePath(`/inspecciones/${space.caseId}`);
+  return { config: nextConfig };
 }

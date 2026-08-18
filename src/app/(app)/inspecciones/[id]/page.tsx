@@ -11,6 +11,7 @@ import { PhotoUpload } from "@/components/inspecciones/photo-upload";
 import { InspectionNotAvailable } from "@/components/inspecciones/inspection-not-available";
 import { computeProgress, sumProgress } from "@/lib/inspecciones/progress";
 import { parseKnowledgeContent } from "@/lib/inspecciones-knowledge";
+import { getConfigurableComponents, parseSpaceConfig } from "@/lib/inspecciones/space-config";
 
 export const dynamic = "force-dynamic";
 
@@ -75,9 +76,17 @@ export default async function InspeccionDetallePage({
       where: { id: selectedSpaceId },
       include: {
         photos: { orderBy: { createdAt: "asc" } },
+        // Fase 11Y — se necesita el `key` del template del espacio (para
+        // resolver qué componentes Nivel 2 aplican) y el `key` del
+        // elementTemplate de cada elemento ya generado (para la
+        // compatibilidad histórica — un componente ya generado antes de
+        // esta fase se considera implícitamente configurado, sin volver
+        // a preguntar).
+        spaceTemplate: { select: { key: true } },
         elements: {
           orderBy: { order: "asc" },
           include: {
+            elementTemplate: { select: { key: true } },
             photos: { orderBy: { createdAt: "asc" } },
             checks: {
               orderBy: { checklistItem: { order: "asc" } },
@@ -174,6 +183,9 @@ export default async function InspeccionDetallePage({
           }))}
           prev={prevSpace ? { id: prevSpace.id, name: prevSpace.name } : null}
           next={nextSpace ? { id: nextSpace.id, name: nextSpace.name } : null}
+          level2Components={getConfigurableComponents(space.spaceTemplate?.key)}
+          level2Config={parseSpaceConfig(space.config)}
+          level2ExistingElementKeys={space.elements.flatMap((el) => (el.elementTemplate ? [el.elementTemplate.key] : []))}
         />
       </div>
     );

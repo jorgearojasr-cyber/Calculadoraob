@@ -23,6 +23,19 @@ const VALID_TIPOS_AMPLIACION: InspectionTipoAmpliacion[] = [
 // cliente; no es una regla de producto, solo un límite de sanidad.
 const MAX_REPEATABLE_COUNT = 20;
 
+// Fase 11Y (docs/FASE11Y_INFORME_PILOTO_CONFIGURACION_NIVEL2.md, sección
+// 9) — Reja y Portón dejan de generarse automáticamente al crear el
+// caso: ahora se crean solo cuando el usuario confirma "Sí" en la
+// configuración Nivel 2 del recinto (saveSpaceLevel2ConfigAction, en
+// [id]/actions.ts). El vínculo de catálogo InspectionElementTemplateSpace
+// (Reja->Antejardín, Portón->Acceso vehicular) NO se toca todavía — la BD
+// es compartida y producción sigue generándolos automáticamente hasta
+// que este código se publique (mismo criterio que terraza-logia en Fase
+// 11X-P). Este filtro es lo único que efectivamente desacopla la
+// generación para el código local: aunque el vínculo de catálogo siga
+// existiendo, esta acción simplemente ignora esas 2 keys al generar.
+const LEVEL2_GATED_ELEMENT_KEYS = new Set(["reja", "porton"]);
+
 export type CreateInspectionInput = {
   name: string;
   tipoInmueble: string;
@@ -164,6 +177,11 @@ export async function createInspectionAndGenerateAction(
             });
 
             for (const link of elementLinks) {
+              // Fase 11Y — ver LEVEL2_GATED_ELEMENT_KEYS arriba: Reja/
+              // Portón ya no se generan acá, quedan pendientes de la
+              // configuración Nivel 2 del recinto.
+              if (LEVEL2_GATED_ELEMENT_KEYS.has(link.elementTemplate.key)) continue;
+
               const element = await tx.inspectionElement.create({
                 data: { spaceId: space.id, elementTemplateId: link.elementTemplateId, name: link.elementTemplate.label },
               });

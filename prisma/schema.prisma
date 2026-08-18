@@ -1435,6 +1435,18 @@ model InspectionSpace {
   // catálogo (ver InspectionElement.isCustom, mismo criterio).
   isCustom Boolean @default(false)
 
+  // Fase 11Y — configuración Nivel 2 del recinto (docs/FASE11Y_INFORME_
+  // PILOTO_CONFIGURACION_NIVEL2.md). Genérico y extensible a propósito:
+  // NO se modela como una columna por componente (`hasReja`, `hasPorton`,
+  // futuros `hasTina`/`hasLavaplatos`) porque eso no escala a Cocina/Baño.
+  // Shape: `{ components?: Record<elementTemplateKey, boolean>,
+  // componentMeta?: Record<elementTemplateKey, Record<string, string>> }`.
+  // Nullable/aditivo: espacios existentes (histórico) siguen con
+  // `config: null` sin romper nada — su compatibilidad se resuelve en
+  // lectura (ver src/lib/inspecciones/space-config.ts), nunca escribiendo
+  // retroactivamente sobre casos reales.
+  config Json?
+
   elements InspectionElement[]
   photos   InspectionPhoto[]
 
