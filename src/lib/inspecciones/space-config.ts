@@ -195,6 +195,25 @@ export const SPACE_LEVEL2_CONFIG: Record<string, SpaceConfigurableComponent[]> =
       section: "AGUA Y DESAGÜE",
       order: 17,
     },
+    // Fase 11AH — Cocina Lote E (docs/FASE11AH_INFORME_COCINA_LOTE_E.md),
+    // cerrado técnicamente en Fase 11AG
+    // (docs/FASE11AG_CIERRE_TECNICO_CAMPANA_COCINA.md). Último componente
+    // funcional pendiente del diseño original de Fase 11Z — con esto,
+    // el catálogo funcional de Cocina queda V1 cerrado (ver informe 11AG,
+    // sección AA). `section: "EQUIPAMIENTO DEL RECINTO"` aunque su `order`
+    // numérico (18) sea mayor que el de Lavaplatos (17, sección "AGUA Y
+    // DESAGÜE") — el agrupamiento visual lo determina `section`, no
+    // `order` (ver informe 11AG, sección W). Sin subcomponentes: velocidades
+    // viven dentro de Funcionamiento, extracción/filtros/ductos descartados
+    // explícitamente por falta de fuente/método seguro (informe 11AG,
+    // secciones G/J/K/L).
+    {
+      componentKey: "campana-extractor",
+      label: "Campana / Extractor",
+      question: "¿La cocina tiene campana o extractor instalado?",
+      section: "EQUIPAMIENTO DEL RECINTO",
+      order: 18,
+    },
   ],
 };
 

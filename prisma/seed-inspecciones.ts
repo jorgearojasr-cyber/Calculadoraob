@@ -139,6 +139,12 @@ export async function seedInspeccionesModule(prisma: PrismaClient) {
     // son componentes propios — viven como checklist dentro de este
     // único elemento.
     { key: "lavaplatos", label: "Lavaplatos", order: 18, appliesTo: ["CASA", "DEPARTAMENTO", "AMPLIACION"] },
+    // Fase 11AH (docs/FASE11AH_INFORME_COCINA_LOTE_E.md) — Campana /
+    // Extractor, cerrado técnicamente en Fase 11AG. 100% Nivel 2, sin
+    // vínculo InspectionElementTemplateSpace. Último componente funcional
+    // del catálogo original de Fase 11Z — con esto, Cocina V1 queda
+    // funcionalmente cerrada.
+    { key: "campana-extractor", label: "Campana / Extractor", order: 19, appliesTo: ["CASA", "DEPARTAMENTO", "AMPLIACION"] },
   ] as const;
 
   const elementByKey = new Map<string, { id: string }>();
@@ -331,6 +337,14 @@ export async function seedInspeccionesModule(prisma: PrismaClient) {
     { elementKey: "lavaplatos", question: "Al dejar correr agua, ¿se observa alguna fuga o goteo bajo el lavaplatos?", order: 2, technicalArticleSlug: "lavaplatos-fugas", defaultSeverity: "HIGH" },
     { elementKey: "lavaplatos", question: "¿El lavaplatos se ve firme y bien instalado, sin moverse al tocarlo?", order: 3, technicalArticleSlug: "lavaplatos-fijacion", defaultSeverity: "MEDIUM" },
     { elementKey: "lavaplatos", question: "¿El sello alrededor del lavaplatos se ve continuo, sin separaciones ni grietas?", order: 4, technicalArticleSlug: "lavaplatos-sello-perimetral", defaultSeverity: "MEDIUM" },
+
+    // Fase 11AH — Campana / Extractor (Cocina, 100% Nivel 2, sin vínculo
+    // de catálogo). `defaultSeverity` exacto según Fase 11AG (sección P):
+    // ninguna se homogeniza. Sin check separado para velocidades,
+    // extracción, filtros ni ductos — ver informe 11AG secciones G/J/K/L.
+    { elementKey: "campana-extractor", question: "¿La campana o extractor enciende y responde normalmente a sus controles (velocidades, si tiene más de una)?", order: 0, technicalArticleSlug: "campana-extractor-funcionamiento", defaultSeverity: "MEDIUM" },
+    { elementKey: "campana-extractor", question: "Si la campana tiene iluminación incorporada, ¿enciende correctamente?", order: 1, technicalArticleSlug: "campana-extractor-iluminacion", defaultSeverity: "LOW" },
+    { elementKey: "campana-extractor", question: "Al funcionar, ¿presenta vibraciones, golpes o ruidos claramente irregulares (más allá del ruido normal del motor)?", order: 2, technicalArticleSlug: "campana-extractor-ruido-vibracion", defaultSeverity: "MEDIUM" },
   ];
 
   for (const item of checklistItems) {
@@ -1018,6 +1032,113 @@ Registra el sector específico del borde con una foto clara. No intentes resella
 # Fuente
 
 - Criterio interno del proyecto (analogía con el sello marco-muro ya usado en Ventana) — sin fuente normativa aplicable.`,
+    },
+    // Fase 11AH — Campana / Extractor, cerrado técnicamente en Fase 11AG
+    // (docs/FASE11AG_CIERRE_TECNICO_CAMPANA_COCINA.md). Ninguna revisión
+    // se presenta respaldada por el Manual de Tolerancias ni por ningún
+    // catálogo técnico ya usado en el proyecto — las 3 quedan 🟡 criterio
+    // interno del proyecto, sin analogía disponible (a diferencia de
+    // Lavaplatos, que sí pudo reutilizar el criterio ITO).
+    {
+      slug: "campana-extractor-funcionamiento",
+      title: "Cómo revisar el funcionamiento de la campana o extractor",
+      content: `# Qué revisar
+
+Si la campana o extractor de la cocina enciende y responde normalmente a sus controles, incluidas las distintas velocidades si el modelo tiene más de una.
+
+# Cómo revisarlo
+
+Enciende la campana o extractor usando sus controles normales (botones, perilla o panel). Si tiene más de una velocidad, prueba cada una por turno. Apágala al terminar.
+
+# Qué debería verse
+
+El equipo enciende al accionar el control, y cada velocidad disponible responde de forma perceptible y distinta a las demás.
+
+# Qué señales pueden indicar un problema
+
+- El equipo no enciende al accionar el control.
+- Alguna velocidad no responde o no se nota diferencia entre velocidades.
+- Los controles (botones/perilla) no responden o cuesta mucho accionarlos.
+
+# Por qué importa
+
+Un equipo de extracción que no enciende o cuyos controles no funcionan no cumple su función básica de ventilar la cocina durante el uso diario.
+
+# Recomendación
+
+Si detectas que no enciende o algún control no responde, regístralo como observación indicando qué control específico falla. No es necesario abrir el equipo ni revisar su instalación eléctrica interna — con operar los controles normales alcanza para dejar constancia.
+
+# Fuente
+
+- Criterio interno del proyecto, comprobación funcional directa — sin fuente normativa aplicable (el Manual de Tolerancias no trata equipamiento de extracción de cocina).`,
+    },
+    {
+      slug: "campana-extractor-iluminacion",
+      title: "Cómo revisar la iluminación de la campana",
+      content: `# Qué revisar
+
+Si la campana tiene iluminación incorporada, si esta enciende correctamente.
+
+# Cómo revisarlo
+
+Acciona el control de la luz de la campana (si existe, suele ser un botón o interruptor separado del control de velocidad).
+
+# Qué debería verse
+
+La luz enciende al accionar su control, en los modelos que la incluyen.
+
+# Qué señales pueden indicar un problema
+
+- La luz no enciende al accionar su control, en un modelo que sí la incluye.
+
+Si el modelo de campana no tiene iluminación incorporada por diseño, marca esta revisión como "No corresponde" — no es un defecto.
+
+# Por qué importa
+
+La iluminación de la campana suele ser la principal fuente de luz directa sobre la zona de cocción — su ausencia de funcionamiento afecta el uso diario de la cocina.
+
+# Recomendación
+
+Si la luz no enciende, regístralo como observación. No es necesario abrir el equipo para revisar la ampolleta ni el cableado interno.
+
+# Fuente
+
+- Criterio interno del proyecto, comprobación funcional directa — sin fuente normativa aplicable.`,
+    },
+    {
+      slug: "campana-extractor-ruido-vibracion",
+      title: "Cómo revisar ruido y vibración anormal en la campana o extractor",
+      content: `# Qué revisar
+
+Si, al funcionar, la campana o extractor presenta vibraciones, golpes o ruidos claramente irregulares, más allá del ruido normal de un motor en funcionamiento.
+
+# Cómo revisarlo
+
+Enciende la campana y escucha/observa mientras funciona por unos segundos, en al menos una velocidad.
+
+# Qué debería verse
+
+Un sonido de motor en funcionamiento, sin golpeteo, vibración de piezas sueltas ni roces irregulares.
+
+# Qué señales pueden indicar un problema
+
+- Golpeteo o traqueteo audible.
+- Vibración notoria que hace vibrar la carcasa o piezas cercanas.
+- Un roce o chirrido irregular distinto al sonido normal del motor.
+
+Ten en cuenta que **todo motor produce sonido al funcionar** — eso por sí solo no es un defecto. Solo registra lo que se sienta claramente irregular, no simplemente "suena fuerte".
+
+# Por qué importa
+
+Un ruido o vibración irregular puede indicar una pieza mal fijada o un problema mecánico que conviene documentar antes de que empeore con el uso.
+
+# Recomendación
+
+Si detectas algo claramente irregular, regístralo como observación describiendo el tipo de ruido (golpeteo, vibración, roce). No intentes abrir el equipo para identificar la causa.
+
+# Fuente
+
+- Criterio interno del proyecto, comprobación funcional directa, redactada con precaución para no convertir el sonido normal de operación en un defecto — sin fuente normativa aplicable.`,
     },
   ];
 
