@@ -151,6 +151,32 @@ export const SPACE_LEVEL2_CONFIG: Record<string, SpaceConfigurableComponent[]> =
       section: "EQUIPAMIENTO DEL RECINTO",
       order: 14,
     },
+    // Fase 11AD — Cocina Lote C (docs/FASE11AD_INFORME_COCINA_LOTE_C.md),
+    // cerrado técnicamente en Fase 11AC
+    // (docs/FASE11AC_CIERRE_TECNICO_MUEBLES_COCINA.md). Nota de
+    // desviación deliberada: 11AC proponía una sección visual nueva
+    // "MOBILIARIO" para estos 2 componentes — el enunciado de 11AD
+    // (secciones 5/10/15) pidió explícitamente agregarlos bajo
+    // "EQUIPAMIENTO DEL RECINTO", junto a Ventana/Puerta, en su lugar.
+    // Se siguió la instrucción explícita y más reciente de 11AD.
+    // Muebles y Cubierta son componentes 100% independientes (ninguno
+    // deriva del otro) — ver informe 11AC sección K: existen casos reales
+    // en ambas direcciones (muebles aéreos sin cubierta; cubierta de obra
+    // sin muebles bajos), así que anidarlos habría sido incorrecto.
+    {
+      componentKey: "muebles-cocina",
+      label: "Muebles de cocina",
+      question: "¿La cocina tiene muebles instalados (bajos, aéreos u otros fijos)?",
+      section: "EQUIPAMIENTO DEL RECINTO",
+      order: 15,
+    },
+    {
+      componentKey: "cubierta-meson",
+      label: "Cubierta / Mesón",
+      question: "¿La cocina tiene cubierta o mesón?",
+      section: "EQUIPAMIENTO DEL RECINTO",
+      order: 16,
+    },
   ],
 };
 

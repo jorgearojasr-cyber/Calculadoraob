@@ -126,6 +126,13 @@ export async function seedInspeccionesModule(prisma: PrismaClient) {
     { key: "revestimiento-ceramico-piso", label: "Revestimiento cerámico de piso", order: 13, appliesTo: ["CASA", "DEPARTAMENTO", "AMPLIACION"], materialVariantOf: "piso" },
     { key: "pintura-muro", label: "Pintura de muro", order: 14, appliesTo: ["CASA", "DEPARTAMENTO", "AMPLIACION"], materialVariantOf: "muros" },
     { key: "revestimiento-ceramico-muro", label: "Revestimiento cerámico de muro", order: 15, appliesTo: ["CASA", "DEPARTAMENTO", "AMPLIACION"], materialVariantOf: "muros" },
+    // Fase 11AD (docs/FASE11AD_INFORME_COCINA_LOTE_C.md) — Muebles de
+    // cocina + Cubierta/Mesón, cerrados técnicamente en Fase 11AC. 100%
+    // Nivel 2, sin vínculo InspectionElementTemplateSpace (mismo patrón
+    // que Puerta y Lote B). Independientes entre sí — ninguno deriva del
+    // otro (ver informe 11AC sección K).
+    { key: "muebles-cocina", label: "Muebles de cocina", order: 16, appliesTo: ["CASA", "DEPARTAMENTO", "AMPLIACION"] },
+    { key: "cubierta-meson", label: "Cubierta / Mesón", order: 17, appliesTo: ["CASA", "DEPARTAMENTO", "AMPLIACION"] },
   ] as const;
 
   const elementByKey = new Map<string, { id: string }>();
@@ -250,7 +257,13 @@ export async function seedInspeccionesModule(prisma: PrismaClient) {
   // elementos) y agregan Enchufes/interruptores, Bodega y Estacionamiento.
   // Ninguno trae `technicalArticleSlug` (regla Fase 6B punto 10: no crear
   // artículos nuevos en esta fase).
-  const checklistItems: { elementKey: string; question: string; order: number; technicalArticleSlug?: string }[] = [
+  const checklistItems: {
+    elementKey: string;
+    question: string;
+    order: number;
+    technicalArticleSlug?: string;
+    defaultSeverity?: "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
+  }[] = [
     { elementKey: "piso", question: "¿Presenta daños visibles?", order: 0 },
     { elementKey: "piso", question: "¿Presenta desniveles?", order: 1 },
     { elementKey: "muros", question: "¿Presenta fisuras visibles?", order: 0 },
@@ -291,6 +304,15 @@ export async function seedInspeccionesModule(prisma: PrismaClient) {
     { elementKey: "pintura-muro", question: "¿Se observan manchas, marcas o defectos visibles en la pintura?", order: 0, technicalArticleSlug: "pintura-muro-manchas-defectos" },
     { elementKey: "revestimiento-ceramico-muro", question: "¿Hay palmetas quebradas, trisadas o despuntadas?", order: 0, technicalArticleSlug: "revestimiento-ceramico-muro-palmetas-quebradas" },
     { elementKey: "revestimiento-ceramico-muro", question: "¿Se observan defectos visibles en el esmalte o superficie de las palmetas?", order: 1, technicalArticleSlug: "revestimiento-ceramico-muro-defectos-esmalte" },
+
+    // Fase 11AD — Muebles de cocina + Cubierta/Mesón (Cocina, 100% Nivel
+    // 2, sin vínculo de catálogo). `defaultSeverity` exacto según la
+    // matriz final de Fase 11AC (sección P) — ninguna se homogeniza.
+    { elementKey: "muebles-cocina", question: "¿Las puertas y cajones abren, cierran o deslizan correctamente (cuando existan)?", order: 0, technicalArticleSlug: "muebles-cocina-funcionamiento", defaultSeverity: "MEDIUM" },
+    { elementKey: "muebles-cocina", question: "¿Los muebles se sienten firmes y bien sujetos, sin moverse al tocarlos?", order: 1, technicalArticleSlug: "muebles-cocina-fijacion", defaultSeverity: "HIGH" },
+    { elementKey: "muebles-cocina", question: "¿Los muebles presentan golpes, quiebres, rayas profundas u otros daños visibles?", order: 2, technicalArticleSlug: "muebles-cocina-danos-visibles", defaultSeverity: "LOW" },
+    { elementKey: "cubierta-meson", question: "¿La cubierta o mesón se ve firme y bien fijada, sin moverse al tocarla?", order: 0, technicalArticleSlug: "cubierta-meson-fijacion", defaultSeverity: "MEDIUM" },
+    { elementKey: "cubierta-meson", question: "¿La cubierta presenta daños visibles o separaciones/grietas en el encuentro con el muro?", order: 1, technicalArticleSlug: "cubierta-meson-danos-sellos", defaultSeverity: "LOW" },
   ];
 
   for (const item of checklistItems) {
@@ -301,11 +323,21 @@ export async function seedInspeccionesModule(prisma: PrismaClient) {
     if (existing) {
       await prisma.inspectionChecklistItem.update({
         where: { id: existing.id },
-        data: { order: item.order, ...(item.technicalArticleSlug ? { technicalArticleSlug: item.technicalArticleSlug } : {}) },
+        data: {
+          order: item.order,
+          ...(item.technicalArticleSlug ? { technicalArticleSlug: item.technicalArticleSlug } : {}),
+          ...(item.defaultSeverity ? { defaultSeverity: item.defaultSeverity } : {}),
+        },
       });
     } else {
       await prisma.inspectionChecklistItem.create({
-        data: { elementTemplateId, question: item.question, order: item.order, technicalArticleSlug: item.technicalArticleSlug },
+        data: {
+          elementTemplateId,
+          question: item.question,
+          order: item.order,
+          technicalArticleSlug: item.technicalArticleSlug,
+          defaultSeverity: item.defaultSeverity,
+        },
       });
     }
   }
@@ -629,6 +661,175 @@ Registra con foto el sector específico afectado, indicando qué palmeta o zona 
 - **Manual técnico de referencia**: Manual de Tolerancias para Edificaciones (CDT/CChC, 3ª edición 2018), capítulo 10, Revestimientos Cerámicos — mismo criterio aplicado a superficie vertical.
 
 Sin referencia normativa verificada más allá del Manual de Tolerancias.`,
+    },
+    // Fase 11AD — mismos 5 artículos ya aplicados a la BD compartida vía
+    // `prisma/db-fixes/fase11ad-cocina-lote-c.ts`, reproducidos acá
+    // verbatim (contenido final de Fase 11AC, no las 7 candidatas de
+    // Fase 11Z) para que una instalación nueva quede idéntica.
+    {
+      slug: "muebles-cocina-funcionamiento",
+      title: "Cómo revisar el funcionamiento de puertas y cajones de los muebles de cocina",
+      content: `# Qué revisar
+
+Si las puertas y cajones de los muebles de cocina abren, cierran o deslizan correctamente.
+
+# Cómo revisarlo
+
+Abre y cierra cada puerta, y saca y guarda cada cajón que exista. Revisa solo los elementos que existan — no todas las cocinas tienen cajones o puertas en todos sus muebles.
+
+# Qué debería verse
+
+Puertas que abren y cierran sin forzar ni rozar. Cajones que corren de forma pareja, sin trabarse a mitad de camino.
+
+# Qué señales pueden indicar un problema
+
+- Una puerta que roza el mueble vecino o el piso al abrir.
+- Una puerta que no cierra del todo o que se abre sola.
+- Un cajón que se traba, se sale de su riel o cuesta mucho abrir/cerrar.
+
+# Por qué importa
+
+Un mecanismo que no opera bien puede empeorar con el uso diario y suele ser más fácil de ajustar cuanto antes se detecta.
+
+# Recomendación
+
+Registra qué puerta o cajón específico falla, con una foto si es posible. No es necesario ajustar ni desarmar nada tú mismo.
+
+# Fuente
+
+- Criterio interno del proyecto, mismo estándar ya usado en Puerta ("¿Cierra correctamente?") y Ventana. El Manual de Tolerancias (cap. 22, Muebles Incorporados) no mide funcionamiento — solo alineación dimensional con instrumento.`,
+    },
+    {
+      slug: "muebles-cocina-fijacion",
+      title: "Cómo revisar la fijación y estabilidad de los muebles de cocina",
+      content: `# Qué revisar
+
+Si los muebles de cocina se sienten firmes y bien sujetos a la pared o al piso, sin moverse.
+
+# Cómo revisarlo
+
+Observa el mueble y tócalo suavemente con la mano (un empujón leve, sin forzar). Presta especial atención a los muebles aéreos (los que están sobre la altura de la cabeza), donde un mal anclaje es más riesgoso.
+
+# Qué debería verse
+
+El mueble no se mueve ni se balancea al tocarlo levemente. No hay separación visible entre el mueble y la pared donde debería estar fijo.
+
+# Qué señales pueden indicar un problema
+
+- El mueble se mueve o balancea al tocarlo con suavidad.
+- Se ve una separación entre el mueble y el muro donde debería estar anclado.
+- Un mueble aéreo que se ve inclinado o más bajo de un lado.
+
+# Por qué importa
+
+Un mueble mal fijado — sobre todo uno aéreo, sobre la cabeza — es un riesgo real de caída, no solo un defecto estético.
+
+# Recomendación
+
+No te cuelgues del mueble, no apliques fuerza excesiva y no intentes desarmarlo ni retirar sus fijaciones. Si notas movimiento, regístralo con foto y descríbelo — no te acerques con la cabeza debajo de un mueble aéreo que sospechas suelto.
+
+# Fuente
+
+- Criterio interno del proyecto. El Manual de Tolerancias (cap. 22) no incluye ningún criterio de fijación o estabilidad estructural.`,
+    },
+    {
+      slug: "muebles-cocina-danos-visibles",
+      title: "Cómo revisar daños visibles en los muebles de cocina",
+      content: `# Qué revisar
+
+Si los muebles de cocina presentan golpes, quiebres, rayas profundas u otros daños visibles.
+
+# Cómo revisarlo
+
+Recorre visualmente los muebles con buena luz, observando puertas, cajones y costados.
+
+# Qué debería verse
+
+Superficies sin golpes que expongan el material base, sin piezas quebradas o faltantes, sin rayas profundas que se sientan al pasar la uña.
+
+# Qué señales pueden indicar un problema
+
+- Un golpe que dejó una marca visible o expuso el material base.
+- Una pieza quebrada, astillada o faltante.
+- Una raya profunda (se siente al pasar la uña, no solo se ve).
+
+Las vetas naturales de la madera, pequeñas diferencias de brillo según el ángulo de luz o leves diferencias de tono entre piezas NO son un defecto — son variación normal del material.
+
+# Por qué importa
+
+Un daño visible ya presente en la entrega no va a mejorar con el tiempo, y conviene dejarlo documentado.
+
+# Recomendación
+
+Registra el mueble y la zona específica con una foto clara. No es necesario que evalúes si el daño se puede reparar.
+
+# Fuente
+
+- Criterio interno del proyecto. El Manual de Tolerancias (cap. 22) no incluye ningún criterio sobre daños visibles.`,
+    },
+    {
+      slug: "cubierta-meson-fijacion",
+      title: "Cómo revisar la fijación y estabilidad de la cubierta o mesón",
+      content: `# Qué revisar
+
+Si la cubierta o mesón de la cocina se ve firme y bien fijada, sin moverse.
+
+# Cómo revisarlo
+
+Observa la cubierta y tócala suavemente con la mano en distintos puntos, especialmente cerca de los bordes y las uniones con los muebles.
+
+# Qué debería verse
+
+La cubierta no se mueve ni se balancea al tocarla levemente, y no hay separación visible entre la cubierta y los muebles o el muro donde debería apoyarse.
+
+# Qué señales pueden indicar un problema
+
+- La cubierta se mueve o cede al presionarla suavemente.
+- Se ve una separación entre la cubierta y los muebles o el muro de apoyo.
+
+# Por qué importa
+
+Una cubierta mal fijada puede indicar un problema en su soporte y empeorar con el uso normal (apoyar objetos, cocinar).
+
+# Recomendación
+
+No apliques fuerza excesiva ni te apoyes con todo tu peso para probarla. Si notas movimiento, regístralo con foto.
+
+# Fuente
+
+- Criterio interno del proyecto. El Manual de Tolerancias (cap. 22) da solo la horizontalidad dimensional de la superficie (1 mm por metro lineal, verificable con nivel), no un criterio de fijación.`,
+    },
+    {
+      slug: "cubierta-meson-danos-sellos",
+      title: "Cómo revisar daños y sellos de la cubierta o mesón",
+      content: `# Qué revisar
+
+Si la cubierta o mesón presenta daños visibles, o si el sello (silicona o masilla) en su encuentro con el muro se ve continuo, sin separaciones ni grietas.
+
+# Cómo revisarlo
+
+Recorre visualmente la cubierta con buena luz, observando la superficie y el borde donde se encuentra con el muro.
+
+# Qué debería verse
+
+Superficie sin golpes, rayas profundas ni quiebres. El sello con el muro se ve continuo en todo su largo visible, sin cortes ni separaciones.
+
+# Qué señales pueden indicar un problema
+
+- Un golpe, quiebre o raya profunda en la superficie de la cubierta.
+- Una separación o grieta visible en el sello entre la cubierta y el muro.
+
+# Por qué importa
+
+Un daño en la cubierta es un defecto visible y de uso diario. Una separación en el sello con el muro puede dejar pasar agua hacia zonas que no deberían mojarse — conviene documentarlo aunque hoy se vea seco.
+
+# Recomendación
+
+Registra el sector específico con una foto. No intentes resellar ni reparar nada tú mismo.
+
+# Fuente
+
+- Criterio interno del proyecto. El Manual de Tolerancias (cap. 22) no menciona sellos ni encuentros cubierta-muro — el criterio del sello es una analogía con el ya usado en Ventana (sello marco-muro), declarada explícitamente como criterio interno, no como respaldo del Manual de Cocina.`,
     },
   ];
 
