@@ -177,6 +177,24 @@ export const SPACE_LEVEL2_CONFIG: Record<string, SpaceConfigurableComponent[]> =
       section: "EQUIPAMIENTO DEL RECINTO",
       order: 16,
     },
+    // Fase 11AF — Cocina Lote D (docs/FASE11AF_INFORME_COCINA_LOTE_D.md),
+    // cerrado técnicamente en Fase 11AE
+    // (docs/FASE11AE_CIERRE_TECNICO_LAVAPLATOS_COCINA.md). Primer
+    // componente de la sección "AGUA Y DESAGÜE" — aparece por primera vez
+    // porque, por primera vez, tiene una decisión real que agrupar.
+    // Grifería/Fugas/Fijación/Sello NO son componentes propios — viven
+    // como checklist dentro del único InspectionElement "lavaplatos",
+    // mismo patrón ya usado para Cubierta dentro de Muebles (11AC/11AD):
+    // no requiere ningún cambio al motor de protección de datos, porque
+    // esos checks quedan protegidos automáticamente al vivir en el mismo
+    // InspectionElement que su padre.
+    {
+      componentKey: "lavaplatos",
+      label: "Lavaplatos",
+      question: "¿La cocina tiene lavaplatos instalado?",
+      section: "AGUA Y DESAGÜE",
+      order: 17,
+    },
   ],
 };
 
