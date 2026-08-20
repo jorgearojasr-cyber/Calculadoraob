@@ -393,6 +393,61 @@ export const SPACE_LEVEL2_CONFIG: Record<string, SpaceConfigurableComponent[]> =
       order: 12,
     },
   ],
+  // Fase 14A (docs/FASE14A_IMPLEMENTACION_QA_LIVING_COMEDOR_SEPARADOS_V1.md)
+  // — mismo patrón exacto de Living-comedor (13A): cierra la brecha de
+  // paridad de Cielo/Iluminación (vínculo nuevo, ver
+  // fase14a-living-comedor-separados-v1.ts) y habilita las 3
+  // terminaciones ya usadas por Cocina/Baño/Dormitorio/Living-comedor,
+  // sin ningún componente nuevo. Sin Puerta — `living` no la tenía como
+  // base y no hay evidencia de que deba tenerla.
+  living: [
+    {
+      componentKey: "revestimiento-ceramico-piso",
+      label: "Revestimiento cerámico de piso",
+      question: "¿El piso es de cerámica o porcelanato?",
+      section: "TERMINACIONES",
+      order: 10,
+    },
+    {
+      componentKey: "pintura-muro",
+      label: "Pintura de muro",
+      question: "¿Los muros tienen pintura?",
+      section: "TERMINACIONES",
+      order: 11,
+    },
+    {
+      componentKey: "revestimiento-ceramico-muro",
+      label: "Revestimiento cerámico de muro",
+      question: "¿Los muros tienen revestimiento cerámico o porcelanato?",
+      section: "TERMINACIONES",
+      order: 12,
+    },
+  ],
+  // Fase 14A — mismo criterio exacto que `living` (mismo patrón, mismo
+  // lote, mismo script). Sin Puerta — `comedor` no la tenía como base.
+  comedor: [
+    {
+      componentKey: "revestimiento-ceramico-piso",
+      label: "Revestimiento cerámico de piso",
+      question: "¿El piso es de cerámica o porcelanato?",
+      section: "TERMINACIONES",
+      order: 10,
+    },
+    {
+      componentKey: "pintura-muro",
+      label: "Pintura de muro",
+      question: "¿Los muros tienen pintura?",
+      section: "TERMINACIONES",
+      order: 11,
+    },
+    {
+      componentKey: "revestimiento-ceramico-muro",
+      label: "Revestimiento cerámico de muro",
+      question: "¿Los muros tienen revestimiento cerámico o porcelanato?",
+      section: "TERMINACIONES",
+      order: 12,
+    },
+  ],
 };
 
 // Fase 11AA — señal de compatibilidad histórica a nivel de RECINTO
@@ -426,6 +481,12 @@ export const SPACE_LEVEL2_HISTORICAL_ANCHOR: Record<string, string> = {
   // no tiene "cielo" (confirmado por auditoría read-only antes de
   // implementar), y todo Living-comedor V1 nuevo lo tendrá como base.
   "living-comedor": "cielo",
+  // Fase 14A — mismo criterio: los históricos reales de `living` (2) y
+  // `comedor` (1) no tienen "cielo" (confirmado por auditoría read-only
+  // antes de implementar), y todo Living/Comedor V1 nuevo lo tendrá
+  // como base.
+  living: "cielo",
+  comedor: "cielo",
 };
 
 export function getConfigurableComponents(spaceTemplateKey: string | null | undefined): SpaceConfigurableComponent[] {
