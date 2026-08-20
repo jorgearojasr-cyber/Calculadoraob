@@ -549,6 +549,70 @@ export const SPACE_LEVEL2_CONFIG: Record<string, SpaceConfigurableComponent[]> =
       order: 10,
     },
   ],
+  // Fase 16A (docs/FASE16A_IMPLEMENTACION_QA_LOGIA_LAVANDERIA_V1.md) —
+  // único recinto pendiente que quedó clasificado COMPLEJO en el barrido de
+  // 15A (0 elementos vinculados, 0 checks generados). Base nueva (piso,
+  // muros, enchufes-interruptores, cielo, iluminacion) agregada por vínculo
+  // de catálogo (fase16a-logia-lavanderia-v1.ts), NO acá. Ventana y Puerta
+  // se agregan como Level 2 reutilizadas (sin vínculo base, mismo patrón de
+  // Puerta en Cocina, Fase 11AA) — no hay evidencia de que toda Logia/
+  // Lavandería tenga puerta o ventana propia. 2 componentes nuevos de
+  // catálogo (sección AGUA Y DESAGÜE): `conexion-lavadora` (punto de agua/
+  // desagüe para el electrodoméstico) y `lavadero` (pileta fija del
+  // recinto) — evaluados contra Lavaplatos/Lavamanos y descartados como
+  // reutilización directa por tener semántica propia (ver informe 16A,
+  // sección 3).
+  "logia-lavanderia": [
+    {
+      componentKey: "revestimiento-ceramico-piso",
+      label: "Revestimiento cerámico de piso",
+      question: "¿El piso es de cerámica o porcelanato?",
+      section: "TERMINACIONES",
+      order: 10,
+    },
+    {
+      componentKey: "pintura-muro",
+      label: "Pintura de muro",
+      question: "¿Los muros tienen pintura?",
+      section: "TERMINACIONES",
+      order: 11,
+    },
+    {
+      componentKey: "revestimiento-ceramico-muro",
+      label: "Revestimiento cerámico de muro",
+      question: "¿Los muros tienen revestimiento cerámico o porcelanato?",
+      section: "TERMINACIONES",
+      order: 12,
+    },
+    {
+      componentKey: "ventana",
+      label: "Ventana",
+      question: "¿La logia/lavandería tiene ventana?",
+      section: "EQUIPAMIENTO DEL RECINTO",
+      order: 13,
+    },
+    {
+      componentKey: "puerta",
+      label: "Puerta",
+      question: "¿La logia/lavandería tiene puerta?",
+      section: "EQUIPAMIENTO DEL RECINTO",
+      order: 14,
+    },
+    {
+      componentKey: "conexion-lavadora",
+      label: "Conexión de lavadora",
+      question: "¿La logia/lavandería tiene conexión (punto de agua y desagüe) para lavadora?",
+      section: "AGUA Y DESAGÜE",
+      order: 15,
+    },
+    {
+      componentKey: "lavadero",
+      label: "Lavadero / Pileta",
+      question: "¿La logia/lavandería tiene lavadero o pileta instalado?",
+      section: "AGUA Y DESAGÜE",
+      order: 16,
+    },
+  ],
 };
 
 // Fase 11AA — señal de compatibilidad histórica a nivel de RECINTO
@@ -599,6 +663,12 @@ export const SPACE_LEVEL2_HISTORICAL_ANCHOR: Record<string, string> = {
   // aplica (no hay retro-onboarding posible sin una brecha de base).
   "recinto-ampliado": "cielo",
   "terraza-cerrada": "cielo",
+  // Fase 16A — mismo criterio: "cielo" pasa a ser BASE nueva de
+  // `logia-lavanderia` en este mismo lote (fase16a-logia-lavanderia-v1.ts).
+  // Sin espacios reales existentes (0 históricos) — ancla trivialmente
+  // segura, agregada por consistencia con el resto del catálogo, no porque
+  // exista un riesgo real que mitigar.
+  "logia-lavanderia": "cielo",
 };
 
 export function getConfigurableComponents(spaceTemplateKey: string | null | undefined): SpaceConfigurableComponent[] {
