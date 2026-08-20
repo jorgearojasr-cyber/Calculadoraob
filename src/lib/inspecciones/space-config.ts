@@ -66,7 +66,20 @@ export type SpaceConfigurableComponent = {
 };
 
 export const SPACE_LEVEL2_CONFIG: Record<string, SpaceConfigurableComponent[]> = {
-  antejardin: [{ componentKey: "reja", label: "Reja", question: "¿Tiene reja?" }],
+  // Fase 17A (docs/FASE17A_CIERRE_FUNCIONAL_GLOBAL_INSPECCIONES.md) — el
+  // recinto solo tenía Fachada+Reja, sin ninguna revisión de la superficie
+  // del propio antejardín. Se agrega Iluminación exterior reutilizada (sin
+  // catálogo nuevo) como opcional — no todo antejardín tiene luminaria
+  // instalada.
+  antejardin: [
+    { componentKey: "reja", label: "Reja", question: "¿Tiene reja?" },
+    {
+      componentKey: "iluminacion",
+      label: "Iluminación exterior",
+      question: "¿El antejardín tiene iluminación exterior instalada?",
+      order: 10,
+    },
+  ],
   "acceso-vehicular": [
     {
       componentKey: "porton",
@@ -507,48 +520,9 @@ export const SPACE_LEVEL2_CONFIG: Record<string, SpaceConfigurableComponent[]> =
       order: 12,
     },
   ],
-  // Fase 15A — `terraza` es un espacio EXTERIOR ABIERTO (a diferencia de
-  // `terraza-cerrada`): deliberadamente SIN Cielo/Iluminación/Enchufes
-  // (no hay techo ni corresponde asumir instalación eléctrica). Solo se
-  // habilitan las 3 terminaciones ya usadas en el resto del catálogo —
-  // sin cambios de base. Sin históricos reales existentes.
-  terraza: [
-    {
-      componentKey: "revestimiento-ceramico-piso",
-      label: "Revestimiento cerámico de piso",
-      question: "¿El piso es de cerámica o porcelanato?",
-      section: "TERMINACIONES",
-      order: 10,
-    },
-    {
-      componentKey: "pintura-muro",
-      label: "Pintura de muro",
-      question: "¿Los muros tienen pintura?",
-      section: "TERMINACIONES",
-      order: 11,
-    },
-    {
-      componentKey: "revestimiento-ceramico-muro",
-      label: "Revestimiento cerámico de muro",
-      question: "¿Los muros tienen revestimiento cerámico o porcelanato?",
-      section: "TERMINACIONES",
-      order: 12,
-    },
-  ],
-  // Fase 15A — `patio-trasero` es un espacio EXTERIOR ABIERTO cuya base
-  // solo incluye Piso (sin Muros) — no corresponde `pintura-muro` ni
-  // `revestimiento-ceramico-muro` (no hay muros que revestir en este
-  // recinto). Solo se habilita la terminación de piso. Sin históricos
-  // reales existentes.
-  "patio-trasero": [
-    {
-      componentKey: "revestimiento-ceramico-piso",
-      label: "Revestimiento cerámico de piso",
-      question: "¿El piso es de cerámica o porcelanato?",
-      section: "TERMINACIONES",
-      order: 10,
-    },
-  ],
+  // Fase 15A — `terraza` y `patio-trasero` son espacios EXTERIORES
+  // ABIERTOS. Rediseñados en Fase 17A (ver bloques más abajo) — bloques
+  // originales de 15A retirados de aquí para evitar claves duplicadas.
   // Fase 16A (docs/FASE16A_IMPLEMENTACION_QA_LOGIA_LAVANDERIA_V1.md) —
   // único recinto pendiente que quedó clasificado COMPLEJO en el barrido de
   // 15A (0 elementos vinculados, 0 checks generados). Base nueva (piso,
@@ -613,6 +587,180 @@ export const SPACE_LEVEL2_CONFIG: Record<string, SpaceConfigurableComponent[]> =
       order: 16,
     },
   ],
+  // Fase 17A — Bodega solo tenía 1 check propio (candado/puerta), sin
+  // ninguna revisión de sus superficies. Se agrega la misma base "recinto
+  // interior cerrado" ya usada 7 veces en el catálogo (piso/muros/cielo/
+  // enchufes/iluminacion, ver script fase17a) — una bodega es un recinto
+  // techado con puerta propia, misma categoría funcional. Las 3
+  // terminaciones se habilitan como Level 2 opcional, sin catálogo nuevo.
+  bodega: [
+    {
+      componentKey: "revestimiento-ceramico-piso",
+      label: "Revestimiento cerámico de piso",
+      question: "¿El piso es de cerámica o porcelanato?",
+      section: "TERMINACIONES",
+      order: 10,
+    },
+    {
+      componentKey: "pintura-muro",
+      label: "Pintura de muro",
+      question: "¿Los muros tienen pintura?",
+      section: "TERMINACIONES",
+      order: 11,
+    },
+    {
+      componentKey: "revestimiento-ceramico-muro",
+      label: "Revestimiento cerámico de muro",
+      question: "¿Los muros tienen revestimiento cerámico o porcelanato?",
+      section: "TERMINACIONES",
+      order: 12,
+    },
+  ],
+  // Fase 17A — Estacionamiento solo tenía 1 check (demarcación/pavimento).
+  // Se agrega Piso como base (ver script — reutilizado, mismo criterio ya
+  // usado en Patio trasero para superficies exteriores). Cielo/Iluminación/
+  // Enchufes quedan opcionales porque un estacionamiento puede ser abierto
+  // o techado — no se fuerza ninguno como base sin evidencia.
+  estacionamiento: [
+    {
+      componentKey: "cielo",
+      label: "Cielo / Techumbre",
+      question: "¿El estacionamiento es techado o cubierto?",
+      section: "EQUIPAMIENTO",
+      order: 10,
+    },
+    {
+      componentKey: "iluminacion",
+      label: "Iluminación",
+      question: "¿El estacionamiento tiene iluminación instalada?",
+      section: "EQUIPAMIENTO",
+      order: 11,
+    },
+    {
+      componentKey: "enchufes-interruptores",
+      label: "Enchufes e interruptores",
+      question: "¿El estacionamiento tiene enchufes o interruptores instalados?",
+      section: "EQUIPAMIENTO",
+      order: 12,
+    },
+  ],
+  // Fase 17A — Patio trasero solo tenía Piso como base y una terminación
+  // Level 2. Es un espacio EXTERIOR ABIERTO (igual que `terraza`) — no se
+  // fuerza Muros como base porque no todo patio trasero tiene cierres
+  // perimetrales propios del inmueble; se habilita como opcional, con sus
+  // 2 terminaciones dependientes (mismo patrón independiente ya usado en
+  // el resto del catálogo). Iluminación/Enchufes exteriores opcionales.
+  "patio-trasero": [
+    {
+      componentKey: "revestimiento-ceramico-piso",
+      label: "Revestimiento cerámico de piso",
+      question: "¿El piso es de cerámica o porcelanato?",
+      section: "TERMINACIONES",
+      order: 10,
+    },
+    {
+      componentKey: "muros",
+      label: "Muros / Cierres perimetrales",
+      question: "¿El patio trasero tiene muros o cierres perimetrales propios del inmueble?",
+      section: "EQUIPAMIENTO",
+      order: 11,
+    },
+    {
+      componentKey: "pintura-muro",
+      label: "Pintura de muro",
+      question: "¿Los muros tienen pintura?",
+      section: "TERMINACIONES",
+      order: 12,
+    },
+    {
+      componentKey: "revestimiento-ceramico-muro",
+      label: "Revestimiento cerámico de muro",
+      question: "¿Los muros tienen revestimiento cerámico o porcelanato?",
+      section: "TERMINACIONES",
+      order: 13,
+    },
+    {
+      componentKey: "iluminacion",
+      label: "Iluminación exterior",
+      question: "¿El patio trasero tiene iluminación exterior instalada?",
+      section: "EQUIPAMIENTO",
+      order: 14,
+    },
+    {
+      componentKey: "enchufes-interruptores",
+      label: "Enchufes exteriores",
+      question: "¿El patio trasero tiene enchufes exteriores instalados?",
+      section: "EQUIPAMIENTO",
+      order: 15,
+    },
+  ],
+  // Fase 17A — `terraza` tenía Muros y Ventana forzados como base pese a
+  // ser un espacio EXTERIOR ABIERTO (misma naturaleza que `patio-trasero`,
+  // que correctamente nunca los tuvo como base) — inconsistencia detectada
+  // en la auditoría global. Se convierten a Level 2 opcional (gateados en
+  // LEVEL2_GATED_LINKS, ver actions.ts) sin históricos reales que proteger
+  // (0 espacios `terraza` existentes). Se agrega además `baranda` (Level 2
+  // nuevo, catálogo nuevo — ver script) por ser un elemento de seguridad
+  // real y distinto de Muros en una terraza elevada, e Iluminación/
+  // Enchufes exteriores reutilizados.
+  terraza: [
+    {
+      componentKey: "revestimiento-ceramico-piso",
+      label: "Revestimiento cerámico de piso",
+      question: "¿El piso es de cerámica o porcelanato?",
+      section: "TERMINACIONES",
+      order: 10,
+    },
+    {
+      componentKey: "muros",
+      label: "Muros",
+      question: "¿La terraza tiene muros propios del inmueble?",
+      section: "EQUIPAMIENTO",
+      order: 11,
+    },
+    {
+      componentKey: "pintura-muro",
+      label: "Pintura de muro",
+      question: "¿Los muros tienen pintura?",
+      section: "TERMINACIONES",
+      order: 12,
+    },
+    {
+      componentKey: "revestimiento-ceramico-muro",
+      label: "Revestimiento cerámico de muro",
+      question: "¿Los muros tienen revestimiento cerámico o porcelanato?",
+      section: "TERMINACIONES",
+      order: 13,
+    },
+    {
+      componentKey: "ventana",
+      label: "Ventana / Ventanal de acceso",
+      question: "¿La terraza tiene ventana o ventanal de acceso?",
+      section: "EQUIPAMIENTO",
+      order: 14,
+    },
+    {
+      componentKey: "baranda",
+      label: "Baranda",
+      question: "¿La terraza tiene baranda instalada?",
+      section: "EQUIPAMIENTO",
+      order: 15,
+    },
+    {
+      componentKey: "iluminacion",
+      label: "Iluminación exterior",
+      question: "¿La terraza tiene iluminación exterior instalada?",
+      section: "EQUIPAMIENTO",
+      order: 16,
+    },
+    {
+      componentKey: "enchufes-interruptores",
+      label: "Enchufes exteriores",
+      question: "¿La terraza tiene enchufes exteriores instalados?",
+      section: "EQUIPAMIENTO",
+      order: 17,
+    },
+  ],
 };
 
 // Fase 11AA — señal de compatibilidad histórica a nivel de RECINTO
@@ -669,6 +817,23 @@ export const SPACE_LEVEL2_HISTORICAL_ANCHOR: Record<string, string> = {
   // segura, agregada por consistencia con el resto del catálogo, no porque
   // exista un riesgo real que mitigar.
   "logia-lavanderia": "cielo",
+  // Fase 17A — mismo criterio: "cielo" pasa a ser BASE nueva de `bodega`
+  // (script fase17a). El único espacio real de bodega no lo tiene, por lo
+  // que queda correctamente clasificado como histórico.
+  bodega: "cielo",
+  // Fase 17A — "cielo" no es BASE en estacionamiento (queda Level 2,
+  // "¿es techado?"), por lo que no sirve de ancla ahí. Se usa "piso"
+  // (BASE nueva) como ancla — 0 espacios reales existentes, trivialmente
+  // segura.
+  estacionamiento: "piso",
+  // Fase 17A — "piso" pasa a ser BASE nueva de `antejardin` (script
+  // fase17a). Los 3 espacios reales existentes no lo tienen, quedan
+  // correctamente clasificados como históricos (sin forzar resolución
+  // retroactiva de Reja/Iluminación).
+  antejardin: "piso",
+  // Fase 17A — mismo criterio: "piso" pasa a ser BASE nueva de
+  // `acceso-vehicular`. Los 2 espacios reales existentes no lo tienen.
+  "acceso-vehicular": "piso",
 };
 
 export function getConfigurableComponents(spaceTemplateKey: string | null | undefined): SpaceConfigurableComponent[] {

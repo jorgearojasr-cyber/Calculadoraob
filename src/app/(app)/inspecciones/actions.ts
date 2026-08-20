@@ -61,6 +61,11 @@ const LEVEL2_GATED_LINKS = new Set([
   "acceso-vehicular:porton",
   "cocina:ventana",
   "bano:artefactos-sanitarios",
+  // Fase 17A (docs/FASE17A_CIERRE_FUNCIONAL_GLOBAL_INSPECCIONES.md) —
+  // `terraza` es un espacio exterior abierto; Muros y Ventana pasan de
+  // base forzada a Level 2 opcional (sin históricos reales que proteger).
+  "terraza:muros",
+  "terraza:ventana",
 ]);
 
 export type CreateInspectionInput = {
