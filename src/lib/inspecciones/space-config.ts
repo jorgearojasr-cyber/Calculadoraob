@@ -363,6 +363,36 @@ export const SPACE_LEVEL2_CONFIG: Record<string, SpaceConfigurableComponent[]> =
       order: 13,
     },
   ],
+  // Fase 13A (docs/FASE13A_IMPLEMENTACION_QA_LIVING_COMEDOR_V1.md) — mismo
+  // patrón de Dormitorio (12B): solo cierra la brecha de paridad de
+  // Cielo/Iluminación (vínculo nuevo, ver fase13a-living-comedor-v1.ts) y
+  // habilita las 3 terminaciones ya usadas por Cocina/Baño/Dormitorio, sin
+  // ningún componente nuevo. No se agrega Puerta — Living-comedor no la
+  // tenía como base y no hay evidencia de que deba tenerla (sección 5 del
+  // enunciado de 13A).
+  "living-comedor": [
+    {
+      componentKey: "revestimiento-ceramico-piso",
+      label: "Revestimiento cerámico de piso",
+      question: "¿El piso es de cerámica o porcelanato?",
+      section: "TERMINACIONES",
+      order: 10,
+    },
+    {
+      componentKey: "pintura-muro",
+      label: "Pintura de muro",
+      question: "¿Los muros tienen pintura?",
+      section: "TERMINACIONES",
+      order: 11,
+    },
+    {
+      componentKey: "revestimiento-ceramico-muro",
+      label: "Revestimiento cerámico de muro",
+      question: "¿Los muros tienen revestimiento cerámico o porcelanato?",
+      section: "TERMINACIONES",
+      order: 12,
+    },
+  ],
 };
 
 // Fase 11AA — señal de compatibilidad histórica a nivel de RECINTO
@@ -392,6 +422,10 @@ export const SPACE_LEVEL2_HISTORICAL_ANCHOR: Record<string, string> = {
   // Dormitorios reales existentes hoy no lo tienen, por lo que quedan
   // correctamente clasificados como históricos sin ningún backfill.
   dormitorio: "cielo",
+  // Fase 13A — mismo criterio: el único Living-comedor real existente hoy
+  // no tiene "cielo" (confirmado por auditoría read-only antes de
+  // implementar), y todo Living-comedor V1 nuevo lo tendrá como base.
+  "living-comedor": "cielo",
 };
 
 export function getConfigurableComponents(spaceTemplateKey: string | null | undefined): SpaceConfigurableComponent[] {
