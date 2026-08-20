@@ -448,6 +448,107 @@ export const SPACE_LEVEL2_CONFIG: Record<string, SpaceConfigurableComponent[]> =
       order: 12,
     },
   ],
+  // Fase 15A (docs/FASE15A_BARRIDO_IMPLEMENTACION_QA_RECINTOS_SIMPLES_V1.md)
+  // — mismo patrón exacto de Dormitorio/Living-comedor/Living/Comedor:
+  // cierra la brecha de paridad de Cielo/Iluminación (vínculo nuevo, ver
+  // fase15a-recintos-simples-v1.ts) y habilita las 3 terminaciones ya
+  // usadas en el resto del catálogo. `recinto-ampliado` además carecía de
+  // Enchufes/interruptores (a diferencia de Dormitorio/Cocina/etc., que ya
+  // lo tenían como base) — se cierra en el mismo lote por ser la misma
+  // categoría de brecha (elemento siempre-presente en cualquier recinto
+  // habitable con puerta/ventana propias).
+  "recinto-ampliado": [
+    {
+      componentKey: "revestimiento-ceramico-piso",
+      label: "Revestimiento cerámico de piso",
+      question: "¿El piso es de cerámica o porcelanato?",
+      section: "TERMINACIONES",
+      order: 10,
+    },
+    {
+      componentKey: "pintura-muro",
+      label: "Pintura de muro",
+      question: "¿Los muros tienen pintura?",
+      section: "TERMINACIONES",
+      order: 11,
+    },
+    {
+      componentKey: "revestimiento-ceramico-muro",
+      label: "Revestimiento cerámico de muro",
+      question: "¿Los muros tienen revestimiento cerámico o porcelanato?",
+      section: "TERMINACIONES",
+      order: 12,
+    },
+  ],
+  // Fase 15A — mismo criterio exacto que `recinto-ampliado` (misma brecha:
+  // recinto cerrado con puerta/ventana propias, sin Enchufes/Cielo/
+  // Iluminación como base). Sin históricos reales que proteger (0 espacios
+  // `terraza-cerrada` existentes al momento de implementar).
+  "terraza-cerrada": [
+    {
+      componentKey: "revestimiento-ceramico-piso",
+      label: "Revestimiento cerámico de piso",
+      question: "¿El piso es de cerámica o porcelanato?",
+      section: "TERMINACIONES",
+      order: 10,
+    },
+    {
+      componentKey: "pintura-muro",
+      label: "Pintura de muro",
+      question: "¿Los muros tienen pintura?",
+      section: "TERMINACIONES",
+      order: 11,
+    },
+    {
+      componentKey: "revestimiento-ceramico-muro",
+      label: "Revestimiento cerámico de muro",
+      question: "¿Los muros tienen revestimiento cerámico o porcelanato?",
+      section: "TERMINACIONES",
+      order: 12,
+    },
+  ],
+  // Fase 15A — `terraza` es un espacio EXTERIOR ABIERTO (a diferencia de
+  // `terraza-cerrada`): deliberadamente SIN Cielo/Iluminación/Enchufes
+  // (no hay techo ni corresponde asumir instalación eléctrica). Solo se
+  // habilitan las 3 terminaciones ya usadas en el resto del catálogo —
+  // sin cambios de base. Sin históricos reales existentes.
+  terraza: [
+    {
+      componentKey: "revestimiento-ceramico-piso",
+      label: "Revestimiento cerámico de piso",
+      question: "¿El piso es de cerámica o porcelanato?",
+      section: "TERMINACIONES",
+      order: 10,
+    },
+    {
+      componentKey: "pintura-muro",
+      label: "Pintura de muro",
+      question: "¿Los muros tienen pintura?",
+      section: "TERMINACIONES",
+      order: 11,
+    },
+    {
+      componentKey: "revestimiento-ceramico-muro",
+      label: "Revestimiento cerámico de muro",
+      question: "¿Los muros tienen revestimiento cerámico o porcelanato?",
+      section: "TERMINACIONES",
+      order: 12,
+    },
+  ],
+  // Fase 15A — `patio-trasero` es un espacio EXTERIOR ABIERTO cuya base
+  // solo incluye Piso (sin Muros) — no corresponde `pintura-muro` ni
+  // `revestimiento-ceramico-muro` (no hay muros que revestir en este
+  // recinto). Solo se habilita la terminación de piso. Sin históricos
+  // reales existentes.
+  "patio-trasero": [
+    {
+      componentKey: "revestimiento-ceramico-piso",
+      label: "Revestimiento cerámico de piso",
+      question: "¿El piso es de cerámica o porcelanato?",
+      section: "TERMINACIONES",
+      order: 10,
+    },
+  ],
 };
 
 // Fase 11AA — señal de compatibilidad histórica a nivel de RECINTO
@@ -487,6 +588,17 @@ export const SPACE_LEVEL2_HISTORICAL_ANCHOR: Record<string, string> = {
   // como base.
   living: "cielo",
   comedor: "cielo",
+  // Fase 15A — mismo criterio: "cielo" pasa a ser BASE nueva de
+  // `recinto-ampliado`/`terraza-cerrada` en este mismo lote
+  // (fase15a-recintos-simples-v1.ts). El único `recinto-ampliado` real
+  // existente hoy no lo tiene (confirmado por auditoría read-only antes
+  // de implementar); `terraza-cerrada` no tiene ningún espacio real
+  // existente (ancla trivialmente segura). `terraza`/`patio-trasero` NO
+  // llevan ancla — no se les agrega ningún componente base nuevo en esta
+  // fase, solo Level 2 de terminaciones, así que el mecanismo de ancla no
+  // aplica (no hay retro-onboarding posible sin una brecha de base).
+  "recinto-ampliado": "cielo",
+  "terraza-cerrada": "cielo",
 };
 
 export function getConfigurableComponents(spaceTemplateKey: string | null | undefined): SpaceConfigurableComponent[] {
