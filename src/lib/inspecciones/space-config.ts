@@ -322,6 +322,47 @@ export const SPACE_LEVEL2_CONFIG: Record<string, SpaceConfigurableComponent[]> =
       order: 21,
     },
   ],
+  // Fase 12B (docs/FASE12B_IMPLEMENTACION_LOCAL_DORMITORIO_V1.md),
+  // diseño canónico en docs/FASE12A_DISENO_INTEGRAL_DORMITORIO_V1.md.
+  // Ventana y Puerta permanecen BASE (sin cambios, ver sección G/H de
+  // 12A) — Dormitorio ya las genera automáticamente desde antes de esta
+  // fase, y no hay evidencia de que deban ser opcionales. Cielo e
+  // Iluminación se agregan como BASE nueva (vínculo de catálogo, ver
+  // fase12b-dormitorio-v1.ts), NO acá — no son Nivel 2, cierran una
+  // brecha de paridad con Cocina/Baño que sí las tenían desde su
+  // respectivo Lote A.
+  dormitorio: [
+    {
+      componentKey: "revestimiento-ceramico-piso",
+      label: "Revestimiento cerámico de piso",
+      question: "¿El piso es de cerámica o porcelanato?",
+      section: "TERMINACIONES",
+      order: 10,
+    },
+    {
+      componentKey: "pintura-muro",
+      label: "Pintura de muro",
+      question: "¿Los muros tienen pintura?",
+      section: "TERMINACIONES",
+      order: 11,
+    },
+    {
+      componentKey: "revestimiento-ceramico-muro",
+      label: "Revestimiento cerámico de muro",
+      question: "¿Los muros tienen revestimiento cerámico o porcelanato?",
+      section: "TERMINACIONES",
+      order: 12,
+    },
+    // Único componente nuevo de Dormitorio V1 (sección K de 12A) — 4
+    // checks, sin metadata, sin dependencia de ningún otro componente.
+    {
+      componentKey: "closet",
+      label: "Clóset / Armario empotrado",
+      question: "¿El dormitorio tiene clóset o armario empotrado instalado?",
+      section: "EQUIPAMIENTO DEL RECINTO",
+      order: 13,
+    },
+  ],
 };
 
 // Fase 11AA — señal de compatibilidad histórica a nivel de RECINTO
@@ -346,6 +387,11 @@ export const SPACE_LEVEL2_HISTORICAL_ANCHOR: Record<string, string> = {
   // espacios de Baño reales existentes hoy no tienen `cielo`, por lo que
   // quedan correctamente clasificados como históricos.
   bano: "cielo",
+  // Fase 12B — mismo criterio: "cielo" pasa a ser BASE nueva de
+  // Dormitorio en este mismo lote (fase12b-dormitorio-v1.ts), y los 6
+  // Dormitorios reales existentes hoy no lo tienen, por lo que quedan
+  // correctamente clasificados como históricos sin ningún backfill.
+  dormitorio: "cielo",
 };
 
 export function getConfigurableComponents(spaceTemplateKey: string | null | undefined): SpaceConfigurableComponent[] {
