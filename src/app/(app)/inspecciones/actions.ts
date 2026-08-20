@@ -45,7 +45,23 @@ const MAX_REPEATABLE_COUNT = 20;
 // Reja/Portón, que solo estaban vinculados a un único recinto cada uno,
 // así que un Set por key alcanzaba). El gate ahora es por el PAR
 // `spaceTemplate.key:elementTemplate.key`.
-const LEVEL2_GATED_LINKS = new Set(["antejardin:reja", "acceso-vehicular:porton", "cocina:ventana"]);
+// Fase 11AT (docs/FASE11AT_IMPLEMENTACION_LOCAL_BANO_LOTE_A.md) — mismo
+// criterio exacto que `cocina:ventana`: el vínculo de catálogo
+// `InspectionElementTemplateSpace` (bano<->artefactos-sanitarios) NO se
+// toca — permanece intacto para que los Baños históricos que ya lo
+// generaron sigan intactos. Este filtro es lo único que efectivamente
+// desacopla la generación automática para el código local: un Baño
+// nuevo, creado después de este cambio, nunca recibe
+// `artefactos-sanitarios` (queda reemplazado por los componentes Nivel 2
+// específicos de los lotes B-F); un Baño ya existente conserva el suyo
+// sin ningún cambio, porque el gate solo actúa en el momento de
+// generación de un caso nuevo, nunca en la lectura de uno ya creado.
+const LEVEL2_GATED_LINKS = new Set([
+  "antejardin:reja",
+  "acceso-vehicular:porton",
+  "cocina:ventana",
+  "bano:artefactos-sanitarios",
+]);
 
 export type CreateInspectionInput = {
   name: string;

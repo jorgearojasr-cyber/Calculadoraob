@@ -215,6 +215,113 @@ export const SPACE_LEVEL2_CONFIG: Record<string, SpaceConfigurableComponent[]> =
       order: 18,
     },
   ],
+  // Fase 11AT — Baño Lote A (docs/FASE11AT_IMPLEMENTACION_LOCAL_BANO_LOTE_A.md),
+  // arquitectura consolidada en docs/FASE11AS_CONSOLIDACION_CANONICA_BANO_V1.md.
+  // Fase 11AU (docs/FASE11AU_IMPLEMENTACION_LOCAL_BANO_V1_RESTANTE.md) agrega
+  // las 8 decisiones restantes (Extractor + 7 Artefactos sanitarios),
+  // cerradas técnicamente en 11AK-11AR — Baño V1 queda con sus 12
+  // decisiones Nivel 2 completas. Ninguna tiene `metaOptions`.
+  bano: [
+    {
+      componentKey: "revestimiento-ceramico-piso",
+      label: "Revestimiento cerámico de piso",
+      question: "¿El piso es de cerámica o porcelanato?",
+      section: "TERMINACIONES",
+      order: 10,
+    },
+    {
+      componentKey: "pintura-muro",
+      label: "Pintura de muro",
+      question: "¿Los muros tienen pintura?",
+      section: "TERMINACIONES",
+      order: 11,
+    },
+    {
+      componentKey: "revestimiento-ceramico-muro",
+      label: "Revestimiento cerámico de muro",
+      question: "¿Los muros tienen revestimiento cerámico o porcelanato?",
+      section: "TERMINACIONES",
+      order: 12,
+    },
+    {
+      componentKey: "ventana",
+      label: "Ventana",
+      question: "¿El baño tiene ventana?",
+      section: "EQUIPAMIENTO DEL RECINTO",
+      order: 13,
+    },
+    // Fase 11AU — Extractor de aire (docs/FASE11AK_CIERRE_TECNICO_EXTRACTOR_AIRE_BANO.md).
+    // Sin reutilizar `campana-extractor` de Cocina — contexto y checks
+    // distintos, confirmado explícitamente en el cierre técnico.
+    {
+      componentKey: "extractor-aire",
+      label: "Extractor de aire",
+      question: "¿El baño tiene extractor de aire instalado?",
+      section: "EQUIPAMIENTO DEL RECINTO",
+      order: 14,
+    },
+    // Fase 11AU — 7 componentes sanitarios (docs/FASE11AL a FASE11AR),
+    // sección ARTEFACTOS SANITARIOS. El componente agregado histórico
+    // `artefactos-sanitarios` queda gateado (LEVEL2_GATED_LINKS,
+    // "bano:artefactos-sanitarios") desde Fase 11AT — nunca coexiste con
+    // estos 7 en un Baño V1 nuevo.
+    {
+      componentKey: "wc",
+      label: "WC / Inodoro",
+      question: "¿El baño tiene inodoro instalado?",
+      section: "ARTEFACTOS SANITARIOS",
+      order: 15,
+    },
+    {
+      componentKey: "lavamanos",
+      label: "Lavamanos",
+      question: "¿El baño tiene lavamanos instalado?",
+      section: "ARTEFACTOS SANITARIOS",
+      order: 16,
+    },
+    {
+      componentKey: "ducha",
+      label: "Ducha",
+      question: "¿El baño tiene ducha instalada?",
+      section: "ARTEFACTOS SANITARIOS",
+      order: 17,
+    },
+    // `tina` order=18 antes que `mampara` order=19 — secuencia ya fijada
+    // en 11AJ/11AN, sin relación con el orden en que se cerraron
+    // técnicamente (Mampara se cerró en 11AO, antes que Tina en 11AP).
+    {
+      componentKey: "tina",
+      label: "Tina / Bañera",
+      question: "¿El baño tiene tina instalada?",
+      section: "ARTEFACTOS SANITARIOS",
+      order: 18,
+    },
+    {
+      componentKey: "mampara",
+      label: "Mampara",
+      question: "¿El baño tiene mampara instalada?",
+      section: "ARTEFACTOS SANITARIOS",
+      order: 19,
+    },
+    // Fase 11AQ corrigió la conclusión preliminar de 11AJ: Cubierta de
+    // baño requiere componente propio (independiente de Mueble), cerrado
+    // en 11AR. Mueble/Cubierta sin dependencia automática entre sí ni con
+    // Lavamanos.
+    {
+      componentKey: "mueble-bano",
+      label: "Mueble de baño / Vanitorio",
+      question: "¿El baño tiene mueble de baño o vanitorio instalado?",
+      section: "ARTEFACTOS SANITARIOS",
+      order: 20,
+    },
+    {
+      componentKey: "cubierta-bano",
+      label: "Cubierta de baño",
+      question: "¿El baño tiene cubierta o mesón instalado?",
+      section: "ARTEFACTOS SANITARIOS",
+      order: 21,
+    },
+  ],
 };
 
 // Fase 11AA — señal de compatibilidad histórica a nivel de RECINTO
@@ -232,6 +339,13 @@ export const SPACE_LEVEL2_CONFIG: Record<string, SpaceConfigurableComponent[]> =
 // (presencia/ausencia de un InspectionElement con ese elementTemplate.key).
 export const SPACE_LEVEL2_HISTORICAL_ANCHOR: Record<string, string> = {
   cocina: "cielo",
+  // Fase 11AT — mismo criterio y mismo elemento ancla que Cocina: "cielo"
+  // es (a) siempre-presente en cualquier Baño generado por el código
+  // nuevo (Lote A lo vincula como base), y (b) nunca existió en un Baño
+  // generado por el código viejo (100% nuevo en este lote) — los 5
+  // espacios de Baño reales existentes hoy no tienen `cielo`, por lo que
+  // quedan correctamente clasificados como históricos.
+  bano: "cielo",
 };
 
 export function getConfigurableComponents(spaceTemplateKey: string | null | undefined): SpaceConfigurableComponent[] {
