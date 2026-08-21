@@ -57,7 +57,10 @@ export default async function InspeccionResumenPage({ params }: { params: { id: 
         include: {
           photos: { orderBy: { createdAt: "asc" } },
           elements: {
-            orderBy: { order: "asc" },
+            // Fase 18A (DT-02) — ver mismo comentario en [id]/page.tsx:
+            // `id` desempata elementos históricos con `order=0` sin migrar
+            // datos.
+            orderBy: [{ order: "asc" }, { id: "asc" }],
             include: {
               photos: { orderBy: { createdAt: "asc" } },
               checks: {

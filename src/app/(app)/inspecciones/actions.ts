@@ -217,8 +217,20 @@ export async function createInspectionAndGenerateAction(
               // cualquier OTRO recinto que la use).
               if (LEVEL2_GATED_LINKS.has(`${template.key}:${link.elementTemplate.key}`)) continue;
 
+              // Fase 18A (DT-02) — `order` explícito y determinista desde
+              // InspectionElementTemplateSpace.order (fuente de verdad del
+              // catálogo, sin empates confirmados en ningún recinto activo
+              // — ver docs/FASE18A_...): antes quedaba en el default de
+              // esquema (0) para todo elemento base, indistinguible entre
+              // sí para el `orderBy` de la pantalla/PDF/resumen. No migra
+              // ningún elemento histórico ya creado.
               const element = await tx.inspectionElement.create({
-                data: { spaceId: space.id, elementTemplateId: link.elementTemplateId, name: link.elementTemplate.label },
+                data: {
+                  spaceId: space.id,
+                  elementTemplateId: link.elementTemplateId,
+                  name: link.elementTemplate.label,
+                  order: link.order,
+                },
               });
 
               const checklistItems = await tx.inspectionChecklistItem.findMany({

@@ -84,7 +84,12 @@ export default async function InspeccionDetallePage({
         // a preguntar).
         spaceTemplate: { select: { key: true } },
         elements: {
-          orderBy: { order: "asc" },
+          // Fase 18A (DT-02) — `order` ahora se asigna determinísticamente
+          // al generar (ver actions.ts), pero elementos históricos previos
+          // a esta fase quedaron en el default de esquema (0), indistintos
+          // entre sí; `id` (cuid, creado secuencialmente) es un
+          // desempate estable sin necesidad de migrar ninguna fila.
+          orderBy: [{ order: "asc" }, { id: "asc" }],
           include: {
             elementTemplate: { select: { key: true } },
             photos: { orderBy: { createdAt: "asc" } },
@@ -101,6 +106,11 @@ export default async function InspeccionDetallePage({
                 checklistItem: {
                   select: {
                     technicalArticleSlug: true,
+                    // Fase 18A (DT-01) — se necesita para inicializar el
+                    // selector de severidad de un hallazgo NUEVO con el
+                    // valor por defecto real del checklist, en vez de
+                    // forzar siempre "Media" (ver ObservationForm).
+                    defaultSeverity: true,
                     referenceImages: {
                       orderBy: { order: "asc" },
                       select: { id: true, kind: true, url: true, alt: true, caption: true },
@@ -167,6 +177,7 @@ export default async function InspeccionDetallePage({
               questionSnapshot: c.questionSnapshot,
               status: c.status,
               notApplicableReason: c.notApplicableReason,
+              defaultSeverity: c.checklistItem.defaultSeverity,
               technicalArticle: c.checklistItem.technicalArticleSlug
                 ? articleBySlug.get(c.checklistItem.technicalArticleSlug) ?? null
                 : null,

@@ -12,6 +12,7 @@ import {
 import { suggestObservationCommentAction } from "@/app/(app)/inspecciones/[id]/redaccion-actions";
 import { PhotoUpload } from "./photo-upload";
 import { TechnicalArticleLink } from "./technical-article-link";
+import { resolveInitialSeverity } from "@/lib/inspecciones/severity";
 import type { InspectionAnswerStatus, InspectionReferenceImageKind, InspectionSeverity } from "@/generated/prisma/client";
 
 const SEVERITY_LABELS: Record<InspectionSeverity, string> = {
@@ -74,6 +75,7 @@ export function ChecklistItemRow({
   questionSnapshot,
   initialStatus,
   initialNotApplicableReason,
+  defaultSeverity,
   initialObservations,
   technicalArticle,
   referenceImages,
@@ -86,6 +88,9 @@ export function ChecklistItemRow({
   // initialStatus === "NOT_APPLICABLE"; la Server Action garantiza null
   // en cualquier otro caso.
   initialNotApplicableReason: string | null;
+  // Fase 18A (DT-01) — severidad por defecto del catálogo (puede ser
+  // null). Solo inicializa el selector de un hallazgo NUEVO.
+  defaultSeverity: InspectionSeverity | null;
   initialObservations: ObservationDTO[];
   technicalArticle: {
     title: string;
@@ -393,6 +398,7 @@ export function ChecklistItemRow({
           <ObservationForm
             checkId={checkId}
             initial={null}
+            defaultSeverity={defaultSeverity}
             onSaved={(created) => {
               setObservations((prev) => [...prev, created]);
               setCreatingObservation(false);
@@ -439,6 +445,7 @@ export function ChecklistItemRow({
                     key={obs.id}
                     checkId={checkId}
                     initial={obs}
+                    defaultSeverity={defaultSeverity}
                     onSaved={(updated) => {
                       setObservations((prev) => prev.map((o) => (o.id === updated.id ? updated : o)));
                       setEditingObservationId(null);
@@ -468,6 +475,7 @@ export function ChecklistItemRow({
                 key={obs.id}
                 checkId={checkId}
                 initial={obs}
+                defaultSeverity={defaultSeverity}
                 onSaved={(updated) => {
                   setObservations((prev) => prev.map((o) => (o.id === updated.id ? updated : o)));
                   setEditingObservationId(null);
@@ -490,6 +498,7 @@ export function ChecklistItemRow({
             <ObservationForm
               checkId={checkId}
               initial={null}
+              defaultSeverity={defaultSeverity}
               onSaved={(created) => {
                 setObservations((prev) => [...prev, created]);
                 setShowAddForm(false);
@@ -799,16 +808,23 @@ function ObservationRow({
 function ObservationForm({
   checkId,
   initial,
+  defaultSeverity,
   onSaved,
   onCancel,
 }: {
   checkId: string;
   initial: ObservationDTO | null;
+  // Fase 18A (DT-01) — severidad por defecto del checklist item de este
+  // check (puede ser null: varios checks base no la declaran). Solo se
+  // usa para un hallazgo NUEVO (initial === null); un hallazgo ya
+  // guardado siempre respeta su propia severidad (initial.severity),
+  // nunca se resetea a este valor.
+  defaultSeverity: InspectionSeverity | null;
   onSaved: (observation: ObservationDTO) => void;
   onCancel: () => void;
 }) {
   const [comment, setComment] = useState(initial?.comment ?? "");
-  const [severity, setSeverity] = useState<InspectionSeverity>(initial?.severity ?? "MEDIUM");
+  const [severity, setSeverity] = useState<InspectionSeverity>(resolveInitialSeverity(initial?.severity, defaultSeverity));
   const [recommendation, setRecommendation] = useState(initial?.recommendation ?? "");
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();

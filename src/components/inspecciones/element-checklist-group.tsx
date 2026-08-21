@@ -3,7 +3,7 @@ import { ChecklistItemRow } from "./checklist-item-row";
 import { PhotoUpload, type InspectionPhotoItem } from "./photo-upload";
 import { computeProgress } from "@/lib/inspecciones/progress";
 import type { ObservationDTO } from "@/app/(app)/inspecciones/[id]/actions";
-import type { InspectionAnswerStatus, InspectionReferenceImageKind } from "@/generated/prisma/client";
+import type { InspectionAnswerStatus, InspectionReferenceImageKind, InspectionSeverity } from "@/generated/prisma/client";
 
 export type ElementChecklistData = {
   id: string;
@@ -17,6 +17,12 @@ export type ElementChecklistData = {
     // cuando status === "NOT_APPLICABLE"; en cualquier otro caso siempre
     // viene null (la Server Action lo garantiza).
     notApplicableReason: string | null;
+    // Fase 18A (DT-01) — severidad por defecto del InspectionChecklistItem
+    // (puede ser null: varios checks base — piso/muros/ventana/etc. — no
+    // declaran una). Se usa solo para inicializar el selector de un
+    // hallazgo NUEVO; nunca sobrescribe la severidad ya guardada de un
+    // hallazgo existente (ver ObservationForm en checklist-item-row.tsx).
+    defaultSeverity: InspectionSeverity | null;
     observations: ObservationDTO[];
     // Piloto Fase 5B — presente solo cuando el InspectionChecklistItem
     // tiene technicalArticleSlug Y ese slug resuelve a un TechnicalArticle
@@ -85,6 +91,7 @@ export function ElementChecklistGroup({ caseId, element }: { caseId: string; ele
             questionSnapshot={check.questionSnapshot}
             initialStatus={check.status}
             initialNotApplicableReason={check.notApplicableReason}
+            defaultSeverity={check.defaultSeverity}
             initialObservations={check.observations}
             technicalArticle={check.technicalArticle}
             referenceImages={check.referenceImages}
