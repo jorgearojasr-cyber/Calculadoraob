@@ -297,6 +297,17 @@ export async function deleteInspectionCaseAction(
   // fila hija a mano acá.
   await prisma.inspectionCase.delete({ where: { id: caseId } });
 
+  // Fase 20A (docs/FASE20A_INVESTIGACION_FORENSE_INCIDENTE_NEON.md) —
+  // observabilidad mínima: este es el ÚNICO camino de aplicación que
+  // borra un InspectionCase completo. Log server-side (sin tokens/
+  // cookies/secretos) para que, si vuelve a aparecer una BD vacía, se
+  // pueda saber qué acción y qué usuario la originó. `caseId` ya no
+  // resuelve a nada tras el delete, por eso se registra antes de perder
+  // la referencia.
+  console.log(
+    `[inspecciones] deleteInspectionCaseAction: userId=${session.user.id} caseId=${caseId} photosDeleted=${photos.length} at=${new Date().toISOString()}`
+  );
+
   revalidatePath("/inspecciones");
   return { success: true };
 }

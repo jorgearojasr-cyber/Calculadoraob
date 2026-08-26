@@ -141,6 +141,24 @@ const LENGUAJE_PRUDENTE =
   "No aparece dentro de los antecedentes adjuntos del Formulario 12.1 y permanece pendiente de validación profesional. Algunas Direcciones de Obras Municipales podrían solicitarlo igualmente según el caso.";
 
 export async function seedRegularizationDocuments(prisma: PrismaClient) {
+  // Fase 20A (docs/FASE20A_INVESTIGACION_FORENSE_INCIDENTE_NEON.md) —
+  // guardrail: el comentario de arriba ya advertía que este borrar-y-
+  // recrear es destructivo apenas existan usuarios reales con progreso
+  // (RegularizationDocumentCheck no es catálogo, tiene userId/caseId).
+  // Antes de la advertencia esto era seguro porque no había usuarios
+  // reales; hoy `RegularizationCase` ya tiene casos reales en producción.
+  // Sin migrar a una clave de negocio única (fuera de alcance de esta
+  // fase), el guardrail mínimo seguro es negarse a ejecutar el reset si
+  // ya existe progreso real — obliga a decidir explícitamente en vez de
+  // borrarlo en silencio la próxima vez que este seed se ejecute.
+  const existingProgress = await prisma.regularizationDocumentCheck.count();
+  if (existingProgress > 0) {
+    throw new Error(
+      `seedRegularizationDocuments: se aborta — existen ${existingProgress} RegularizationDocumentCheck reales (progreso de usuario). ` +
+        `Este seed borra y recrea todo RegularizationDocumentChecklist, lo que eliminaría ese progreso por cascada. ` +
+        `Revisar antes de continuar (ver advertencia original más arriba: requiere clave de negocio única para upsert seguro).`
+    );
+  }
   await prisma.regularizationDocumentCheck.deleteMany({});
   await prisma.regularizationDocumentChecklist.deleteMany({});
 
