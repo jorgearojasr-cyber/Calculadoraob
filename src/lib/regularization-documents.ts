@@ -79,7 +79,11 @@ export async function getVisibleDocumentChecklist(
 
   const [documents, checks] = await Promise.all([
     prisma.regularizationDocumentChecklist.findMany({
-      where: { momento: { in: ["PREVIO", "DURANTE"] } },
+      // Fase 21A (docs/FASE21A_SEED_REGULARIZACION_IDEMPOTENTE_SEGURO.md)
+      // — `active: true` excluye documentos retirados del catálogo
+      // (soft-disable), sin afectar el comportamiento actual: hoy los 25
+      // documentos están activos.
+      where: { momento: { in: ["PREVIO", "DURANTE"] }, active: true },
       orderBy: { order: "asc" },
     }),
     prisma.regularizationDocumentCheck.findMany({ where: { userId, caseId } }),
@@ -101,7 +105,7 @@ export async function getPosteriorDocuments(): Promise<
   Pick<RegularizationDocumentItem, "id" | "documento" | "paraQueSirve" | "dondeSeObtiene" | "citaNormativa">[]
 > {
   const documents = await prisma.regularizationDocumentChecklist.findMany({
-    where: { momento: "POSTERIOR" },
+    where: { momento: "POSTERIOR", active: true },
     orderBy: { order: "asc" },
   });
   return documents.map((doc) => ({

@@ -141,26 +141,17 @@ const LENGUAJE_PRUDENTE =
   "No aparece dentro de los antecedentes adjuntos del Formulario 12.1 y permanece pendiente de validación profesional. Algunas Direcciones de Obras Municipales podrían solicitarlo igualmente según el caso.";
 
 export async function seedRegularizationDocuments(prisma: PrismaClient) {
-  // Fase 20A (docs/FASE20A_INVESTIGACION_FORENSE_INCIDENTE_NEON.md) —
-  // guardrail: el comentario de arriba ya advertía que este borrar-y-
-  // recrear es destructivo apenas existan usuarios reales con progreso
-  // (RegularizationDocumentCheck no es catálogo, tiene userId/caseId).
-  // Antes de la advertencia esto era seguro porque no había usuarios
-  // reales; hoy `RegularizationCase` ya tiene casos reales en producción.
-  // Sin migrar a una clave de negocio única (fuera de alcance de esta
-  // fase), el guardrail mínimo seguro es negarse a ejecutar el reset si
-  // ya existe progreso real — obliga a decidir explícitamente en vez de
-  // borrarlo en silencio la próxima vez que este seed se ejecute.
-  const existingProgress = await prisma.regularizationDocumentCheck.count();
-  if (existingProgress > 0) {
-    throw new Error(
-      `seedRegularizationDocuments: se aborta — existen ${existingProgress} RegularizationDocumentCheck reales (progreso de usuario). ` +
-        `Este seed borra y recrea todo RegularizationDocumentChecklist, lo que eliminaría ese progreso por cascada. ` +
-        `Revisar antes de continuar (ver advertencia original más arriba: requiere clave de negocio única para upsert seguro).`
-    );
-  }
-  await prisma.regularizationDocumentCheck.deleteMany({});
-  await prisma.regularizationDocumentChecklist.deleteMany({});
+  // Fase 21A (docs/FASE21A_SEED_REGULARIZACION_IDEMPOTENTE_SEGURO.md) —
+  // reemplaza por completo el patrón borrar-y-recrear (y el guardrail de
+  // Fase 20A que lo protegía: ver nota al final de esta función, sección
+  // "guardrail retirado"). Ahora sincroniza por `upsert` usando `key`
+  // (clave de negocio estable, migración
+  // 20260826060000_regularization_document_business_key) — nunca hay un
+  // `deleteMany` sobre `RegularizationDocumentChecklist` ni
+  // `RegularizationDocumentCheck` en esta función, así que no existe
+  // ninguna ruta por la que este seed pueda borrar progreso real de
+  // usuario, sin importar cuántas veces o en qué estado de la BD se
+  // ejecute.
 
   // Fase 2 del plan de implementación del Informe de Evaluación Preliminar
   // — modelo de tres ejes (obligatoriedad/origen/momento) + soporteObraBien
@@ -185,6 +176,7 @@ export async function seedRegularizationDocuments(prisma: PrismaClient) {
   const DOCUMENTS = [
     // ===== Tramo 1 (Formulario 12.1) — momento: previo =====
     {
+      key: "formulario-12-1",
       documento: "Formulario 12.1 (solicitud firmada por propietario y profesional)",
       category: "DOM",
       paraQueSirve: "Formulario formal que da inicio al trámite ante la Dirección de Obras, firmado conjuntamente por el propietario y el profesional a cargo",
@@ -198,6 +190,7 @@ export async function seedRegularizationDocuments(prisma: PrismaClient) {
       dependeDe: null,
     },
     {
+      key: "declaracion-no-reclamaciones",
       documento: "Declaración simple de no reclamaciones pendientes ante la DOM o el Juzgado de Policía Local",
       category: "DOM",
       paraQueSirve: "Declaración jurada integrada en la sección 2 del propio Formulario 12.1 — no es un documento separado, se firma junto con la solicitud",
@@ -211,6 +204,7 @@ export async function seedRegularizationDocuments(prisma: PrismaClient) {
       dependeDe: null,
     },
     {
+      key: "listado-documentos-planos",
       documento: "Listado de documentos y planos numerados",
       category: "ARQUITECTO",
       paraQueSirve: "Índice numerado de todos los antecedentes y planos que se adjuntan al expediente",
@@ -224,6 +218,7 @@ export async function seedRegularizationDocuments(prisma: PrismaClient) {
       dependeDe: null,
     },
     {
+      key: "certificado-avaluo-fiscal",
       documento: "Certificado de avalúo fiscal simple, a la fecha 04/02/2016",
       category: "MUNICIPAL",
       paraQueSirve: "Fuente oficial del avalúo fiscal del inmueble a la fecha de publicación de la ley (no el avalúo vigente actual) — el dato que cargas en el sistema sale de este certificado",
@@ -237,6 +232,7 @@ export async function seedRegularizationDocuments(prisma: PrismaClient) {
       dependeDe: null,
     },
     {
+      key: "antecedentes-antiguedad",
       documento: "Antecedentes que acrediten antigüedad anterior al 04/02/2016",
       category: "DOM",
       paraQueSirve: "Evidencia de que la construcción existía antes del 4 de febrero de 2016 (boletas de servicios, fotografías aéreas, certificados de avalúo antiguos, u otro medio a elección)",
@@ -250,6 +246,7 @@ export async function seedRegularizationDocuments(prisma: PrismaClient) {
       dependeDe: ANTIGUEDAD_APLICA,
     },
     {
+      key: "certificado-recepcion-municipal-anterior",
       documento: "Certificado de recepción municipal anterior (si existe)",
       category: "DOM",
       paraQueSirve: "Acredita qué parte de la propiedad ya cuenta con recepción anterior, para regularizar solo lo nuevo",
@@ -273,6 +270,7 @@ export async function seedRegularizationDocuments(prisma: PrismaClient) {
       },
     },
     {
+      key: "croquis-emplazamiento",
       documento: "Croquis de ubicación + plano de emplazamiento escala 1:500",
       category: "ARQUITECTO",
       paraQueSirve: "Ubica la propiedad y la construcción dentro del predio",
@@ -286,6 +284,7 @@ export async function seedRegularizationDocuments(prisma: PrismaClient) {
       dependeDe: null,
     },
     {
+      key: "planos-escala-1-50",
       documento: "Planos escala 1:50 (plantas, elevación, corte) + cuadro de superficies",
       category: "ARQUITECTO",
       paraQueSirve: "Documento técnico base de toda regularización — muestra lo construido tal como está, con el cuadro de superficies",
@@ -299,6 +298,7 @@ export async function seedRegularizationDocuments(prisma: PrismaClient) {
       dependeDe: null,
     },
     {
+      key: "especificaciones-tecnicas",
       documento: "Especificaciones técnicas resumidas",
       category: "ARQUITECTO",
       paraQueSirve: "Detalla materiales y soluciones constructivas usadas",
@@ -312,6 +312,7 @@ export async function seedRegularizationDocuments(prisma: PrismaClient) {
       dependeDe: null,
     },
     {
+      key: "informe-profesional-competente",
       documento: "Informe del profesional competente",
       category: "ARQUITECTO",
       paraQueSirve: "Informe técnico del profesional que certifica la seguridad y habitabilidad de la construcción",
@@ -325,6 +326,7 @@ export async function seedRegularizationDocuments(prisma: PrismaClient) {
       dependeDe: null,
     },
     {
+      key: "formulario-estadisticas-edificacion",
       documento: "Formulario único de estadísticas de edificación",
       category: "DOM",
       paraQueSirve: "Formulario estadístico oficial que acompaña toda solicitud de permiso o regularización",
@@ -338,6 +340,7 @@ export async function seedRegularizationDocuments(prisma: PrismaClient) {
       dependeDe: null,
     },
     {
+      key: "fotocopia-patente-profesional",
       documento: "Fotocopia patente del profesional que suscribe",
       category: "ARQUITECTO",
       paraQueSirve: "Acredita que el profesional está habilitado para ejercer en la comuna",
@@ -351,6 +354,7 @@ export async function seedRegularizationDocuments(prisma: PrismaClient) {
       dependeDe: null,
     },
     {
+      key: "proyecto-calculo-estructural",
       documento: "Proyecto de cálculo estructural",
       category: "ARQUITECTO",
       paraQueSirve: "Certifica que la estructura es segura — exigible según tamaño/material",
@@ -364,6 +368,7 @@ export async function seedRegularizationDocuments(prisma: PrismaClient) {
       dependeDe: { op: "or", args: [EXCEDE_TRAMO, MADERA_SEGUNDO_PISO] },
     },
     {
+      key: "cedula-propietario-mayor-65",
       documento: "Fotocopia cédula de identidad, propietario mayor de 65 años",
       category: "DOM",
       paraQueSirve: "Exigido cuando el propietario es mayor de 65 años",
@@ -380,6 +385,7 @@ export async function seedRegularizationDocuments(prisma: PrismaClient) {
       dependeDe: null,
     },
     {
+      key: "acuerdo-asamblea-copropietarios",
       documento: "Acuerdo de asamblea de copropietarios",
       category: "DOM",
       paraQueSirve: "Exigido solo si la propiedad está acogida a copropiedad inmobiliaria",
@@ -393,6 +399,7 @@ export async function seedRegularizationDocuments(prisma: PrismaClient) {
       dependeDe: null,
     },
     {
+      key: "inscripcion-registro-discapacidad",
       documento: "Inscripción en el Registro Nacional de la Discapacidad",
       category: "DOM",
       paraQueSirve: "Exigido si corresponde acogerse a beneficios asociados a discapacidad",
@@ -406,6 +413,7 @@ export async function seedRegularizationDocuments(prisma: PrismaClient) {
       dependeDe: null,
     },
     {
+      key: "certificado-subsidio-minvu",
       documento: "Certificado de subsidio MINVU",
       category: "MUNICIPAL",
       paraQueSirve: "Exigido solo si el financiamiento de la construcción incluyó un subsidio MINVU",
@@ -422,6 +430,7 @@ export async function seedRegularizationDocuments(prisma: PrismaClient) {
     // ===== Sin respaldo confirmado en el Formulario 12.1 — lenguaje
     // prudente exacto, momento: previo, obligatoriedad: condicional =====
     {
+      key: "certificado-informaciones-previas",
       documento: "Certificado de Informaciones Previas (CIP)",
       category: "MUNICIPAL",
       paraQueSirve: LENGUAJE_PRUDENTE,
@@ -435,6 +444,7 @@ export async function seedRegularizationDocuments(prisma: PrismaClient) {
       dependeDe: null,
     },
     {
+      key: "copia-escritura-propiedad",
       documento: "Copia de la escritura de la propiedad",
       category: "NOTARIA_REGISTRO",
       paraQueSirve: LENGUAJE_PRUDENTE,
@@ -448,6 +458,7 @@ export async function seedRegularizationDocuments(prisma: PrismaClient) {
       dependeDe: null,
     },
     {
+      key: "informe-revisor-independiente",
       documento: "Informe de revisor independiente",
       category: "DOM",
       paraQueSirve: LENGUAJE_PRUDENTE,
@@ -464,6 +475,7 @@ export async function seedRegularizationDocuments(prisma: PrismaClient) {
       // Corrección Fase 2 (ver clasificacion-documentos-ley-20898.md,
       // sección 3 y 6, punto 4): antes `obligatorio: true` sin respaldo
       // directo — baja a condicional + lenguaje prudente.
+      key: "certificado-dominio-vigente",
       documento: "Certificado de dominio vigente",
       category: "NOTARIA_REGISTRO",
       paraQueSirve: LENGUAJE_PRUDENTE,
@@ -497,6 +509,7 @@ export async function seedRegularizationDocuments(prisma: PrismaClient) {
       // mencionada en esa sección. Ver informe de Fase 2, sección
       // "Contradicciones encontradas", y la aprobación de Jorge
       // (2026-08-02) que pidió esta anotación explícita.
+      key: "memoria-explicativa",
       documento: "Memoria explicativa",
       category: "ARQUITECTO",
       paraQueSirve: LENGUAJE_PRUDENTE,
@@ -513,6 +526,7 @@ export async function seedRegularizationDocuments(prisma: PrismaClient) {
     // ===== momento: posterior — nunca en el checklist de entrada, solo
     // en la sección "¿Qué Ocurre Después?" del informe =====
     {
+      key: "certificado-recepcion-definitiva",
       documento: "Certificado de Recepción Definitiva (resultado del trámite)",
       category: "DOM",
       paraQueSirve: "Documento final que certifica que la construcción quedó regularizada — se obtiene al final del trámite, no se aporta para iniciarlo",
@@ -526,6 +540,7 @@ export async function seedRegularizationDocuments(prisma: PrismaClient) {
       dependeDe: null,
     },
     {
+      key: "pago-derechos-municipales",
       documento: "Pago de derechos municipales",
       category: "MUNICIPAL",
       paraQueSirve: "Comprobante de pago que la propia DOM calcula y emite después de revisar el expediente",
@@ -539,6 +554,7 @@ export async function seedRegularizationDocuments(prisma: PrismaClient) {
       dependeDe: null,
     },
     {
+      key: "inscripcion-recepcion-cbr",
       documento: "Inscripción de la recepción en el Conservador de Bienes Raíces",
       category: "NOTARIA_REGISTRO",
       paraQueSirve: "Paso final — deja constancia registral de la regularización, una vez obtenida la recepción definitiva",
@@ -553,10 +569,36 @@ export async function seedRegularizationDocuments(prisma: PrismaClient) {
     },
   ] as const;
 
+  // Upsert por `key` (identidad de negocio estable) — nunca por `id`
+  // autogenerado ni por `documento` (texto de UI). Si la fila ya existe,
+  // se actualizan únicamente los campos canónicos de catálogo: el `id`
+  // real se preserva intacto, y con él cualquier
+  // `RegularizationDocumentCheck` (progreso real) que lo referencie por
+  // FK. Si no existe, se crea. `order` se sincroniza como cualquier otro
+  // campo de catálogo — nunca es parte de la identidad.
+  const seededKeys = new Set<string>();
   for (let i = 0; i < DOCUMENTS.length; i++) {
     const doc = DOCUMENTS[i];
-    await prisma.regularizationDocumentChecklist.create({
-      data: {
+    seededKeys.add(doc.key);
+    await prisma.regularizationDocumentChecklist.upsert({
+      where: { key: doc.key },
+      update: {
+        documento: doc.documento,
+        category: doc.category,
+        paraQueSirve: doc.paraQueSirve,
+        dondeSeObtiene: doc.dondeSeObtiene,
+        obligatoriedad: doc.obligatoriedad,
+        origen: doc.origen,
+        momento: doc.momento,
+        soporteObraBien: doc.soporteObraBien,
+        citaNormativa: doc.citaNormativa,
+        estadoValidacion: doc.estadoValidacion,
+        dependeDe: doc.dependeDe ?? undefined,
+        order: i,
+        active: true,
+      },
+      create: {
+        key: doc.key,
         documento: doc.documento,
         category: doc.category,
         paraQueSirve: doc.paraQueSirve,
@@ -573,8 +615,33 @@ export async function seedRegularizationDocuments(prisma: PrismaClient) {
     });
   }
 
-  console.log(`Seed de Regularización: ${DOCUMENTS.length} documentos recreados.`);
+  // Sección 15 del diseño de la fase — un documento retirado de este
+  // seed (ya no aparece en DOCUMENTS) nunca se borra físicamente: puede
+  // tener `RegularizationDocumentCheck` real asociado. Se marca
+  // `active: false` (soft-disable, mismo patrón ya usado en
+  // InspectionSpaceTemplate) y deja de ofrecerse, sin tocar su fila ni
+  // el progreso que la referencia.
+  const retired = await prisma.regularizationDocumentChecklist.findMany({
+    where: { key: { notIn: Array.from(seededKeys) }, active: true },
+    select: { id: true, key: true },
+  });
+  for (const doc of retired) {
+    await prisma.regularizationDocumentChecklist.update({ where: { id: doc.id }, data: { active: false } });
+    console.log(`  Retirado (soft-disable): ${doc.key}`);
+  }
+
+  console.log(
+    `Seed de Regularización: ${DOCUMENTS.length} documentos sincronizados (upsert), ${retired.length} retirados (soft-disable).`
+  );
 }
+
+// Guardrail retirado (Fase 21A): Fase 20A había agregado un chequeo que
+// abortaba el seed si existía progreso real ANTES de un `deleteMany`
+// destructivo. Esta función ya no contiene ningún `deleteMany` sobre
+// `RegularizationDocumentChecklist` ni `RegularizationDocumentCheck` —
+// el guardrail protegía una operación que ya no existe, así que
+// mantenerlo sería código muerto. Se retira aquí explícitamente en vez
+// de dejarlo silenciosamente sin uso.
 
 // --- RegularizationRule: 9 reglas ---
 // Mismo patrón de idempotencia que los documentos (borrar y recrear

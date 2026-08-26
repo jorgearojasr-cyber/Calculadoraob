@@ -927,8 +927,17 @@ enum RegularizationDocEstadoValidacion {
 // Catálogo de documentos requeridos para el trámite — contenido vive en
 // BD, no hardcodeado en componentes (principio Database First). `dependeDe`
 // usa el mismo formato de nodo DSL que RegularizationRule.condition.
+//
+// Fase 21A (docs/FASE21A_SEED_REGULARIZACION_IDEMPOTENTE_SEGURO.md) —
+// `key` es la identidad de negocio estable del seed (slug legible, ej.
+// "formulario-12-1"), independiente de `documento` (texto de UI que
+// puede corregirse/reescribirse) y de `order` (solo posición visual).
+// El seed ahora hace upsert por `key`, nunca borra y recrea — preserva
+// el `id` real y por lo tanto cualquier `RegularizationDocumentCheck`
+// (progreso real de usuario) que lo referencie.
 model RegularizationDocumentChecklist {
   id               String                            @id @default(cuid())
+  key              String                            @unique
   documento        String
   category         RegularizationDocumentCategory
   paraQueSirve     String
@@ -947,6 +956,11 @@ model RegularizationDocumentChecklist {
   estadoValidacion RegularizationDocEstadoValidacion @default(VALIDADO)
   dependeDe        Json?
   order            Int                               @default(0)
+  // Fase 21A — soft-disable: un documento retirado del seed nunca se
+  // borra físicamente si puede tener progreso asociado (ver sección 15
+  // del diseño de la fase); en vez de eso queda `active: false` y deja
+  // de ofrecerse, igual patrón ya usado en InspectionSpaceTemplate.
+  active           Boolean                           @default(true)
 
   checks RegularizationDocumentCheck[]
 
