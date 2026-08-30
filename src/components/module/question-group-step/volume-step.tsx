@@ -5,6 +5,7 @@ import { Lightbulb } from "lucide-react";
 import type { WizardQuestion } from "../types";
 import { formatQuantity } from "@/lib/format-number";
 import { DiagramV2 } from "@/lib/diagram-v2";
+import { RadierIllustration } from "../radier-illustration";
 import type { DiagramConfig } from "../module-visual-config";
 import { FieldRow } from "./field-row";
 import { SubmitActions } from "./submit-actions";
@@ -139,6 +140,33 @@ export function VolumeStep({
         )}
         {diagram.groupHelpText && <p className="text-sm text-ink-muted mb-5">{diagram.groupHelpText}</p>}
 
+        {/* Radier ("Calculadora de radier rediseñada", 2026-08-30, aprobado
+            por Jorge): en mobile, la ilustración va DESPUÉS del título/
+            texto explicativo y ANTES de los inputs (mismo orden que el
+            diseño de referencia) — instancia separada, md:hidden, que
+            lee los mismos `values` que la columna derecha (sin duplicar
+            estado). En desktop queda oculta acá porque la columna derecha
+            (más abajo, hidden solo cuando isSlab) ya la muestra en su
+            lugar de siempre. Ningún módulo no-slab agrega este bloque. */}
+        {isSlab && (
+          <div className="md:hidden mb-5 rounded-2xl bg-[#F3F7FB] p-4">
+            <RadierIllustration
+              largo={toFieldNum(questions[0], values[questions[0].key])}
+              ancho={secondaryQuestion ? toFieldNum(secondaryQuestion, values[secondaryQuestion.key]) : null}
+              espesor={
+                depthIsSelect
+                  ? ((toFieldNum(depthQuestion, values[depthQuestion.key]) ?? null) !== null
+                      ? toFieldNum(depthQuestion, values[depthQuestion.key])! * 100
+                      : null)
+                  : toFieldNum(depthQuestion, values[depthQuestion.key])
+              }
+              largoUnit={questions[0].unit ?? "m"}
+              anchoUnit={secondaryQuestion?.unit ?? "m"}
+              espesorUnit={diagramDepthUnit ?? depthQuestion.unit ?? "cm"}
+            />
+          </div>
+        )}
+
         <div className="grid gap-4">
           {fields.map((f, i) => (
             <FieldRow
@@ -176,7 +204,15 @@ export function VolumeStep({
               {volume !== null ? `${formatQuantity(volume)} m³` : "—"}
             </p>
           </div>
-          {formulaText && <p className="col-span-2 mt-1 text-xs text-ink-muted">{formulaText}</p>}
+          {/* Radier ("Calculadora de radier rediseñada", 2026-08-30,
+              revisión de Jorge): el diseño final aprobado no incluye la
+              fórmula secundaria ("6 × 3 × 0,08 m") bajo Superficie/
+              Volumen — se oculta SOLO cuando isSlab; el resto de los
+              módulos (Excavación, Pilar, Piscina, Fundación, etc.) la
+              siguen mostrando exactamente igual que antes. No se toca el
+              cálculo de `formulaText` en useVolumePreview, solo su
+              render acá. */}
+          {formulaText && !isSlab && <p className="col-span-2 mt-1 text-xs text-ink-muted">{formulaText}</p>}
         </div>
 
         {tips.length > 0 && (
@@ -192,15 +228,49 @@ export function VolumeStep({
         <SubmitActions onSubmit={handleSubmit} onSaveForLater={onSaveForLater} />
       </div>
 
-      <div className="order-2 mb-6 md:mb-0 rounded-2xl bg-[#F3F7FB] p-5 md:p-6">
-        <div className="hidden md:block mb-4">
-          <p className="font-semibold text-sm">Así se ve con tus medidas</p>
-          <p className="text-sm text-ink-muted mt-1">
-            Mismo diagrama y mismos valores: el {isCircular ? "diámetro" : "ancho"} extra va al dibujo, no a agrandar
-            el texto.
-          </p>
-        </div>
-        {isCircular ? (
+      {/* Radier ("Calculadora de radier rediseñada", 2026-08-30, aprobado
+          por Jorge): en mobile esta columna se oculta completa (la
+          ilustración ya se mostró más arriba, entre el texto explicativo
+          y los inputs, ver bloque `isSlab && ...md:hidden` de más arriba)
+          — evita mostrarla dos veces. En desktop no cambia nada: sigue
+          siendo la columna derecha de siempre, mismo `order-2`. Ningún
+          módulo no-slab toca esta clase. */}
+      <div className={`${isSlab ? "hidden md:block" : ""} order-2 mb-6 md:mb-0 rounded-2xl bg-[#F3F7FB] p-5 md:p-6`}>
+        {/* Radier ("Calculadora de radier rediseñada", 2026-08-30, revisión
+            de Jorge): el diseño final aprobado no incluye este título/
+            explicación en la tarjeta de ilustración — se oculta SOLO
+            cuando isSlab. El resto de los módulos lo sigue mostrando
+            exactamente igual que antes. */}
+        {!isSlab && (
+          <div className="hidden md:block mb-4">
+            <p className="font-semibold text-sm">Así se ve con tus medidas</p>
+            <p className="text-sm text-ink-muted mt-1">
+              Mismo diagrama y mismos valores: el {isCircular ? "diámetro" : "ancho"} extra va al dibujo, no a agrandar
+              el texto.
+            </p>
+          </div>
+        )}
+        {isSlab ? (
+          <RadierIllustration
+            largo={toFieldNum(questions[0], values[questions[0].key])}
+            ancho={secondaryQuestion ? toFieldNum(secondaryQuestion, values[secondaryQuestion.key]) : null}
+            // Mismo criterio que profundidadDisplay más abajo (DiagramV2,
+            // rama box): el valor a MOSTRAR es el que el usuario ve en su
+            // propio campo (cm en SELECT ×100, o el crudo tipeado en
+            // NUMBER+cm) — nunca el convertido a metros que usaría una
+            // geometría a escala real (esta ilustración no la tiene).
+            espesor={
+              depthIsSelect
+                ? ((toFieldNum(depthQuestion, values[depthQuestion.key]) ?? null) !== null
+                    ? toFieldNum(depthQuestion, values[depthQuestion.key])! * 100
+                    : null)
+                : toFieldNum(depthQuestion, values[depthQuestion.key])
+            }
+            largoUnit={questions[0].unit ?? "m"}
+            anchoUnit={secondaryQuestion?.unit ?? "m"}
+            espesorUnit={diagramDepthUnit ?? depthQuestion.unit ?? "cm"}
+          />
+        ) : isCircular ? (
           <DiagramV2
             kind="cylinder"
             diametro={toFieldNum(questions[0], values[questions[0].key]) ?? undefined}
