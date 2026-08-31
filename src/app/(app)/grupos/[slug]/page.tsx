@@ -4,7 +4,7 @@ import { ListChecks, Clock, HelpCircle as HelpCircleIcon, TriangleAlert } from "
 import { prisma } from "@/lib/prisma";
 import { getCategoryIcon } from "@/lib/category-icons";
 import { pluralizeUnit } from "@/lib/pluralize";
-import { GROUP_ICON_CHIP_CLASS } from "@/lib/group-colors";
+import { GROUP_ICON_CHIP_CLASS, getGroupCountLabel } from "@/lib/group-colors";
 import { GroupChip } from "@/components/home/group-chip";
 import { ProjectCard } from "@/components/project-card";
 import { TASK_IMAGES } from "@/lib/popular-tasks";
@@ -53,6 +53,7 @@ export default async function GroupDetailPage({ params }: { params: Promise<{ sl
 
   const Icon = getCategoryIcon(group.icon);
   const total = group.tasks.length;
+  const countLabel = getGroupCountLabel(group.slug) ?? `${total} ${pluralizeUnit(total, "cálculo")}`;
 
   // Fase 1 de homogeneización visual (07-ago-2026): toda tarea se muestra
   // con la misma ProjectCard, con o sin foto (el placeholder de la tarjeta
@@ -106,9 +107,7 @@ export default async function GroupDetailPage({ params }: { params: Promise<{ sl
         </div>
         <div>
           <h1 className="font-display text-[22px] font-semibold tracking-tight">{group.name}</h1>
-          <p className="text-sm text-ink-muted">
-            {total} {pluralizeUnit(total, "cálculo")}
-          </p>
+          <p className="text-sm text-ink-muted">{countLabel}</p>
         </div>
       </div>
 

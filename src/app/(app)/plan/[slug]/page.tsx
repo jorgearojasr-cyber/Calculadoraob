@@ -4,7 +4,7 @@ import { ArrowLeft } from "lucide-react";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { PlanView, type PlanPhaseData } from "@/components/plan/plan-view";
+import { PlanView, type PlanPhaseData, type PoolShape } from "@/components/plan/plan-view";
 import { SHAPE_LABELS } from "@/lib/plan-shape";
 
 export default async function ProjectPlanPage({
@@ -60,8 +60,7 @@ export default async function ProjectPlanPage({
         link.module.slug === "piscina-circular-hormigon-armado"
     );
 
-  let poolShape: { kind: "rectangular"; largo: number; ancho: number } | { kind: "circular"; radio: number } | null =
-    null;
+  let poolShape: PoolShape | null = null;
   if (userId) {
     for (const link of poolLinks) {
       const savedPool = await prisma.savedProject.findFirst({
@@ -75,17 +74,27 @@ export default async function ProjectPlanPage({
       // (ver Variable.source: {type: "QUESTION", questionKey: "..."}).
       const variables = (savedPool?.result as { variables?: Record<string, unknown> } | undefined)?.variables;
       if (!variables) continue;
+      // FASE A — Piscinas (auditoría, sección 9): espesor-muro-cm ya existe
+      // como Variable en ambos módulos de piscina (ver Fase 2, "Espesor de
+      // los muros"). Se lee acá para que el contorno de Fase 3 se calcule
+      // desde la cara exterior real del muro, no desde el espejo de agua.
+      // Fallback seguro: si no existe o no es un número válido (proyecto
+      // guardado antes de esta fase, o dato corrupto), `espesorMuroM` queda
+      // `undefined` y `computeContornoArea` lo trata como 0 — exactamente
+      // el comportamiento que ya existía antes de este cambio, sin NaN.
+      const espesorMuroCm = Number(variables["espesor-muro-cm"]);
+      const espesorMuroM = Number.isFinite(espesorMuroCm) && espesorMuroCm > 0 ? espesorMuroCm / 100 : undefined;
       if (link.module.slug === "piscina-rectangular-hormigon-armado") {
         const largo = Number(variables["largo"]);
         const ancho = Number(variables["ancho"]);
         if (Number.isFinite(largo) && largo > 0 && Number.isFinite(ancho) && ancho > 0) {
-          poolShape = { kind: "rectangular", largo, ancho };
+          poolShape = { kind: "rectangular", largo, ancho, espesorMuroM };
           break;
         }
       } else {
         const diametro = Number(variables["diametro"]);
         if (Number.isFinite(diametro) && diametro > 0) {
-          poolShape = { kind: "circular", radio: diametro / 2 };
+          poolShape = { kind: "circular", radio: diametro / 2, espesorMuroM };
           break;
         }
       }

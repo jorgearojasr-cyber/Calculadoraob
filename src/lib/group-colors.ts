@@ -34,3 +34,23 @@ export function getGroupIconClasses(slug: string): string {
   const colors = GROUP_ICON_COLORS[slug];
   return colors ? `${colors.bg} ${colors.text}` : GROUP_ICON_CHIP_CLASS;
 }
+
+// FASE A — Piscinas (auditoría, sección 10): el conteo genérico de
+// ProjectGroup ("N cálculos" = group.tasks.length) es correcto como
+// ARQUITECTURA — "Construir una piscina" es 1 sola ProjectTask, con 2
+// ProjectTaskModule (Rectangular/Circular) — pero el copy resultante ("1
+// cálculo") no comunica que hay 2 formas reales disponibles. Se corrige
+// SOLO el copy, SOLO para "piscinas", sin tocar group.tasks.length ni
+// ningún otro ProjectGroup — mismo criterio que GROUP_ICON_COLORS de
+// arriba (mapa opcional por slug, con fallback al comportamiento
+// genérico de siempre). Ver group-card.tsx y grupos/[slug]/page.tsx.
+const GROUP_COUNT_LABEL_OVERRIDES: Record<string, string> = {
+  piscinas: "2 formas disponibles",
+};
+
+// Label del contador de un grupo — el override de arriba si existe, o
+// `null` para que el llamador use el cálculo genérico "{total} {cálculo(s)}"
+// de siempre (sin cambios para los demás 12 grupos).
+export function getGroupCountLabel(slug: string): string | null {
+  return GROUP_COUNT_LABEL_OVERRIDES[slug] ?? null;
+}

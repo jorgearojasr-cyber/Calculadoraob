@@ -15,9 +15,16 @@ export type PlanPhaseData = {
   links: PlanPhaseLink[];
 };
 
+// FASE A — Piscinas (auditoría, sección 9): `espesorMuroM` se agrega para
+// que el contorno se calcule desde la cara EXTERIOR física del muro, no
+// desde el espejo de agua (que es lo que largo/ancho/radio representan —
+// ver Fase 2, "Medida interior del espejo de agua"). Opcional: proyectos
+// guardados antes de que el espesor se guardara como Variable, o donde no
+// se pudo leer, caen a 0 (mismo comportamiento que existía antes de este
+// cambio — el contorno se mide desde la medida interior).
 export type PoolShape =
-  | { kind: "rectangular"; largo: number; ancho: number }
-  | { kind: "circular"; radio: number };
+  | { kind: "rectangular"; largo: number; ancho: number; espesorMuroM?: number }
+  | { kind: "circular"; radio: number; espesorMuroM?: number };
 
 // Módulos de "Terminar el entorno" que aceptan un área directa (ver
 // AreaInputToggle / forcedInitialArea en question-group-step.tsx) — si una
@@ -36,16 +43,26 @@ function round2(value: number): number {
 }
 
 // Área EXACTA del anillo de contorno (no perímetro × ancho — eso subestima
-// las esquinas/curvatura): rectangular resta el rectángulo interior del
-// exterior agrandado; circular resta el círculo interior del exterior.
+// las esquinas/curvatura): rectangular resta el rectángulo EXTERIOR del
+// muro (agrandado por el espesor real) del exterior agrandado por el
+// ancho de contorno; circular, lo mismo con el radio exterior. FASE A
+// (auditoría, sección 9): antes el punto de partida era largo/ancho/radio
+// tal cual (el espejo de agua interior) — el contorno físico real empieza
+// en la cara exterior del muro, `espesorMuroM` (0 si no se conoce, mismo
+// comportamiento que antes) mueve ese punto de partida hacia afuera antes
+// de sumar el ancho de contorno.
 function computeContornoArea(pool: PoolShape, contornoWidth: number): number {
+  const e = pool.espesorMuroM ?? 0;
   if (pool.kind === "rectangular") {
-    const largoExt = pool.largo + 2 * contornoWidth;
-    const anchoExt = pool.ancho + 2 * contornoWidth;
-    return largoExt * anchoExt - pool.largo * pool.ancho;
+    const largoMuroExt = pool.largo + 2 * e;
+    const anchoMuroExt = pool.ancho + 2 * e;
+    const largoExt = largoMuroExt + 2 * contornoWidth;
+    const anchoExt = anchoMuroExt + 2 * contornoWidth;
+    return largoExt * anchoExt - largoMuroExt * anchoMuroExt;
   }
-  const radioExt = pool.radio + contornoWidth;
-  return Math.PI * (radioExt * radioExt - pool.radio * pool.radio);
+  const radioMuroExt = pool.radio + e;
+  const radioExt = radioMuroExt + contornoWidth;
+  return Math.PI * (radioExt * radioExt - radioMuroExt * radioMuroExt);
 }
 
 // Campo de ancho de contorno + botones de módulo de la fase, con el área
