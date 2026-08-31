@@ -6,6 +6,7 @@ import type { WizardQuestion } from "../types";
 import { formatQuantity } from "@/lib/format-number";
 import { DiagramV2 } from "@/lib/diagram-v2";
 import { RadierIllustration } from "../radier-illustration";
+import { CollapsibleHelp } from "../collapsible-help";
 import { PoolExcavationIllustration } from "../pool-excavation-illustration";
 import { PoolStructureIllustration } from "../pool-structure-illustration";
 import type { DiagramConfig } from "../module-visual-config";
@@ -278,7 +279,25 @@ export function VolumeStep({
         {diagram.groupLabel && (
           <h2 className="font-display text-xl md:text-2xl font-semibold tracking-tight mb-2">{diagram.groupLabel}</h2>
         )}
-        {diagram.groupHelpText && <p className="text-sm text-ink-muted mb-5">{diagram.groupHelpText}</p>}
+        {diagram.groupHelpText && (
+          <p className={`text-sm text-ink-muted ${diagram.groupHelpTextDetail ? "mb-2" : "mb-5"}`}>{diagram.groupHelpText}</p>
+        )}
+        {/* Fase B.1 (2026-08-31, Excavación): contenido técnico adicional
+            (holgura, moldaje, sistema constructivo) que alargaba demasiado
+            la explicación siempre visible en mobile, empujando la
+            ilustración fuera de la primera pantalla — se muestra colapsado
+            detrás de "¿Cómo medir?", mismo componente `CollapsibleHelp` ya
+            usado en el resto del framework para helpText largo, sin
+            mecanismo nuevo. Ausente (`undefined`) en todo módulo que no lo
+            declare explícitamente en su DiagramConfig — cero cambio para
+            Radier/Pilar/Fundación/Jardinera/Muro/Piscina. */}
+        {diagram.groupHelpTextDetail && (
+          <div className="mb-5">
+            <CollapsibleHelp label="¿Cómo medir?" ariaLabel="Más información sobre cómo medir">
+              <p className="text-sm text-ink-muted">{diagram.groupHelpTextDetail}</p>
+            </CollapsibleHelp>
+          </div>
+        )}
 
         {/* Radier ("Calculadora de radier rediseñada", 2026-08-30, aprobado
             por Jorge) + Fase B (2026-08-31, Excavación/Piscinas): en

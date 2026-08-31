@@ -95,6 +95,17 @@ export type DiagramConfig = {
   // área no tienen heading propio, cada campo lleva su propio label).
   groupLabel?: string;
   groupHelpText?: string;
+  // Fase B.1 (2026-08-31, Excavación): contenido técnico adicional que
+  // NO debe perderse (holgura, moldaje, sistema constructivo) pero que
+  // volvía la explicación de arriba (`groupHelpText`) demasiado larga en
+  // mobile, empujando la ilustración fuera de la primera pantalla —
+  // detectado en verificación visual. Cuando está presente, VolumeStep lo
+  // muestra colapsado detrás de un ícono (i) "¿Cómo medir?", mismo patrón
+  // ya usado por `CollapsibleHelp`/`isHelpCollapsed` para helpText largo de
+  // preguntas individuales — no es un mecanismo nuevo. Ausente en todo
+  // módulo que no lo necesite (su `groupHelpText` sigue mostrándose
+  // completo y siempre visible, sin cambios).
+  groupHelpTextDetail?: string;
   // Además del cuadro de volumen en vivo, muestra la superficie (primario
   // × secundario) al lado — solo tiene sentido cuando esos 2 campos son
   // realmente el contorno/footprint de la figura (ej. Radier: largo ×
@@ -680,8 +691,15 @@ export const MODULE_CONFIG: Record<string, ModuleVisualConfig> = {
         // un cálculo"), nunca como una medida verificada, y se aclara que
         // depende del sistema constructivo — mismo criterio editorial ya
         // usado en el resto de los helpText/note del proyecto.
-        groupHelpText:
-          "Mide el hoyo terminado, no la marca en el suelo ni el tamaño de la piscina: el hoyo va más ancho y profundo que la piscina para dejar espacio de moldaje y el espesor del muro. La profundidad se mide desde el nivel del terreno hasta el fondo. Como referencia general, muchos proyectos dejan entre 20 y 30 cm de holgura alrededor de la piscina — es solo una recomendación, no un cálculo: el valor real depende del sistema constructivo que uses, confírmalo con tu maestro o constructor.",
+        // Fase B.1 (2026-08-31): el texto completo (holgura, moldaje,
+        // sistema constructivo) empujaba la ilustración fuera de la
+        // primera pantalla en mobile — se divide en un resumen siempre
+        // visible + el resto colapsado detrás de "¿Cómo medir?"
+        // (`groupHelpTextDetail`, ver comentario en el type DiagramConfig).
+        // Cero contenido eliminado, solo reordenado.
+        groupHelpText: "Mide el hoyo terminado, no la marca en el suelo ni el tamaño de la piscina.",
+        groupHelpTextDetail:
+          "El hoyo va más ancho y profundo que la piscina para dejar espacio de moldaje y el espesor del muro. La profundidad se mide desde el nivel del terreno hasta el fondo. Como referencia general, muchos proyectos dejan entre 20 y 30 cm de holgura alrededor de la piscina — es solo una recomendación, no un cálculo: el valor real depende del sistema constructivo que uses, confírmalo con tu maestro o constructor.",
       },
     },
   },
@@ -860,8 +878,11 @@ export const MODULE_CONFIG: Record<string, ModuleVisualConfig> = {
         // un cálculo"), nunca como una medida verificada, y se aclara que
         // depende del sistema constructivo — mismo criterio editorial ya
         // usado en el resto de los helpText/note del proyecto.
-        groupHelpText:
-          "Mide el hoyo terminado, no la marca en el suelo ni el tamaño de la piscina: el hoyo va más ancho y profundo que la piscina para dejar espacio de moldaje y el espesor del muro. La profundidad se mide desde el nivel del terreno hasta el fondo. Como referencia general, muchos proyectos dejan entre 20 y 30 cm de holgura alrededor de la piscina — es solo una recomendación, no un cálculo: el valor real depende del sistema constructivo que uses, confírmalo con tu maestro o constructor.",
+        // Fase B.1 (2026-08-31): mismo motivo/split que excavacion-circular
+        // (ver comentario ahí) — resumen visible + detalle colapsado.
+        groupHelpText: "Mide el hoyo terminado, no la marca en el suelo ni el tamaño de la piscina.",
+        groupHelpTextDetail:
+          "El hoyo va más ancho y profundo que la piscina para dejar espacio de moldaje y el espesor del muro. La profundidad se mide desde el nivel del terreno hasta el fondo. Como referencia general, muchos proyectos dejan entre 20 y 30 cm de holgura alrededor de la piscina — es solo una recomendación, no un cálculo: el valor real depende del sistema constructivo que uses, confírmalo con tu maestro o constructor.",
       },
     },
   },
