@@ -33,7 +33,30 @@ export type DiagramConfig = {
   // contraste fuerte. Ver DiagramV2.tsx y math/scale-engine.ts
   // (compressedSlabRatios) para el detalle — sin tocar "box" ni ningún
   // otro módulo que use "rectangle-with-depth".
-  shape: "rectangle" | "rectangle-with-depth" | "slab-with-depth" | "circle" | "circle-with-depth";
+  // "pit-with-depth"/"pit-circle-with-depth" (Fase B, 2026-08-31): mismos
+  // campos/labels/cotas que "rectangle-with-depth"/"circle-with-depth",
+  // pero VolumeStep dibuja PoolExcavationIllustration (terreno + hueco)
+  // en vez de DiagramV2 — ver volume-step.tsx. Aplicado globalmente al
+  // módulo Excavación (rect/circ), no solo dentro del plan de Piscinas:
+  // la representación es semánticamente correcta para todos sus usos.
+  //
+  // "pool-structure-with-depth"/"pool-structure-circle-with-depth" (Fase
+  // B): SOLO para el stepGroup de espesores de Piscina (rect/circ) — 2
+  // preguntas de espesor (muro=primary, fondo=depth, sin secondary),
+  // ruteadas a PoolStructureIllustration en vez de DiagramV2. Ver
+  // `sourceDimensionKeys` para cómo la ilustración recupera largo/ancho/
+  // diámetro/profundidad ya respondidos en el Paso 1, sin duplicar
+  // preguntas ni estado.
+  shape:
+    | "rectangle"
+    | "rectangle-with-depth"
+    | "slab-with-depth"
+    | "circle"
+    | "circle-with-depth"
+    | "pit-with-depth"
+    | "pit-circle-with-depth"
+    | "pool-structure-with-depth"
+    | "pool-structure-circle-with-depth";
   primaryLabel: string;
   secondaryLabel?: string;
   depthLabel?: string;
@@ -96,6 +119,15 @@ export type DiagramConfig = {
   // factor real vía ROOF_SLOPE_FACTORS (mismos 3 valores que la Variable
   // "factor-de-inclinacion" del motor de fórmulas).
   slopeQuestionKey?: string;
+  // Piscina Paso 2 (espesores) — SOLO para shapes "pool-structure-*": keys
+  // de las preguntas de MEDIDAS (Paso 1, un stepGroup ANTERIOR y distinto
+  // a este) que la ilustración necesita mostrar junto a los espesores
+  // (largo/ancho/profundidad o diámetro/profundidad). Se leen de
+  // `initialValues` (todas las respuestas previas del wizard, no solo las
+  // de este grupo — mismo mecanismo ya usado por tileSizeQuestionKey/
+  // orientationQuestionKey/slopeQuestionKey) — nunca se duplica la
+  // pregunta ni se crea una Variable nueva.
+  sourceDimensionKeys?: { primary: string; secondary?: string; depth: string };
 };
 
 export type CombinedAreaQuestionConfig = { label: string; helpText: string; areaLabel: string };
@@ -107,8 +139,13 @@ export type ModuleVisualConfig = {
   // stepGroup -> layout combinado (largo+ancho en una sola pregunta con
   // caja de superficie en vivo) — ver COMBINED_AREA_QUESTION más abajo.
   combinedAreaQuestion?: Record<string, CombinedAreaQuestionConfig>;
-  // Ver HERO_RESULT_KEYS.
-  heroResultKey?: string;
+  // Ver HERO_RESULT_KEYS. Acepta un arreglo cuando el dato protagonista
+  // puede venir de Formula distintas según una condición mutuamente
+  // excluyente (ej. Radier: "volumen_total" en la rama manual,
+  // "volumen_premezclado" en la rama premezclado — nunca las dos a la
+  // vez) — se usa la primera key del arreglo que efectivamente vino en
+  // los resultados de este cálculo.
+  heroResultKey?: string | string[];
   // Ver RECALCULATE_FIELDS.
   recalculateField?: string;
   // Ver OPTIONAL_QUESTION_KEYS.
@@ -122,9 +159,25 @@ export type ModuleVisualConfig = {
   // Ver EXCLUDE_FROM_LIST_KEYS.
   excludeFromListKeys?: string[];
   // Ver HERO_POSITIONS. Default "top" (comportamiento de siempre).
-  heroPosition?: "top" | "beforeMaterials";
+  heroPosition?: "top" | "beforeMaterials" | "afterInfo";
   // Ver REFUERZO_CONFIG.
   refuerzo?: RefuerzoConfig;
+  // Ver HERO_CAPTIONS — reemplaza el subtítulo autogenerado de ResultHero
+  // ("Más arena, gravilla... Tipo de hormigón: X") por este texto fijo,
+  // más corto. Sin este prop (la mayoría de los módulos), el subtítulo
+  // autogenerado sigue igual.
+  heroCaption?: string;
+  // Ver HIDE_TOTAL_IN_HERO — cuando true, ResultHero no muestra "Total
+  // aproximado" (aunque haya precios cargados); el total vuelve a
+  // aparecer donde ya lo hacía antes de tener ResultHero: el pie de
+  // PricedResults, después de la lista de materiales. Sin este prop (la
+  // mayoría de los módulos), el total sigue mostrándose en el hero como
+  // siempre.
+  hideTotalInHero?: boolean;
+  // Ver RECALCULATE_FIELD_SECTIONS — envuelve RecalculateField con un
+  // título + bajada (ej. "Ajusta tu radier"). Sin este prop, RecalculateField
+  // se ve exactamente igual que antes (sin encabezado).
+  recalculateFieldSection?: { title: string; helpText: string };
 };
 
 // Fase 5 (Radier) — arma la RefuerzoCard a partir de 2 InfoResult (estado
@@ -220,10 +273,16 @@ export const MODULE_CONFIG: Record<string, ModuleVisualConfig> = {
         areaResultLabel: "Superficie del radier",
       },
     },
-    // Editar el espesor desde el resultado dispara un recálculo completo
-    // sin volver atrás en el wizard (ver RecalculateField en
-    // result-screen.tsx) — mecanismo genérico, por ahora solo conectado acá.
+    // Fase 8 (13-ago-2026): "Ajusta tu radier" — RecalculateField pasa de
+    // ir arriba de todo a un bloque compacto justo antes de "Materiales"
+    // (ver heroPosition/orden en result-screen.tsx) — el usuario primero
+    // entiende qué/cuánto hormigón necesita y qué refuerzo/dosificación
+    // le corresponde; recién después puede ajustar el espesor si quiere.
     recalculateField: "espesor_cm",
+    recalculateFieldSection: {
+      title: "Ajusta tu radier",
+      helpText: "Puedes modificar el espesor y recalcular los materiales.",
+    },
     // Fase 5 (13-ago-2026): "Volumen de hormigón" pasa a ser el resultado
     // protagonista (ResultHero, azul) en vez de Cemento — pedido explícito
     // del usuario ("VOLUMEN DE HORMIGÓN — AZUL" como su propio bloque,
@@ -235,12 +294,32 @@ export const MODULE_CONFIG: Record<string, ModuleVisualConfig> = {
     // — ver comentario en result-screen.tsx sobre showsHero). Se excluye
     // "volumen_total" de la lista genérica para que no aparezca dos veces
     // (una vez en ResultHero, otra como fila de "Materiales") —
-    // "volumen_premezclado" NO está en esta lista a propósito: bajo
-    // premezclado no hay hero, así que necesita seguir siendo el primer
-    // ítem de la lista para conservar su propio destaque, como antes.
-    heroResultKey: "volumen_total",
-    excludeFromListKeys: ["volumen_total"],
-    heroPosition: "beforeMaterials",
+    // Corrección post-Fase 8 (13-ago-2026): bajo premezclado, "volumen_total"
+    // no se computa (condition = manual), heroResult no encontraba match, y
+    // el hero azul desaparecía por completo — "volumen_premezclado" quedaba
+    // enterrado como fila de la lista de materiales, después de "Ajusta tu
+    // radier", en vez de ser el protagonista. Con el arreglo, se usa la
+    // primera key que sí vino en los resultados de esta rama — nunca
+    // coexisten las dos, así que nunca hay ambigüedad ni duplicado.
+    heroResultKey: ["volumen_total", "volumen_premezclado"],
+    excludeFromListKeys: ["volumen_total", "volumen_premezclado"],
+    // Fase 8: "afterInfo" (antes "beforeMaterials") — el hero ahora va
+    // justo después de "Tipo de hormigón recomendado" (el primer
+    // infoResults), no después de dosificación/refuerzo. Nuevo orden:
+    // Tipo de hormigón -> Volumen (hero) -> Refuerzo -> Dosificación ->
+    // Ajusta tu radier -> Materiales -> Total -> Fuente técnica.
+    heroPosition: "afterInfo",
+    // Fase 8: el subtítulo autogenerado ("Más cemento, arena... Tipo de
+    // hormigón: G17-N") repetía el tipo de hormigón que ya se muestra
+    // justo arriba en su propio bloque — se reemplaza por un texto fijo,
+    // más corto, sobre a qué corresponde el número.
+    heroCaption: "Volumen recomendado a comprar, considerando la pendiente y el margen por pérdida de vaciado.",
+    // Fase 8: "Total aproximado" pasa a mostrarse después de Materiales
+    // (el pie de PricedResults, que ya existía y ya tiene menos jerarquía
+    // visual que el hero) en vez de adentro del hero azul — no se creó
+    // ningún bloque nuevo para esto, PricedResults ya lo hacía así antes
+    // de que existiera ResultHero (ver hideTotal ahí).
+    hideTotalInHero: true,
     refuerzo: {
       title: "Refuerzo recomendado",
       materialLabel: "Malla electrosoldada",
@@ -426,10 +505,24 @@ export const MODULE_CONFIG: Record<string, ModuleVisualConfig> = {
         groupHelpText: "Medida interior del espejo de agua, de borde a borde.",
         waterFill: true,
       },
-      // Excluido deliberadamente: grupo "espesor de muros x espesor de
-      // losa" — ambos campos son espesores de partes distintas (muro vs.
-      // losa de fondo), no una pareja ancho/largo de una misma figura — un
-      // rectángulo etiquetado así confundiría más de lo que ayuda.
+      // Fase B (2026-08-31): el grupo "espesor de muros x espesor de losa"
+      // ya no queda excluido — antes un rectángulo genérico habría
+      // confundido más de lo que ayuda (dos espesores de partes distintas,
+      // no una pareja ancho/largo de una misma figura); ahora se rutea a
+      // PoolStructureIllustration (ilustración del vaso estructural), que
+      // sí distingue explícitamente muro de fondo/losa. "espesor de los
+      // muros" = primary, "espesor del fondo/losa" = depth (2 preguntas,
+      // sin secondary — mismo patrón de 2 campos que Piscina circular
+      // Paso 1). `sourceDimensionKeys` recupera diámetro/profundidad del
+      // Paso 1 (stepGroup ANTERIOR) desde `initialValues`, sin duplicar
+      // preguntas ni estado.
+      cmrwrhv06000edosesg7vud51: {
+        shape: "pool-structure-circle-with-depth",
+        primaryLabel: "espesor de los muros",
+        depthLabel: "espesor del fondo/losa",
+        groupLabel: "Espesores del vaso",
+        sourceDimensionKeys: { primary: "diametro", depth: "profundidad" },
+      },
     },
     heroResultKey: "volumen-de-agua",
   },
@@ -562,7 +655,14 @@ export const MODULE_CONFIG: Record<string, ModuleVisualConfig> = {
   "excavacion-circular": {
     diagrams: {
       "excavacion-circular-dims": {
-        shape: "circle-with-depth",
+        // Fase B (2026-08-31): "circle-with-depth" -> "pit-circle-with-depth"
+        // — mismos campos/cotas/textos, pero VolumeStep dibuja
+        // PoolExcavationIllustration (terreno + hueco) en vez de DiagramV2.
+        // Aplicado globalmente (ver comentario del type `shape` arriba):
+        // este módulo también se usa suelto en Herramientas avanzadas, no
+        // solo dentro del plan "Construir una piscina" — la ilustración es
+        // correcta para ambos usos por igual.
+        shape: "pit-circle-with-depth",
         primaryLabel: "diámetro",
         depthLabel: "profundidad",
         primarySubLabel: "De borde a borde",
@@ -702,8 +802,21 @@ export const MODULE_CONFIG: Record<string, ModuleVisualConfig> = {
         groupHelpText: "Medida interior del espejo de agua, de borde a borde.",
         waterFill: true,
       },
-      // Excluido deliberadamente: grupo "espesor de muros x espesor de
-      // losa" — mismo motivo que Piscina circular.
+      // Fase B (2026-08-31): mismo motivo/patrón que Piscina circular (ver
+      // comentario ahí) — "espesor de los muros" = primary, "espesor del
+      // fondo/losa" = depth, sin secondary. `sourceDimensionKeys` recupera
+      // largo/ancho/profundidad del Paso 1 desde `initialValues`.
+      cmrwrhtiz0000dose4fmkjyia: {
+        shape: "pool-structure-with-depth",
+        primaryLabel: "espesor de los muros",
+        depthLabel: "espesor del fondo/losa",
+        groupLabel: "Espesores del vaso",
+        sourceDimensionKeys: {
+          primary: "largo-de-la-piscina-metros",
+          secondary: "ancho-de-la-piscina-metros",
+          depth: "profundidad-promedio-metros",
+        },
+      },
     },
     // Nota: esta entrada queda sin efecto — mismo caso que Jardinera (ver
     // comentario ahí), el stepGroup tiene depthLabel así que VolumeStep
@@ -720,7 +833,14 @@ export const MODULE_CONFIG: Record<string, ModuleVisualConfig> = {
   excavacion: {
     diagrams: {
       cmrsc8n1d000mdwse1soq1ay1: {
-        shape: "rectangle-with-depth",
+        // Fase B (2026-08-31): "rectangle-with-depth" -> "pit-with-depth" —
+        // mismos campos/cotas/textos, pero VolumeStep dibuja
+        // PoolExcavationIllustration (terreno + hueco) en vez de DiagramV2.
+        // Aplicado globalmente (ver comentario del type `shape` arriba):
+        // este módulo también se usa suelto en Herramientas avanzadas, no
+        // solo dentro del plan "Construir una piscina" — la ilustración es
+        // correcta para ambos usos por igual.
+        shape: "pit-with-depth",
         primaryLabel: "largo",
         secondaryLabel: "ancho",
         depthLabel: "profundidad",
@@ -836,7 +956,7 @@ export const RECALCULATE_FIELDS: Record<string, string> = Object.fromEntries(
 // priced sino un resultado informativo más relevante para el usuario (ej.
 // Piscina: volumen de agua antes que hormigón) — mecanismo genérico, un
 // Formula.key fuerza qué resultado ocupa la tarjeta hero.
-export const HERO_RESULT_KEYS: Record<string, string> = Object.fromEntries(
+export const HERO_RESULT_KEYS: Record<string, string | string[]> = Object.fromEntries(
   Object.entries(MODULE_CONFIG)
     .filter(([, m]) => m.heroResultKey)
     .map(([slug, m]) => [slug, m.heroResultKey!])
@@ -884,11 +1004,12 @@ export const EXCLUDE_FROM_LIST_KEYS: Record<string, string[]> = Object.fromEntri
     .map(([slug, m]) => [slug, m.excludeFromListKeys!])
 );
 
-// Fase 5 (Radier) — dónde va ResultHero (la tarjeta protagonista azul).
+// Fase 5/8 (Radier) — dónde va ResultHero (la tarjeta protagonista azul).
 // Todos los módulos salvo Radier quedan "top" (comportamiento de
-// siempre, sin tocar nada) — Radier pidió el orden Espesor -> Tipo de
-// hormigón -> Dosificación -> Refuerzo -> Volumen (hero) -> Materiales.
-export const HERO_POSITIONS: Record<string, "top" | "beforeMaterials"> = Object.fromEntries(
+// siempre, sin tocar nada). Fase 8: Radier pasó de "beforeMaterials" a
+// "afterInfo" — nuevo orden pedido: Tipo de hormigón -> Volumen (hero)
+// -> Refuerzo -> Dosificación -> Ajusta tu radier -> Materiales.
+export const HERO_POSITIONS: Record<string, "top" | "beforeMaterials" | "afterInfo"> = Object.fromEntries(
   Object.entries(MODULE_CONFIG)
     .filter(([, m]) => m.heroPosition)
     .map(([slug, m]) => [slug, m.heroPosition!])
@@ -899,6 +1020,27 @@ export const REFUERZO_CONFIG: Record<string, RefuerzoConfig> = Object.fromEntrie
   Object.entries(MODULE_CONFIG)
     .filter(([, m]) => m.refuerzo)
     .map(([slug, m]) => [slug, m.refuerzo!])
+);
+
+// Ver heroCaption en ModuleVisualConfig.
+export const HERO_CAPTIONS: Record<string, string> = Object.fromEntries(
+  Object.entries(MODULE_CONFIG)
+    .filter(([, m]) => m.heroCaption)
+    .map(([slug, m]) => [slug, m.heroCaption!])
+);
+
+// Ver hideTotalInHero en ModuleVisualConfig.
+export const HIDE_TOTAL_IN_HERO: Record<string, boolean> = Object.fromEntries(
+  Object.entries(MODULE_CONFIG)
+    .filter(([, m]) => m.hideTotalInHero)
+    .map(([slug, m]) => [slug, m.hideTotalInHero!])
+);
+
+// Ver recalculateFieldSection en ModuleVisualConfig.
+export const RECALCULATE_FIELD_SECTIONS: Record<string, { title: string; helpText: string }> = Object.fromEntries(
+  Object.entries(MODULE_CONFIG)
+    .filter(([, m]) => m.recalculateFieldSection)
+    .map(([slug, m]) => [slug, m.recalculateFieldSection!])
 );
 
 // Preguntas NUMBER que el usuario puede dejar en blanco y avanzar igual

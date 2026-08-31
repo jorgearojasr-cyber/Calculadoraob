@@ -215,6 +215,34 @@ export function QuestionGroupStep({
     ? ROOF_SLOPE_FACTORS[initialValues[diagram.slopeQuestionKey] as string]
     : undefined;
 
+  // Piscina Paso 2 (espesores) — mismo criterio de lectura que
+  // tileSizeCm/roofSlopeFactor: `initialValues` trae TODAS las respuestas
+  // previas del wizard (no solo las de este stepGroup), así que largo/
+  // ancho/profundidad o diámetro/profundidad del Paso 1 ya están
+  // disponibles acá aunque esas preguntas vivan en un stepGroup ANTERIOR.
+  // Sin duplicar pregunta ni estado — solo se leen para alimentar
+  // PoolStructureIllustration (ver volume-step.tsx). A diferencia de
+  // tileSizeCm/roofSlopeFactor (que solo usan el valor como lookup key,
+  // string o no), acá se necesita un número real: `toNum` espera un
+  // string y le hace `.trim()`, pero un campo NUMBER ya respondido en el
+  // Paso 1 llega acá como `number` (ver parseAnswers en
+  // dimension-utils/validation.ts) — `.trim()` sobre un number rompería
+  // en runtime, así que se resuelve con este helper en vez de `toNum`
+  // directo.
+  const initialValueToNum = (raw: string | number | undefined): number | null => {
+    if (typeof raw === "number") return Number.isFinite(raw) && raw >= 0 ? raw : null;
+    return toNum(raw);
+  };
+  const structureDims = diagram?.sourceDimensionKeys
+    ? {
+        primary: initialValueToNum(initialValues[diagram.sourceDimensionKeys.primary]),
+        secondary: diagram.sourceDimensionKeys.secondary
+          ? initialValueToNum(initialValues[diagram.sourceDimensionKeys.secondary])
+          : null,
+        depth: initialValueToNum(initialValues[diagram.sourceDimensionKeys.depth]),
+      }
+    : undefined;
+
   const handleAreaChange = (
     area: number | null,
     dims: { primary: string; secondary: string } | null
@@ -256,6 +284,7 @@ export function QuestionGroupStep({
         handleSubmit={handleSubmit}
         onSaveForLater={onSaveForLater}
         focusFieldKey={focusFieldKey}
+        structureDims={structureDims}
       />
     );
   }

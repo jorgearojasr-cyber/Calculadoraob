@@ -6,6 +6,8 @@ import type { WizardQuestion } from "../types";
 import { formatQuantity } from "@/lib/format-number";
 import { DiagramV2 } from "@/lib/diagram-v2";
 import { RadierIllustration } from "../radier-illustration";
+import { PoolExcavationIllustration } from "../pool-excavation-illustration";
+import { PoolStructureIllustration } from "../pool-structure-illustration";
 import type { DiagramConfig } from "../module-visual-config";
 import { FieldRow } from "./field-row";
 import { SubmitActions } from "./submit-actions";
@@ -43,6 +45,7 @@ export function VolumeStep({
   handleSubmit,
   onSaveForLater,
   focusFieldKey,
+  structureDims,
 }: {
   questions: WizardQuestion[];
   diagram: DiagramConfig;
@@ -55,6 +58,13 @@ export function VolumeStep({
   // BUG-003: ver QuestionGroupStep — campo puntual a autoenfocar en vez del
   // primero por defecto, cuando se llegó acá vía "Cambiar".
   focusFieldKey?: string | null;
+  // Piscina Paso 2 (espesores) — SOLO presente cuando `diagram.shape` es
+  // "pool-structure-*" (ver module-visual-config.ts,
+  // `sourceDimensionKeys`): largo/ancho/profundidad o diámetro/profundidad
+  // ya respondidos en el Paso 1 (stepGroup ANTERIOR), resueltos por
+  // QuestionGroupStep desde `initialValues` — nunca se duplica la
+  // pregunta ni se crea estado nuevo acá.
+  structureDims?: { primary: number | null; secondary: number | null; depth: number | null };
 }) {
   // QuestionOption.numericValue siempre se guarda en METROS (convención,
   // ver comentario en el schema) para que sea consistente con el resto de
@@ -89,13 +99,44 @@ export function VolumeStep({
   };
   const diagramDepthUnit = depthIsSelect || depthUnitIsCm ? "cm" : undefined;
 
-  const isCircular = diagram.shape === "circle-with-depth";
+  const isCircular =
+    diagram.shape === "circle-with-depth" ||
+    diagram.shape === "pit-circle-with-depth" ||
+    diagram.shape === "pool-structure-circle-with-depth";
   // Fase 5 (Radier) — "slab-with-depth" reusa TODO el resto de este
   // componente (campos, cotas, labels, toDiagramDepth) igual que
   // "rectangle-with-depth"; la única diferencia es qué `kind` recibe
   // DiagramV2 más abajo (ver ese archivo, math/scale-engine.ts
   // compressedSlabRatios y render/solid-3d.tsx SlabSolid).
   const isSlab = diagram.shape === "slab-with-depth";
+  // Fase B (2026-08-31) — mismo patrón que isSlab, pero para las 2
+  // ilustraciones nuevas standalone (ninguna toca DiagramV2):
+  // "pit-*" = Excavación (terreno + hueco), aplicado GLOBALMENTE al
+  // módulo (también se usa suelto en Herramientas avanzadas, fuera del
+  // plan de Piscinas — ver module-visual-config.ts).
+  // "pool-structure-*" = Piscina Paso 2 (espesores) — SOLO estos 2
+  // stepGroups, exclusivos de Piscina rectangular/circular.
+  const isPit = diagram.shape === "pit-with-depth" || diagram.shape === "pit-circle-with-depth";
+  const isPoolStructure =
+    diagram.shape === "pool-structure-with-depth" || diagram.shape === "pool-structure-circle-with-depth";
+  // Piscina Paso 1 (dimensiones interiores) — se identifica exclusivamente
+  // por `waterFill` (ver auditoría Fase B, sección 6): confirmado que hoy
+  // SOLO las 2 entradas de Piscina rectangular/circular lo activan, así
+  // que es un gate seguro y ya existente (no requiere shape nuevo) para
+  // mover la ilustración antes de los inputs en mobile sin tocar
+  // Fundación/Pilar/Jardinera/Muro (que no lo usan). El diagrama en sí
+  // sigue siendo el DiagramV2 box/cylinder de siempre, sin cambios.
+  const isPoolStep1 = Boolean(diagram.waterFill);
+  // Gate único de "ilustración antes de los inputs en mobile" — reemplaza
+  // el antiguo `isSlab &&` puntual; cada shape nuevo llega acá por su
+  // propio dato explícito, ninguno afecta a los módulos no mencionados.
+  const showIllustrationFirst = isSlab || isPit || isPoolStructure || isPoolStep1;
+  // Paso 2 de espesores: 2 cifras de espesor no arman un volumen real
+  // (useVolumePreview asume largo×ancho×profundidad o cilindro) — se
+  // sigue calculando por debajo (sin costo funcional) pero no se muestra
+  // la caja de resultado, que hoy tampoco existe en este paso (era un
+  // grid plano sin preview).
+  const showResultBox = !isPoolStructure;
   const secondaryQuestion = diagram.secondaryLabel ? questions[1] : undefined;
   const depthQuestion = questions[diagram.secondaryLabel ? 2 : 1];
 
@@ -121,6 +162,105 @@ export function VolumeStep({
     showArea: diagram.showArea,
   });
 
+  // Espesor en CM crudo (sin convertir a metros) — mismo criterio ya usado
+  // por el bloque `isSlab` de más abajo para RadierIllustration: estos 2
+  // campos de Piscina Paso 2 son NUMBER con unit "cm", así que
+  // `toDiagramDepth` (pensado para geometría real de DiagramV2) los
+  // convertiría a metros — no queremos eso, PoolStructureIllustration
+  // espera el valor real en cm tal cual el usuario lo tipeó.
+  const rawCm = (question: WizardQuestion, raw: string | undefined): number | null => {
+    if (question.type === "SELECT") {
+      const opt = question.options.find((o) => o.key === raw);
+      return opt?.numericValue !== undefined && opt.numericValue !== null ? opt.numericValue * 100 : null;
+    }
+    return toFieldNum(question, raw);
+  };
+
+  // Ilustración compartida entre el bloque mobile (antes de los inputs) y
+  // la columna desktop — un solo cálculo, sin duplicar la lógica de
+  // ternarios en 2 lugares (ver `showIllustrationFirst` más arriba).
+  const illustrationNode = isSlab ? (
+    <RadierIllustration
+      largo={toFieldNum(questions[0], values[questions[0].key])}
+      ancho={secondaryQuestion ? toFieldNum(secondaryQuestion, values[secondaryQuestion.key]) : null}
+      espesor={rawCm(depthQuestion, values[depthQuestion.key])}
+      largoUnit={questions[0].unit ?? "m"}
+      anchoUnit={secondaryQuestion?.unit ?? "m"}
+      espesorUnit={diagramDepthUnit ?? depthQuestion.unit ?? "cm"}
+    />
+  ) : isPit ? (
+    isCircular ? (
+      <PoolExcavationIllustration
+        shape="circular"
+        diametro={toFieldNum(questions[0], values[questions[0].key])}
+        profundidad={toDiagramDepth(depthQuestion, values[depthQuestion.key]) ?? null}
+        diametroUnit={questions[0].unit ?? "m"}
+        profundidadUnit={diagramDepthUnit ?? depthQuestion.unit ?? "m"}
+      />
+    ) : (
+      <PoolExcavationIllustration
+        shape="rectangular"
+        largo={toFieldNum(questions[0], values[questions[0].key])}
+        ancho={secondaryQuestion ? toFieldNum(secondaryQuestion, values[secondaryQuestion.key]) : null}
+        profundidad={toDiagramDepth(depthQuestion, values[depthQuestion.key]) ?? null}
+        largoUnit={questions[0].unit ?? "m"}
+        anchoUnit={secondaryQuestion?.unit ?? "m"}
+        profundidadUnit={diagramDepthUnit ?? depthQuestion.unit ?? "m"}
+      />
+    )
+  ) : isPoolStructure ? (
+    isCircular ? (
+      <PoolStructureIllustration
+        shape="circular"
+        diametro={structureDims?.primary ?? null}
+        profundidad={structureDims?.depth ?? null}
+        espesorMuroCm={rawCm(questions[0], values[questions[0].key])}
+        espesorFondoCm={rawCm(depthQuestion, values[depthQuestion.key])}
+      />
+    ) : (
+      <PoolStructureIllustration
+        shape="rectangular"
+        largo={structureDims?.primary ?? null}
+        ancho={structureDims?.secondary ?? null}
+        profundidad={structureDims?.depth ?? null}
+        espesorMuroCm={rawCm(questions[0], values[questions[0].key])}
+        espesorFondoCm={rawCm(depthQuestion, values[depthQuestion.key])}
+      />
+    )
+  ) : isCircular ? (
+    <DiagramV2
+      kind="cylinder"
+      diametro={toFieldNum(questions[0], values[questions[0].key]) ?? undefined}
+      profundidad={toDiagramDepth(depthQuestion, values[depthQuestion.key])}
+      labels={{ diametro: capitalize(diagram.primaryLabel), profundidad: capitalize(diagram.depthLabel!) }}
+      unit={questions[0].unit ?? "m"}
+      units={{ diametro: questions[0].unit ?? undefined, profundidad: diagramDepthUnit ?? depthQuestion.unit ?? undefined }}
+      activeField={activeField}
+      waterFill={diagram.waterFill}
+    />
+  ) : (
+    <DiagramV2
+      kind="box"
+      largo={toFieldNum(questions[0], values[questions[0].key]) ?? undefined}
+      ancho={secondaryQuestion ? (toFieldNum(secondaryQuestion, values[secondaryQuestion.key]) ?? undefined) : undefined}
+      profundidad={toDiagramDepth(depthQuestion, values[depthQuestion.key])}
+      profundidadDisplay={depthUnitIsCm ? (toFieldNum(depthQuestion, values[depthQuestion.key]) ?? undefined) : undefined}
+      labels={{
+        largo: capitalize(diagram.primaryLabel),
+        ancho: diagram.secondaryLabel ? capitalize(diagram.secondaryLabel) : undefined,
+        profundidad: capitalize(diagram.depthLabel!),
+      }}
+      unit={questions[0].unit ?? "m"}
+      units={{
+        largo: questions[0].unit ?? undefined,
+        ancho: secondaryQuestion?.unit ?? undefined,
+        profundidad: diagramDepthUnit ?? depthQuestion.unit ?? undefined,
+      }}
+      activeField={activeField}
+      waterFill={diagram.waterFill}
+    />
+  );
+
   // Un tip POR CAMPO (Fase 1, sprint UX V1.2, 04-ago-2026) — antes se
   // mostraba solo el primer helpText no nulo de todo el grupo, así que un
   // campo con su propio helpText (ej. espesor) quedaba tapado si otro
@@ -141,29 +281,19 @@ export function VolumeStep({
         {diagram.groupHelpText && <p className="text-sm text-ink-muted mb-5">{diagram.groupHelpText}</p>}
 
         {/* Radier ("Calculadora de radier rediseñada", 2026-08-30, aprobado
-            por Jorge): en mobile, la ilustración va DESPUÉS del título/
-            texto explicativo y ANTES de los inputs (mismo orden que el
-            diseño de referencia) — instancia separada, md:hidden, que
-            lee los mismos `values` que la columna derecha (sin duplicar
-            estado). En desktop queda oculta acá porque la columna derecha
-            (más abajo, hidden solo cuando isSlab) ya la muestra en su
-            lugar de siempre. Ningún módulo no-slab agrega este bloque. */}
-        {isSlab && (
+            por Jorge) + Fase B (2026-08-31, Excavación/Piscinas): en
+            mobile, la ilustración va DESPUÉS del título/texto explicativo
+            y ANTES de los inputs — instancia separada, md:hidden, que
+            reusa `illustrationNode` (mismos `values`/`structureDims` que
+            la columna derecha, sin duplicar estado). En desktop queda
+            oculta acá porque la columna derecha (más abajo, hidden solo
+            cuando `showIllustrationFirst`) ya la muestra en su lugar de
+            siempre. Ningún módulo fuera de este gate agrega este bloque
+            (Fundación/Pilar/Jardinera/Muro no matchean ningún shape ni
+            waterFill). */}
+        {showIllustrationFirst && (
           <div className="md:hidden mb-5 rounded-2xl bg-[#F3F7FB] p-4">
-            <RadierIllustration
-              largo={toFieldNum(questions[0], values[questions[0].key])}
-              ancho={secondaryQuestion ? toFieldNum(secondaryQuestion, values[secondaryQuestion.key]) : null}
-              espesor={
-                depthIsSelect
-                  ? ((toFieldNum(depthQuestion, values[depthQuestion.key]) ?? null) !== null
-                      ? toFieldNum(depthQuestion, values[depthQuestion.key])! * 100
-                      : null)
-                  : toFieldNum(depthQuestion, values[depthQuestion.key])
-              }
-              largoUnit={questions[0].unit ?? "m"}
-              anchoUnit={secondaryQuestion?.unit ?? "m"}
-              espesorUnit={diagramDepthUnit ?? depthQuestion.unit ?? "cm"}
-            />
+            {illustrationNode}
           </div>
         )}
 
@@ -191,29 +321,37 @@ export function VolumeStep({
           ))}
         </div>
 
-        <div className={`mt-4 rounded-2xl bg-concrete px-5 py-4 ${area !== null ? "grid grid-cols-2 gap-4" : ""}`}>
-          {area !== null && (
+        {/* Fase B (2026-08-31): Piscina Paso 2 (espesores) no arma un
+            volumen/superficie real con solo 2 espesores — este paso nunca
+            tuvo una caja de resultado (era un grid plano sin preview) y no
+            gana una inventada acá. El resto de los módulos con VolumeStep
+            (Excavación, Pilar, Piscina Paso 1, Fundación, Jardinera,
+            Radier) la siguen mostrando exactamente igual que antes. */}
+        {showResultBox && (
+          <div className={`mt-4 rounded-2xl bg-concrete px-5 py-4 ${area !== null ? "grid grid-cols-2 gap-4" : ""}`}>
+            {area !== null && (
+              <div>
+                <p className="text-sm text-ink-muted">{diagram.areaResultLabel ?? "Superficie"}</p>
+                <p className="font-display text-2xl font-semibold text-ink">{formatQuantity(area)} m²</p>
+              </div>
+            )}
             <div>
-              <p className="text-sm text-ink-muted">{diagram.areaResultLabel ?? "Superficie"}</p>
-              <p className="font-display text-2xl font-semibold text-ink">{formatQuantity(area)} m²</p>
+              <p className="text-sm text-ink-muted">{diagram.volumeResultLabel ?? "Volumen"}</p>
+              <p className="font-display text-2xl font-semibold text-ink">
+                {volume !== null ? `${formatQuantity(volume)} m³` : "—"}
+              </p>
             </div>
-          )}
-          <div>
-            <p className="text-sm text-ink-muted">{diagram.volumeResultLabel ?? "Volumen"}</p>
-            <p className="font-display text-2xl font-semibold text-ink">
-              {volume !== null ? `${formatQuantity(volume)} m³` : "—"}
-            </p>
+            {/* Radier ("Calculadora de radier rediseñada", 2026-08-30,
+                revisión de Jorge): el diseño final aprobado no incluye la
+                fórmula secundaria ("6 × 3 × 0,08 m") bajo Superficie/
+                Volumen — se oculta SOLO cuando isSlab; el resto de los
+                módulos (Excavación, Pilar, Piscina, Fundación, etc.) la
+                siguen mostrando exactamente igual que antes. No se toca el
+                cálculo de `formulaText` en useVolumePreview, solo su
+                render acá. */}
+            {formulaText && !isSlab && <p className="col-span-2 mt-1 text-xs text-ink-muted">{formulaText}</p>}
           </div>
-          {/* Radier ("Calculadora de radier rediseñada", 2026-08-30,
-              revisión de Jorge): el diseño final aprobado no incluye la
-              fórmula secundaria ("6 × 3 × 0,08 m") bajo Superficie/
-              Volumen — se oculta SOLO cuando isSlab; el resto de los
-              módulos (Excavación, Pilar, Piscina, Fundación, etc.) la
-              siguen mostrando exactamente igual que antes. No se toca el
-              cálculo de `formulaText` en useVolumePreview, solo su
-              render acá. */}
-          {formulaText && !isSlab && <p className="col-span-2 mt-1 text-xs text-ink-muted">{formulaText}</p>}
-        </div>
+        )}
 
         {tips.length > 0 && (
           <div className="mt-4 md:hidden grid gap-2">
@@ -229,19 +367,20 @@ export function VolumeStep({
       </div>
 
       {/* Radier ("Calculadora de radier rediseñada", 2026-08-30, aprobado
-          por Jorge): en mobile esta columna se oculta completa (la
-          ilustración ya se mostró más arriba, entre el texto explicativo
-          y los inputs, ver bloque `isSlab && ...md:hidden` de más arriba)
+          por Jorge) + Fase B (2026-08-31): en mobile esta columna se
+          oculta completa cuando `showIllustrationFirst` (la ilustración ya
+          se mostró más arriba, entre el texto explicativo y los inputs)
           — evita mostrarla dos veces. En desktop no cambia nada: sigue
-          siendo la columna derecha de siempre, mismo `order-2`. Ningún
-          módulo no-slab toca esta clase. */}
-      <div className={`${isSlab ? "hidden md:block" : ""} order-2 mb-6 md:mb-0 rounded-2xl bg-[#F3F7FB] p-5 md:p-6`}>
+          siendo la columna derecha de siempre, mismo `order-2`, mismo
+          slot visual — ningún módulo fuera del gate toca esta clase. */}
+      <div className={`${showIllustrationFirst ? "hidden md:block" : ""} order-2 mb-6 md:mb-0 rounded-2xl bg-[#F3F7FB] p-5 md:p-6`}>
         {/* Radier ("Calculadora de radier rediseñada", 2026-08-30, revisión
-            de Jorge): el diseño final aprobado no incluye este título/
-            explicación en la tarjeta de ilustración — se oculta SOLO
-            cuando isSlab. El resto de los módulos lo sigue mostrando
-            exactamente igual que antes. */}
-        {!isSlab && (
+            de Jorge) + Fase B: el diseño final aprobado no incluye este
+            título/explicación en la tarjeta de ilustración cuando ya hay
+            una ilustración dedicada (`showIllustrationFirst`). El resto de
+            los módulos (Fundación, Pilar, Jardinera, Muro) lo sigue
+            mostrando exactamente igual que antes. */}
+        {!showIllustrationFirst && (
           <div className="hidden md:block mb-4">
             <p className="font-semibold text-sm">Así se ve con tus medidas</p>
             <p className="text-sm text-ink-muted mt-1">
@@ -250,67 +389,7 @@ export function VolumeStep({
             </p>
           </div>
         )}
-        {isSlab ? (
-          <RadierIllustration
-            largo={toFieldNum(questions[0], values[questions[0].key])}
-            ancho={secondaryQuestion ? toFieldNum(secondaryQuestion, values[secondaryQuestion.key]) : null}
-            // Mismo criterio que profundidadDisplay más abajo (DiagramV2,
-            // rama box): el valor a MOSTRAR es el que el usuario ve en su
-            // propio campo (cm en SELECT ×100, o el crudo tipeado en
-            // NUMBER+cm) — nunca el convertido a metros que usaría una
-            // geometría a escala real (esta ilustración no la tiene).
-            espesor={
-              depthIsSelect
-                ? ((toFieldNum(depthQuestion, values[depthQuestion.key]) ?? null) !== null
-                    ? toFieldNum(depthQuestion, values[depthQuestion.key])! * 100
-                    : null)
-                : toFieldNum(depthQuestion, values[depthQuestion.key])
-            }
-            largoUnit={questions[0].unit ?? "m"}
-            anchoUnit={secondaryQuestion?.unit ?? "m"}
-            espesorUnit={diagramDepthUnit ?? depthQuestion.unit ?? "cm"}
-          />
-        ) : isCircular ? (
-          <DiagramV2
-            kind="cylinder"
-            diametro={toFieldNum(questions[0], values[questions[0].key]) ?? undefined}
-            profundidad={toDiagramDepth(depthQuestion, values[depthQuestion.key])}
-            labels={{
-              diametro: capitalize(diagram.primaryLabel),
-              profundidad: capitalize(diagram.depthLabel!),
-            }}
-            unit={questions[0].unit ?? "m"}
-            units={{ diametro: questions[0].unit ?? undefined, profundidad: diagramDepthUnit ?? depthQuestion.unit ?? undefined }}
-            activeField={activeField}
-            waterFill={diagram.waterFill}
-          />
-        ) : (
-          <DiagramV2
-            kind={isSlab ? "slab" : "box"}
-            largo={toFieldNum(questions[0], values[questions[0].key]) ?? undefined}
-            ancho={secondaryQuestion ? (toFieldNum(secondaryQuestion, values[secondaryQuestion.key]) ?? undefined) : undefined}
-            profundidad={toDiagramDepth(depthQuestion, values[depthQuestion.key])}
-            // Radier: profundidad ya viene en metros (fix de geometría de
-            // arriba), pero el chip debe mostrar "8 cm", no "0,08 cm" — se
-            // pasa el valor crudo tipeado (sin convertir) solo para el
-            // texto. Sin efecto en otros módulos (prop opcional, undefined
-            // salvo este caso).
-            profundidadDisplay={depthUnitIsCm ? (toFieldNum(depthQuestion, values[depthQuestion.key]) ?? undefined) : undefined}
-            labels={{
-              largo: capitalize(diagram.primaryLabel),
-              ancho: diagram.secondaryLabel ? capitalize(diagram.secondaryLabel) : undefined,
-              profundidad: capitalize(diagram.depthLabel!),
-            }}
-            unit={questions[0].unit ?? "m"}
-            units={{
-              largo: questions[0].unit ?? undefined,
-              ancho: secondaryQuestion?.unit ?? undefined,
-              profundidad: diagramDepthUnit ?? depthQuestion.unit ?? undefined,
-            }}
-            activeField={activeField}
-            waterFill={diagram.waterFill}
-          />
-        )}
+        {illustrationNode}
         {tips.length > 0 && (
           <div className="hidden md:block mt-4 grid gap-2">
             {tips.map((t) => (
