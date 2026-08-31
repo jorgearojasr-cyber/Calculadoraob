@@ -6,6 +6,7 @@ import type { WizardQuestion } from "../types";
 import { checkRangeWarning, parseTypicalRange } from "@/lib/range-hint";
 import { formatQuantity } from "@/lib/format-number";
 import { AreaInputToggle } from "../area-input-toggle";
+import { PinturaAreaStep } from "../pintura-area-step";
 import { DiagramV2 } from "@/lib/diagram-v2";
 // Configuración visual por módulo (diagramas, layout combinado) — ver
 // module-visual-config.ts, el registro único (Fase de consolidación,
@@ -256,6 +257,30 @@ export function QuestionGroupStep({
         onSaveForLater={onSaveForLater}
         focusFieldKey={focusFieldKey}
       />
+    );
+  }
+
+  // "Calculadora de PINTURA rediseñada" (2026-08-30, aprobado por Jorge)
+  // — rutea a un componente standalone en vez de AreaInputToggle
+  // (compartido), SOLO cuando module-visual-config.ts marca
+  // `standaloneAreaStep` (hoy, únicamente la entrada "pintura"). Chequeo
+  // ANTES de `useAreaToggle` porque Pintura también cumple esa condición
+  // (allowAreaToggle + 1 sola pregunta) — sin esta rama, caería en
+  // AreaInputToggle igual que Muro de bloques/Fachada exterior, que sí
+  // deben seguir usándolo sin cambios.
+  if (diagram?.standaloneAreaStep && questions.length === 1) {
+    return (
+      <div>
+        {questions[0].helpText && <p className="text-sm text-ink-muted mb-3">{questions[0].helpText}</p>}
+        <PinturaAreaStep
+          diagram={diagram}
+          initialArea={values[questions[0].key] || undefined}
+          error={error}
+          handleSubmit={handleSubmit}
+          onSaveForLater={onSaveForLater}
+          onAreaChange={(area) => handleAreaChange(area, null)}
+        />
+      </div>
     );
   }
 

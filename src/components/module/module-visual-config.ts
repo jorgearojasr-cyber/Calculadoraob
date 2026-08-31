@@ -49,6 +49,16 @@ export type DiagramConfig = {
   // ventanas) del área bruta en modo largo×ancho — ver AreaInputToggle.
   enableDeduction?: boolean;
   deductionLabel?: string;
+  // "Calculadora de PINTURA rediseñada" (2026-08-30, aprobado por Jorge)
+  // — rutea este stepGroup a PinturaAreaStep (componente standalone) en
+  // vez de AreaInputToggle (compartido). Presente ÚNICAMENTE en la
+  // entrada "pintura": Muro de bloques o ladrillos y Pintar una fachada
+  // exterior también tienen enableDeduction pero NO este flag, así que
+  // siguen usando AreaInputToggle exactamente igual que siempre — no
+  // ganan el descuento de vanos en modo "m² directo" ni la tarjeta de
+  // resultado de 3 celdas, a propósito (decisión confirmada por Jorge:
+  // no extender este comportamiento fuera de Pintura en esta fase).
+  standaloneAreaStep?: boolean;
   // Sub-etiqueta corta bajo cada label de campo (ej. "El lado más largo")
   // — solo usada por los grupos con depthLabel (volumen). El resto de los
   // grupos (área) no la necesita — su patrón de campo no cambió.
@@ -630,6 +640,7 @@ export const MODULE_CONFIG: Record<string, ModuleVisualConfig> = {
         allowAreaToggle: true,
         enableDeduction: true,
         deductionLabel: "Puertas y ventanas a descontar",
+        standaloneAreaStep: true,
       },
     },
   },
