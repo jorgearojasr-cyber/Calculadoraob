@@ -9,10 +9,11 @@
 // VolumeStep ya arma (mismo grid, mismos campos, mismo mecanismo de
 // guardado/draft/recálculo -- MOTOR/PERSISTENCIA genérica, UI específica).
 //
-// C1 solo tiene 2 bloques (Medidas, Estructura); el arreglo admite agregar
-// más adelante (Interior/Excavación/Entorno, fases C2+) sin cambiar esta
-// firma -- basta con extender `BLOCKS` cuando existan.
-const BLOCKS = ["Medidas", "Estructura"] as const;
+// C1 tenía 2 bloques (Medidas, Estructura); Fase C2 (2026-09-01) agrega
+// "Interior" (terminación de muros/fondo) como tercer bloque -- el arreglo
+// sigue admitiendo más adelante (Excavación/Entorno, fases C3+) sin
+// cambiar esta firma, basta con extender `BLOCKS` cuando existan.
+const BLOCKS = ["Medidas", "Estructura", "Interior"] as const;
 
 export function PoolConfiguratorLayout({ activeBlock }: { activeBlock: string }) {
   return (

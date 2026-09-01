@@ -8,6 +8,7 @@ import { QuestionGroupStep, hasAreaToggle, hasDiagram } from "./question-group-s
 import { ConditionalRevealStep } from "./conditional-reveal-step";
 import { ApplianceConsumptionStep } from "./appliance-consumption-step";
 import { FoundationStep, isFoundationStepGroup } from "./foundation-step";
+import { InteriorTerminationStep, isInteriorTerminationStepGroup, getInteriorActiveKeys } from "./interior-termination-step";
 import { ResultScreen } from "./result-screen";
 import { WizardHeader } from "./wizard-header";
 import { WizardResumeGate } from "./wizard-resume-gate";
@@ -370,8 +371,21 @@ export function ModuleWizard({
   // LiveSummaryPanel) — se usa tanto durante el wizard como en el
   // resultado, un solo cómputo para los dos.
   const answersSummary: SummaryItem[] = useMemo(() => {
+    // Fase C2.1 (2026-09-01) -- las 13 Questions de "interior-termination"
+    // (piscina-integral) no tienen visibleIfQuestionKey (ver
+    // interior-termination-step.tsx: la condición real es compuesta —
+    // depende de 2 keys distintas — y el schema no la puede expresar en
+    // una sola Question), así que el filtro genérico de arriba las deja
+    // pasar TODAS. `getInteriorActiveKeys` es la misma lógica condicional
+    // real que ese componente usa para decidir qué renderizar — acá se
+    // reutiliza (no se duplica a mano) solo para ocultar del resumen las
+    // ramas no vigentes (otro material, o el fondo cuando "misma
+    // terminación" está activo). Gateado por stepGroup: no afecta a
+    // ningún otro módulo, que no tiene preguntas con ese stepGroup.
+    const interiorActive = getInteriorActiveKeys(answers);
     return questions
       .filter((question) => isQuestionVisible(question, answers))
+      .filter((question) => !isInteriorTerminationStepGroup(question.stepGroup) || interiorActive.has(question.key))
       // Respuestas TEXT que son un blob JSON (ej. el desglose de Consumo
       // eléctrico, ver appliance-consumption-step.tsx) son para consumo
       // interno del cálculo, no algo legible para mostrar acá — regla
@@ -408,6 +422,12 @@ export function ModuleWizard({
   // saltarse QuestionGroupStep con un componente a medida.
   const isFoundationGroup = Boolean(currentGroup) && isFoundationStepGroup(currentGroup[0]?.stepGroup);
 
+  // Fase C2 (2026-09-01) -- Interior (terminación de muros/fondo) del
+  // configurador integral de Piscina: mismo criterio que isFoundationGroup,
+  // geometría/UI propia (2 superficies × 4 terminaciones condicionales +
+  // toggle "misma terminación") que no encaja en QuestionGroupStep.
+  const isInteriorTermination = Boolean(currentGroup) && isInteriorTerminationStepGroup(currentGroup[0]?.stepGroup);
+
   const stepInitialValues = useMemo(
     () => (currentGroup ? withSuggestedDefaults(currentGroup, answers) : answers),
     [currentGroup, answers]
@@ -433,7 +453,10 @@ export function ModuleWizard({
   const showSummaryPanel = !calculation && stepIndex > 0;
   const isWideStep =
     !calculation &&
-    (showSummaryPanel || isFoundationGroup || (Boolean(currentGroup) && hasDiagram(currentGroup[0]?.stepGroup)));
+    (showSummaryPanel ||
+      isFoundationGroup ||
+      isInteriorTermination ||
+      (Boolean(currentGroup) && hasDiagram(currentGroup[0]?.stepGroup)));
 
   // Fase C1.1 (2026-09-01) — EXCLUSIVO de "piscina-integral": 3 ajustes
   // opt-in, gateados por moduleSlug, que no tocan ningún otro módulo:
@@ -543,6 +566,14 @@ export function ModuleWizard({
               onAnswer={handleGroupAnswer}
               onSaveForLater={handleSaveForLater}
               focusFieldKey={focusFieldKey}
+            />
+          ) : isInteriorTermination ? (
+            <InteriorTerminationStep
+              key={currentGroup.map((q) => q.id).join("-")}
+              questions={currentGroup}
+              initialValues={stepInitialValues}
+              onAnswer={handleGroupAnswer}
+              onSaveForLater={handleSaveForLater}
             />
           ) : currentGroup.length > 1 || hasAreaToggle(currentGroup[0].stepGroup) ? (
             <QuestionGroupStep

@@ -8,9 +8,9 @@ import { formatQuantity } from "@/lib/format-number";
 // MATEMATICA/idea de esos 2 ultimos (rombo/elipse isometrico + espesor)
 // pero es un archivo propio -- no los importa ni los modifica.
 //
-// 2 estados dentro de UN solo componente (ver seccion 11 del pedido de
+// 3 estados dentro de UN solo componente (ver seccion 11 del pedido de
 // C1, "un unico PoolConfiguratorIllustration con variantes/estados
-// internos", no 4 componentes separados):
+// internos", no un componente separado por paso):
 //   - "medidas": solo el vaso interior (agua), sin muro/losa -- el
 //     usuario aun no respondio espesores.
 //   - "estructura": vaso interior + anillo de muro + losa extendida bajo
@@ -18,10 +18,22 @@ import { formatQuantity } from "@/lib/format-number";
 //     EXCLUSIVO de piscina-integral), leyendo largo/ancho/profundidad ya
 //     respondidos en "Medidas" (sourceDimensionKeys, mismo mecanismo de
 //     Fase B) + los espesores que se estan tipeando ahora.
+//   - "interior" (Fase C2, 2026-09-01): MISMA geometria que "estructura"
+//     (muro+losa ya definidos, se leen de Estructura vía
+//     sourceDimensionKeys igual que siempre) pero la cara de agua (fondo)
+//     y las caras interiores de muro se tiñen/texturizan según la
+//     terminación elegida para cada superficie -- pintura (color solido),
+//     cerámica/mosaico (patrón de grilla), membrana PVC (patrón de franjas
+//     continuas) o sin calcular (gris neutro, mismo tono que el hormigón
+//     sin terminar). Los pills MURO/FONDO pasan a mostrar el nombre de la
+//     terminación en vez del espesor en cm (el espesor ya se ve en la
+//     ilustración de Estructura, acá lo relevante es el material).
 //
 // Mismo criterio de "Sin definir" vs "0" que PoolStructureIllustration:
 // un espesor nunca respondido se muestra sin cifra (nunca se inventa un
 // valor), 0 tipeado se muestra literal.
+export type InteriorMaterial = "pintura" | "ceramica" | "membrana" | "sin-calcular";
+
 export type PoolConfiguratorIllustrationProps =
   | {
       state: "medidas";
@@ -52,6 +64,27 @@ export type PoolConfiguratorIllustrationProps =
       profundidad: number | null;
       espesorMuroCm: number | null;
       espesorFondoCm: number | null;
+    }
+  | {
+      state: "interior";
+      shape: "rectangular";
+      largo: number | null;
+      ancho: number | null;
+      profundidad: number | null;
+      espesorMuroCm: number | null;
+      espesorFondoCm: number | null;
+      materialMuros: InteriorMaterial | null;
+      materialFondo: InteriorMaterial | null;
+    }
+  | {
+      state: "interior";
+      shape: "circular";
+      diametro: number | null;
+      profundidad: number | null;
+      espesorMuroCm: number | null;
+      espesorFondoCm: number | null;
+      materialMuros: InteriorMaterial | null;
+      materialFondo: InteriorMaterial | null;
     };
 
 function clamp(value: number, min: number, max: number): number {
@@ -72,6 +105,37 @@ function formatValue(value: number | null, unit: string): string {
 function formatEspesor(value: number | null): { text: string; hasValue: boolean } {
   if (value === null) return { text: "Sin definir", hasValue: false };
   return { text: `${formatQuantity(value)} cm`, hasValue: true };
+}
+
+// Fase C2 -- nombre corto (cabe en el pill MURO/FONDO) por terminación.
+const MATERIAL_LABELS: Record<InteriorMaterial, string> = {
+  pintura: "Pintura",
+  ceramica: "Cerámica",
+  membrana: "Membrana",
+  "sin-calcular": "Sin calcular",
+};
+
+function formatMaterial(value: InteriorMaterial | null): { text: string; hasValue: boolean } {
+  if (value === null) return { text: "Sin definir", hasValue: false };
+  return { text: MATERIAL_LABELS[value], hasValue: true };
+}
+
+// Relleno visual por terminación -- pintura es color sólido uniforme,
+// cerámica/membrana usan un patrón (definido en MATERIAL_PATTERNS más
+// abajo) para diferenciarse a simple vista, sin calcular/null cae al
+// mismo gris neutro del hormigón sin terminar (no se inventa un
+// acabado que el usuario no eligió).
+function materialFill(value: InteriorMaterial | null): string {
+  switch (value) {
+    case "pintura":
+      return "#4FB8DE";
+    case "ceramica":
+      return "url(#poolcfg-mat-ceramica)";
+    case "membrana":
+      return "url(#poolcfg-mat-membrana)";
+    default:
+      return "#D9D4CB";
+  }
 }
 
 const ANGLE_DEG = 22;
@@ -112,6 +176,19 @@ const MARKERS = (
     <marker id="poolcfg-arrow-navy-start" markerWidth="6" markerHeight="6" refX="1" refY="3" orient="auto">
       <path d="M6,0 L0,3 L6,6 Z" fill="#002152" />
     </marker>
+    {/* Fase C2 -- patrones de terminación interior (cerámica/mosaico =
+        grilla discreta, membrana PVC = franjas continuas). Se incluyen
+        siempre (no solo en state="interior") porque son inertes/sin costo
+        si no se referencian -- evita threadear una prop extra solo para
+        decidir si declarar el <defs>. */}
+    <pattern id="poolcfg-mat-ceramica" width="9" height="9" patternUnits="userSpaceOnUse">
+      <rect width="9" height="9" fill="#CDEBFA" />
+      <rect x="0.5" y="0.5" width="8" height="8" fill="none" stroke="#7FB8DE" strokeWidth="1" />
+    </pattern>
+    <pattern id="poolcfg-mat-membrana" width="10" height="10" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+      <rect width="10" height="10" fill="#BEE3F8" />
+      <rect width="4" height="10" fill="#4A9BC7" />
+    </pattern>
   </defs>
 );
 
@@ -121,6 +198,8 @@ function RectangularPool({
   profundidad,
   espesorMuroCm,
   espesorFondoCm,
+  materialMuros,
+  materialFondo,
 }: {
   largo: number | null;
   ancho: number | null;
@@ -130,17 +209,29 @@ function RectangularPool({
   // donde `null` significa "pregunta visible, aún sin responder".
   espesorMuroCm: number | null | undefined;
   espesorFondoCm: number | null | undefined;
+  // Fase C2 -- presentes (no undefined) SOLO en state="interior". `null`
+  // ahí significa "aún no elegida" (Sin definir), igual criterio que los
+  // espesores de Estructura.
+  materialMuros?: InteriorMaterial | null;
+  materialFondo?: InteriorMaterial | null;
 }) {
   const showStructure = espesorMuroCm !== undefined;
+  const isInterior = materialMuros !== undefined;
   const ratio = clamp(largo && ancho && largo > 0 && ancho > 0 ? largo / ancho : 2, MIN_RATIO, MAX_RATIO);
   const anchoVisual = Math.sqrt(BASE_FOOTPRINT_AREA / ratio);
   const largoVisual = Math.sqrt(BASE_FOOTPRINT_AREA * ratio);
   const avgHorizontal = (largoVisual + anchoVisual) / 2;
 
-  const muro = formatEspesor(espesorMuroCm ?? null);
-  const fondo = formatEspesor(espesorFondoCm ?? null);
-  const wallPx = showStructure ? (muro.hasValue ? clamp(avgHorizontal * 0.035 + (espesorMuroCm ?? 0) * 0.6, MIN_WALL_PX, MAX_WALL_PX) : MIN_WALL_PX) : 0;
-  const floorPx = showStructure ? (fondo.hasValue ? clamp((espesorFondoCm ?? 0) * 0.5, MIN_FLOOR_PX, MAX_FLOOR_PX) : MIN_FLOOR_PX) : 0;
+  // Fase C2 -- en "interior" el pill MURO/FONDO muestra la terminación
+  // elegida (Pintura/Cerámica/Membrana/Sin calcular), no el espesor en cm
+  // (ese ya se vio en el paso Estructura) -- mismo objeto {text,hasValue}
+  // que formatEspesor, así el resto del render no necesita ramas nuevas.
+  const espesorMuroHasValue = espesorMuroCm !== null && espesorMuroCm !== undefined;
+  const espesorFondoHasValue = espesorFondoCm !== null && espesorFondoCm !== undefined;
+  const muro = isInterior ? formatMaterial(materialMuros ?? null) : formatEspesor(espesorMuroCm ?? null);
+  const fondo = isInterior ? formatMaterial(materialFondo ?? null) : formatEspesor(espesorFondoCm ?? null);
+  const wallPx = showStructure ? (espesorMuroHasValue ? clamp(avgHorizontal * 0.035 + (espesorMuroCm ?? 0) * 0.6, MIN_WALL_PX, MAX_WALL_PX) : MIN_WALL_PX) : 0;
+  const floorPx = showStructure ? (espesorFondoHasValue ? clamp((espesorFondoCm ?? 0) * 0.5, MIN_FLOOR_PX, MAX_FLOOR_PX) : MIN_FLOOR_PX) : 0;
 
   const depthRatio = profundidad && profundidad > 0 ? clamp(profundidad / Math.max(largo ?? 1, ancho ?? 1, 0.5), 0.18, 0.85) : 0.32;
   const depthPx = clamp(avgHorizontal * depthRatio, MIN_DEPTH_PX, MAX_DEPTH_PX);
@@ -220,10 +311,13 @@ function RectangularPool({
           {/* Muros exteriores (hormigón) */}
           <polygon points={outerLeftFace} fill="#A9A49B" />
           <polygon points={outerRightFace} fill="#8F8A81" />
-          {/* Anillo superior = espesor de muro (hormigón) */}
+          {/* Anillo superior = espesor de muro -- en "interior" (Fase C2)
+              es la única cara claramente asociable a "muros" en esta
+              perspectiva, así que se tiñe con la terminación de muros; en
+              "estructura" sigue siendo el gris de hormigón de siempre. */}
           <path
             d={`M${outerTopPts.split(" ").join("L")}Z M${waterTopPts.split(" ").join("L")}Z`}
-            fill="#B9B4AC"
+            fill={isInterior ? materialFill(materialMuros ?? null) : "#B9B4AC"}
             fillRule="evenodd"
             stroke="#8F8A81"
             strokeWidth="1"
@@ -236,8 +330,10 @@ function RectangularPool({
           <polygon points={waterRightFace} fill="#7FB8DE" opacity="0.55" />
         </>
       )}
-      {/* Espejo de agua (interior) */}
-      <polygon points={waterTopPts} fill="#BEE3F8" stroke="#7FB8DE" strokeWidth="1" />
+      {/* Espejo de agua = cara de FONDO -- en "interior" se tiñe con la
+          terminación de fondo elegida; en los otros 2 estados sigue el
+          celeste de agua de siempre. */}
+      <polygon points={waterTopPts} fill={isInterior ? materialFill(materialFondo ?? null) : "#BEE3F8"} stroke="#7FB8DE" strokeWidth="1" />
 
       <g stroke="#002152" strokeWidth="1.5" fill="none">
         <line x1={anchoRefPoint.x - 4} y1={anchoRefPoint.y + 4} x2={Pleft.x + 4} y2={Pleft.y - 4} markerStart="url(#poolcfg-arrow-navy-start)" markerEnd="url(#poolcfg-arrow-navy-end)" />
@@ -319,22 +415,29 @@ function CircularPool({
   profundidad,
   espesorMuroCm,
   espesorFondoCm,
+  materialMuros,
+  materialFondo,
 }: {
   diametro: number | null;
   profundidad: number | null;
   espesorMuroCm: number | null | undefined;
   espesorFondoCm: number | null | undefined;
+  materialMuros?: InteriorMaterial | null;
+  materialFondo?: InteriorMaterial | null;
 }) {
   const showStructure = espesorMuroCm !== undefined;
+  const isInterior = materialMuros !== undefined;
   const cx = 200;
   const cy = 96;
   const innerRx = 92;
   const innerRy = 36;
 
-  const muro = formatEspesor(espesorMuroCm ?? null);
-  const fondo = formatEspesor(espesorFondoCm ?? null);
-  const wallPx = showStructure ? (muro.hasValue ? clamp(innerRx * 0.05 + (espesorMuroCm ?? 0) * 0.55, MIN_WALL_PX, MAX_WALL_PX) : MIN_WALL_PX) : 0;
-  const floorPx = showStructure ? (fondo.hasValue ? clamp((espesorFondoCm ?? 0) * 0.5, MIN_FLOOR_PX, MAX_FLOOR_PX) : MIN_FLOOR_PX) : 0;
+  const espesorMuroHasValue = espesorMuroCm !== null && espesorMuroCm !== undefined;
+  const espesorFondoHasValue = espesorFondoCm !== null && espesorFondoCm !== undefined;
+  const muro = isInterior ? formatMaterial(materialMuros ?? null) : formatEspesor(espesorMuroCm ?? null);
+  const fondo = isInterior ? formatMaterial(materialFondo ?? null) : formatEspesor(espesorFondoCm ?? null);
+  const wallPx = showStructure ? (espesorMuroHasValue ? clamp(innerRx * 0.05 + (espesorMuroCm ?? 0) * 0.55, MIN_WALL_PX, MAX_WALL_PX) : MIN_WALL_PX) : 0;
+  const floorPx = showStructure ? (espesorFondoHasValue ? clamp((espesorFondoCm ?? 0) * 0.5, MIN_FLOOR_PX, MAX_FLOOR_PX) : MIN_FLOOR_PX) : 0;
 
   const depthRatio = profundidad && diametro && diametro > 0 ? clamp(profundidad / diametro, 0.15, 0.85) : 0.35;
   const depthPx = clamp(innerRx * 1.05 * depthRatio, MIN_DEPTH_PX, MAX_DEPTH_PX);
@@ -370,7 +473,7 @@ function CircularPool({
           />
           <path
             d={`M${cx - outerRx},${cy} A${outerRx},${outerRy} 0 1,0 ${cx + outerRx},${cy} A${outerRx},${outerRy} 0 1,0 ${cx - outerRx},${cy} Z M${cx - innerRx},${cy} A${innerRx},${innerRy} 0 1,0 ${cx + innerRx},${cy} A${innerRx},${innerRy} 0 1,0 ${cx - innerRx},${cy} Z`}
-            fill="#B9B4AC"
+            fill={isInterior ? materialFill(materialMuros ?? null) : "#B9B4AC"}
             fillRule="evenodd"
             stroke="#8F8A81"
             strokeWidth="1"
@@ -387,7 +490,7 @@ function CircularPool({
           />
         </>
       )}
-      <ellipse cx={cx} cy={cy} rx={innerRx} ry={innerRy} fill="#BEE3F8" stroke="#7FB8DE" strokeWidth="1" />
+      <ellipse cx={cx} cy={cy} rx={innerRx} ry={innerRy} fill={isInterior ? materialFill(materialFondo ?? null) : "#BEE3F8"} stroke="#7FB8DE" strokeWidth="1" />
 
       <rect x={cx - diametroPillWidth / 2} y={cy - innerRy - 30} width={diametroPillWidth} height="20" rx="10" fill="#F9F9F9" />
       <text x={cx} y={cy - innerRy - 23.5} textAnchor="middle" fontSize="8.5" fontWeight="700" letterSpacing="0.05em" fill="#5E5850" className="font-display">
@@ -457,8 +560,10 @@ function CircularPool({
 }
 
 export function PoolConfiguratorIllustration(props: PoolConfiguratorIllustrationProps) {
-  const espesorMuroCm = props.state === "estructura" ? props.espesorMuroCm : undefined;
-  const espesorFondoCm = props.state === "estructura" ? props.espesorFondoCm : undefined;
+  const espesorMuroCm = props.state === "estructura" || props.state === "interior" ? props.espesorMuroCm : undefined;
+  const espesorFondoCm = props.state === "estructura" || props.state === "interior" ? props.espesorFondoCm : undefined;
+  const materialMuros = props.state === "interior" ? props.materialMuros : undefined;
+  const materialFondo = props.state === "interior" ? props.materialFondo : undefined;
 
   return (
     <div>
@@ -469,6 +574,8 @@ export function PoolConfiguratorIllustration(props: PoolConfiguratorIllustration
           profundidad={props.profundidad}
           espesorMuroCm={espesorMuroCm}
           espesorFondoCm={espesorFondoCm}
+          materialMuros={materialMuros}
+          materialFondo={materialFondo}
         />
       ) : (
         <CircularPool
@@ -476,6 +583,8 @@ export function PoolConfiguratorIllustration(props: PoolConfiguratorIllustration
           profundidad={props.profundidad}
           espesorMuroCm={espesorMuroCm}
           espesorFondoCm={espesorFondoCm}
+          materialMuros={materialMuros}
+          materialFondo={materialFondo}
         />
       )}
       <Note />
