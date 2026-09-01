@@ -435,6 +435,18 @@ export function ModuleWizard({
     !calculation &&
     (showSummaryPanel || isFoundationGroup || (Boolean(currentGroup) && hasDiagram(currentGroup[0]?.stepGroup)));
 
+  // Fase C1.1 (2026-09-01) — EXCLUSIVO de "piscina-integral": 3 ajustes
+  // opt-in, gateados por moduleSlug, que no tocan ningún otro módulo:
+  // (a) más ancho de página para dar protagonismo real a la ilustración
+  // (VolumeStep ya usa un ratio de columnas propio para este módulo, ver
+  // volume-step.tsx); (b) "Paso X de Y" + barra segmentada de WizardHeader
+  // ocultos porque PoolConfiguratorLayout ya muestra su propio tracker
+  // "Medidas → Estructura" en el mismo paso (2 indicadores de progreso a
+  // la vez era redundante/confuso, ver captura mobile); (c) "Tu proyecto"
+  // pasa a lg:280px (antes 300px) para ceder ese margen extra a la
+  // ilustración, sin desaparecer ni cambiar de comportamiento.
+  const isPiscinaIntegral = moduleSlug === "piscina-integral";
+
   // Fila "← Inicio / ← Atrás / ← Volver al paso N" (ver WizardHeader) —
   // antes era un link suelto siempre a "/", fijo en el primer paso;
   // ahora refleja de dónde vuelve realmente el usuario en cada momento
@@ -454,10 +466,14 @@ export function ModuleWizard({
       : { label: "Atrás", onClick: handleBack };
 
   return (
-    <div className={`mx-auto px-6 pt-8 pb-20 ${isWideStep ? "max-w-4xl" : "max-w-2xl"}`}>
+    <div
+      className={`mx-auto px-6 pt-8 pb-20 ${
+        isWideStep ? (isPiscinaIntegral ? "max-w-5xl" : "max-w-4xl") : "max-w-2xl"
+      }`}
+    >
       <WizardHeader
         moduleName={moduleName}
-        step={!calculation ? { index: stepIndex, total: steps.length } : undefined}
+        step={!calculation && !isPiscinaIntegral ? { index: stepIndex, total: steps.length } : undefined}
         back={back}
         resultMode={Boolean(calculation)}
       />
@@ -494,7 +510,15 @@ export function ModuleWizard({
           -> lg, aplicado igual en TODOS los módulos, no una excepción
           puntual. */}
       {!calculation && !resumeDraft && (
-        <div className={showSummaryPanel ? "lg:grid lg:grid-cols-[1fr_300px] lg:gap-8 lg:items-start" : undefined}>
+        <div
+          className={
+            showSummaryPanel
+              ? `lg:grid lg:gap-8 lg:items-start ${
+                  isPiscinaIntegral ? "lg:grid-cols-[1fr_260px]" : "lg:grid-cols-[1fr_300px]"
+                }`
+              : undefined
+          }
+        >
         <div>
           {isConditionalReveal ? (
             <ConditionalRevealStep

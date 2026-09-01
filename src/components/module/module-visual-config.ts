@@ -47,6 +47,17 @@ export type DiagramConfig = {
   // `sourceDimensionKeys` para cómo la ilustración recupera largo/ancho/
   // diámetro/profundidad ya respondidos en el Paso 1, sin duplicar
   // preguntas ni estado.
+  //
+  // "pool-integral-*-with-depth" (Fase C1, 2026-08-31): EXCLUSIVO del
+  // Module nuevo `piscina-integral` (configurador integral) — nunca usado
+  // por ningún otro módulo, ni por los standalone de Piscina. Rutea a
+  // PoolConfiguratorIllustration (componente propio, distinto de
+  // PoolStructureIllustration) en un estado "medidas" (rect/circ, 2-3
+  // campos, sin espesores aún) o "estructura" (rect/circ, espesor muro/
+  // losa, lee largo/ancho/profundidad ya respondidos vía
+  // `sourceDimensionKeys`, mismo mecanismo ya usado en Fase B). También
+  // gatea el header de bloque ("MEDIDAS"/"ESTRUCTURA") de
+  // PoolConfiguratorLayout — ver `poolConfiguratorBlockLabel`.
   shape:
     | "rectangle"
     | "rectangle-with-depth"
@@ -56,7 +67,11 @@ export type DiagramConfig = {
     | "pit-with-depth"
     | "pit-circle-with-depth"
     | "pool-structure-with-depth"
-    | "pool-structure-circle-with-depth";
+    | "pool-structure-circle-with-depth"
+    | "pool-integral-medidas-rect-with-depth"
+    | "pool-integral-medidas-circ-with-depth"
+    | "pool-integral-estructura-rect-with-depth"
+    | "pool-integral-estructura-circ-with-depth";
   primaryLabel: string;
   secondaryLabel?: string;
   depthLabel?: string;
@@ -139,6 +154,14 @@ export type DiagramConfig = {
   // orientationQuestionKey/slopeQuestionKey) — nunca se duplica la
   // pregunta ni se crea una Variable nueva.
   sourceDimensionKeys?: { primary: string; secondary?: string; depth: string };
+  // Fase C1 — EXCLUSIVO de shapes "pool-integral-*": rótulo del bloque
+  // ("Medidas"/"Estructura") que PoolConfiguratorLayout muestra como
+  // encabezado, en vez del <h2> genérico de `groupLabel` — es lo que hace
+  // que el Module `piscina-integral` se sienta como un configurador por
+  // bloques y no como un wizard genérico de preguntas sueltas. Ausente
+  // (undefined) en todo el resto de los módulos: VolumeStep sigue
+  // mostrando su `groupLabel` de siempre, sin cambios.
+  poolConfiguratorBlockLabel?: string;
 };
 
 export type CombinedAreaQuestionConfig = { label: string; helpText: string; areaLabel: string };
@@ -836,6 +859,70 @@ export const MODULE_CONFIG: Record<string, ModuleVisualConfig> = {
         groupHelpText: "Mide el hoyo terminado, no la marca en el suelo ni el tamaño de la piscina.",
         groupHelpTextDetail:
           "El hoyo va más ancho y profundo que la piscina para dejar espacio de moldaje y el espesor del muro. La profundidad se mide desde el nivel del terreno hasta el fondo. Como referencia general, muchos proyectos dejan entre 20 y 30 cm de holgura alrededor de la piscina — es solo una recomendación, no un cálculo: el valor real depende del sistema constructivo que uses, confírmalo con tu maestro o constructor.",
+      },
+    },
+  },
+  // Fase C1 (2026-08-31) — Module NUEVO "piscina-integral" (configurador
+  // integral), paralelo a piscina-rectangular-hormigon-armado/
+  // piscina-circular-hormigon-armado — NO los reemplaza ni los modifica.
+  // 4 stepGroups, 2 por forma (rectangular/circular), cada par mutuamente
+  // excluyente vía visibleIfQuestionKey en la Question (ver
+  // fase-c1-piscina-integral.ts) — el wizard nunca muestra más de un
+  // "Medidas" ni más de un "Estructura" en la misma sesión.
+  "piscina-integral": {
+    // Fase C1.1 (2026-09-01) — "hormigon-total" es el puente `coalesce`
+    // (ver fase-c1-piscina-integral.ts) que unifica hormigon-total-rect/
+    // hormigon-total-circ en una sola key SIEMPRE presente, para que el
+    // hero de ResultScreen muestre "Hormigón total" en vez del resultado
+    // priced por defecto (antes caía en el primer no-secundario: el radio/
+    // largo exterior del muro).
+    heroResultKey: "hormigon-total",
+    diagrams: {
+      "medidas-rect": {
+        shape: "pool-integral-medidas-rect-with-depth",
+        primaryLabel: "largo",
+        secondaryLabel: "ancho",
+        depthLabel: "profundidad",
+        primarySubLabel: "Medida interior terminada",
+        secondarySubLabel: "Medida interior terminada",
+        depthSubLabel: "Del fondo al borde",
+        groupLabel: "¿Qué medidas tiene la piscina?",
+        poolConfiguratorBlockLabel: "Medidas",
+      },
+      "medidas-circ": {
+        shape: "pool-integral-medidas-circ-with-depth",
+        primaryLabel: "diámetro",
+        depthLabel: "profundidad",
+        primarySubLabel: "Medida interior terminada",
+        depthSubLabel: "Del fondo al borde",
+        groupLabel: "¿Qué medidas tiene la piscina?",
+        poolConfiguratorBlockLabel: "Medidas",
+      },
+      "estructura-rect": {
+        shape: "pool-integral-estructura-rect-with-depth",
+        primaryLabel: "espesor de los muros",
+        depthLabel: "espesor del fondo/losa",
+        groupLabel: "Estructura del vaso",
+        poolConfiguratorBlockLabel: "Estructura",
+        // Recupera largo/ancho/profundidad ya respondidos en "Medidas"
+        // (stepGroup ANTERIOR) desde `initialValues` — mismo mecanismo de
+        // Fase B, sin duplicar pregunta ni estado.
+        sourceDimensionKeys: {
+          primary: "largo-interior-metros",
+          secondary: "ancho-interior-metros",
+          depth: "profundidad-interior-metros",
+        },
+      },
+      "estructura-circ": {
+        shape: "pool-integral-estructura-circ-with-depth",
+        primaryLabel: "espesor de los muros",
+        depthLabel: "espesor del fondo/losa",
+        groupLabel: "Estructura del vaso",
+        poolConfiguratorBlockLabel: "Estructura",
+        sourceDimensionKeys: {
+          primary: "diametro-interior-metros",
+          depth: "profundidad-interior-metros-circular",
+        },
       },
     },
   },

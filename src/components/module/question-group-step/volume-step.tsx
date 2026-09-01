@@ -9,6 +9,8 @@ import { RadierIllustration } from "../radier-illustration";
 import { CollapsibleHelp } from "../collapsible-help";
 import { PoolExcavationIllustration } from "../pool-excavation-illustration";
 import { PoolStructureIllustration } from "../pool-structure-illustration";
+import { PoolConfiguratorIllustration } from "../pool-configurator-illustration";
+import { PoolConfiguratorLayout } from "../pool-configurator-layout";
 import type { DiagramConfig } from "../module-visual-config";
 import { FieldRow } from "./field-row";
 import { SubmitActions } from "./submit-actions";
@@ -103,7 +105,9 @@ export function VolumeStep({
   const isCircular =
     diagram.shape === "circle-with-depth" ||
     diagram.shape === "pit-circle-with-depth" ||
-    diagram.shape === "pool-structure-circle-with-depth";
+    diagram.shape === "pool-structure-circle-with-depth" ||
+    diagram.shape === "pool-integral-medidas-circ-with-depth" ||
+    diagram.shape === "pool-integral-estructura-circ-with-depth";
   // Fase 5 (Radier) — "slab-with-depth" reusa TODO el resto de este
   // componente (campos, cotas, labels, toDiagramDepth) igual que
   // "rectangle-with-depth"; la única diferencia es qué `kind` recibe
@@ -120,6 +124,18 @@ export function VolumeStep({
   const isPit = diagram.shape === "pit-with-depth" || diagram.shape === "pit-circle-with-depth";
   const isPoolStructure =
     diagram.shape === "pool-structure-with-depth" || diagram.shape === "pool-structure-circle-with-depth";
+  // Fase C1 (2026-08-31) — EXCLUSIVO del Module nuevo "piscina-integral"
+  // (configurador integral): mismo patrón isSlab/isPit/isPoolStructure,
+  // pero con 2 estados propios ("medidas"/"estructura") dentro de UN solo
+  // componente `PoolConfiguratorIllustration` — ver
+  // module-visual-config.ts para el detalle de cada shape. Ningún otro
+  // módulo (incluidos los standalone de Piscina) usa estos shapes.
+  const isIntegralMedidas =
+    diagram.shape === "pool-integral-medidas-rect-with-depth" ||
+    diagram.shape === "pool-integral-medidas-circ-with-depth";
+  const isIntegralEstructura =
+    diagram.shape === "pool-integral-estructura-rect-with-depth" ||
+    diagram.shape === "pool-integral-estructura-circ-with-depth";
   // Piscina Paso 1 (dimensiones interiores) — se identifica exclusivamente
   // por `waterFill` (ver auditoría Fase B, sección 6): confirmado que hoy
   // SOLO las 2 entradas de Piscina rectangular/circular lo activan, así
@@ -131,13 +147,16 @@ export function VolumeStep({
   // Gate único de "ilustración antes de los inputs en mobile" — reemplaza
   // el antiguo `isSlab &&` puntual; cada shape nuevo llega acá por su
   // propio dato explícito, ninguno afecta a los módulos no mencionados.
-  const showIllustrationFirst = isSlab || isPit || isPoolStructure || isPoolStep1;
+  const showIllustrationFirst = isSlab || isPit || isPoolStructure || isPoolStep1 || isIntegralMedidas || isIntegralEstructura;
   // Paso 2 de espesores: 2 cifras de espesor no arman un volumen real
   // (useVolumePreview asume largo×ancho×profundidad o cilindro) — se
   // sigue calculando por debajo (sin costo funcional) pero no se muestra
   // la caja de resultado, que hoy tampoco existe en este paso (era un
-  // grid plano sin preview).
-  const showResultBox = !isPoolStructure;
+  // grid plano sin preview). Igual criterio para el configurador integral
+  // (Fase C1): "Medidas" y "Estructura" no muestran una caja de resultado
+  // en vivo — los resultados básicos de C1 solo aparecen en el resultado
+  // final del wizard.
+  const showResultBox = !isPoolStructure && !isIntegralMedidas && !isIntegralEstructura;
   const secondaryQuestion = diagram.secondaryLabel ? questions[1] : undefined;
   const depthQuestion = questions[diagram.secondaryLabel ? 2 : 1];
 
@@ -228,6 +247,44 @@ export function VolumeStep({
         espesorFondoCm={rawCm(depthQuestion, values[depthQuestion.key])}
       />
     )
+  ) : isIntegralMedidas ? (
+    isCircular ? (
+      <PoolConfiguratorIllustration
+        state="medidas"
+        shape="circular"
+        diametro={toFieldNum(questions[0], values[questions[0].key])}
+        profundidad={toDiagramDepth(depthQuestion, values[depthQuestion.key]) ?? null}
+      />
+    ) : (
+      <PoolConfiguratorIllustration
+        state="medidas"
+        shape="rectangular"
+        largo={toFieldNum(questions[0], values[questions[0].key])}
+        ancho={secondaryQuestion ? toFieldNum(secondaryQuestion, values[secondaryQuestion.key]) : null}
+        profundidad={toDiagramDepth(depthQuestion, values[depthQuestion.key]) ?? null}
+      />
+    )
+  ) : isIntegralEstructura ? (
+    isCircular ? (
+      <PoolConfiguratorIllustration
+        state="estructura"
+        shape="circular"
+        diametro={structureDims?.primary ?? null}
+        profundidad={structureDims?.depth ?? null}
+        espesorMuroCm={rawCm(questions[0], values[questions[0].key])}
+        espesorFondoCm={rawCm(depthQuestion, values[depthQuestion.key])}
+      />
+    ) : (
+      <PoolConfiguratorIllustration
+        state="estructura"
+        shape="rectangular"
+        largo={structureDims?.primary ?? null}
+        ancho={structureDims?.secondary ?? null}
+        profundidad={structureDims?.depth ?? null}
+        espesorMuroCm={rawCm(questions[0], values[questions[0].key])}
+        espesorFondoCm={rawCm(depthQuestion, values[depthQuestion.key])}
+      />
+    )
   ) : isCircular ? (
     <DiagramV2
       kind="cylinder"
@@ -273,11 +330,32 @@ export function VolumeStep({
   // nada específico de Radier en este componente.
   const tips = Array.from(new Set(fields.map((f) => f.question.helpText).filter((t): t is string => Boolean(t))));
 
+  // Fase C1.1 (2026-09-01) — EXCLUSIVO de "piscina-integral": la relación
+  // 1fr/1.15fr de siempre (≈46.5%/53.5%) se sentía como un wizard genérico
+  // con la ilustración de relleno; el configurador integral la usa como
+  // protagonista real. Ratio propio, gateado por isIntegralMedidas/
+  // isIntegralEstructura (los únicos 2 estados de este módulo que llegan
+  // acá), sin tocar el ratio compartido por el resto de los módulos con
+  // VolumeStep (Radier, Fundación, Piscina standalone, Excavación...).
+  const isIntegral = isIntegralMedidas || isIntegralEstructura;
   return (
-    <div className="bg-white rounded-2xl border border-border shadow-sm p-5 md:p-8 grid md:grid-cols-[1fr_1.15fr] md:gap-10 md:items-start">
+    <div
+      className={`bg-white rounded-2xl border border-border shadow-sm p-5 md:p-8 grid md:gap-10 md:items-start ${
+        isIntegral ? "md:grid-cols-[1fr_1.4fr]" : "md:grid-cols-[1fr_1.15fr]"
+      }`}
+    >
       <div className="order-1">
-        {diagram.groupLabel && (
-          <h2 className="font-display text-xl md:text-2xl font-semibold tracking-tight mb-2">{diagram.groupLabel}</h2>
+        {/* Fase C1 (2026-08-31) — EXCLUSIVO de "piscina-integral": header de
+            bloque en vez del <h2> genérico de groupLabel, ver
+            pool-configurator-layout.tsx. Ausente en todo el resto de los
+            módulos (poolConfiguratorBlockLabel es undefined), que siguen
+            mostrando su groupLabel de siempre, sin cambios. */}
+        {diagram.poolConfiguratorBlockLabel ? (
+          <PoolConfiguratorLayout activeBlock={diagram.poolConfiguratorBlockLabel} />
+        ) : (
+          diagram.groupLabel && (
+            <h2 className="font-display text-xl md:text-2xl font-semibold tracking-tight mb-2">{diagram.groupLabel}</h2>
+          )
         )}
         {diagram.groupHelpText && (
           <p className={`text-sm text-ink-muted ${diagram.groupHelpTextDetail ? "mb-2" : "mb-5"}`}>{diagram.groupHelpText}</p>
