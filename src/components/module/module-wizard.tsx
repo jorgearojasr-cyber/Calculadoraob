@@ -34,6 +34,8 @@ import {
   CONSOLIDATE_NOTES_KEYS,
   REFUERZO_CONFIG,
   HERO_POSITIONS,
+  RESULT_GROUPS,
+  SECONDARY_HERO_RESULT_KEYS,
 } from "./module-visual-config";
 
 function isQuestionVisible(question: WizardQuestion, answers: WizardAnswers): boolean {
@@ -698,6 +700,8 @@ export function ModuleWizard({
           recipeGroups={moduleSlug ? RECIPE_GROUPS[moduleSlug] : undefined}
           dosificacionGroups={moduleSlug ? DOSIFICACION_GROUPS[moduleSlug] : undefined}
           excludeFromListKeys={moduleSlug ? EXCLUDE_FROM_LIST_KEYS[moduleSlug] : undefined}
+          resultGroups={moduleSlug ? RESULT_GROUPS[moduleSlug] : undefined}
+          secondaryHeroResultKeys={moduleSlug ? SECONDARY_HERO_RESULT_KEYS[moduleSlug] : undefined}
           consolidateNotesKeys={moduleSlug ? CONSOLIDATE_NOTES_KEYS[moduleSlug] : undefined}
           refuerzoConfig={moduleSlug ? REFUERZO_CONFIG[moduleSlug] : undefined}
           heroPosition={moduleSlug ? HERO_POSITIONS[moduleSlug] : undefined}

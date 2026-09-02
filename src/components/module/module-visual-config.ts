@@ -191,7 +191,20 @@ export type ModuleVisualConfig = {
   heroPosition?: "top" | "beforeMaterials";
   // Ver REFUERZO_CONFIG.
   refuerzo?: RefuerzoConfig;
+  // Ver RESULT_GROUPS.
+  resultGroups?: ResultGroupConfig[];
+  // Ver SECONDARY_HERO_RESULT_KEYS.
+  secondaryHeroResultKeys?: string[];
 };
+
+// Fase C4.2 (2026-09-02) — un grupo visual de la lista genérica de
+// PricedResults (ver RESULT_GROUPS más abajo). `title` se pinta como
+// encabezado tipo eyebrow (mismo tratamiento mono/uppercase que ya usa
+// "CONFIGURA TU PISCINA" en PoolConfiguratorLayout, no un componente
+// nuevo) y `keys` son los Formula.key (ya isResult:true) que van bajo
+// ese encabezado, en el mismo orden en que ya vienen de `results`
+// (Formula.order asc) — el grupo no reordena, solo filtra y rotula.
+export type ResultGroupConfig = { title: string; keys: string[] };
 
 // Fase 5 (Radier) — arma la RefuerzoCard a partir de 2 InfoResult (estado
 // + explicación, ver Variable.key) más una nota estática (no depende de
@@ -877,6 +890,73 @@ export const MODULE_CONFIG: Record<string, ModuleVisualConfig> = {
     // priced por defecto (antes caía en el primer no-secundario: el radio/
     // largo exterior del muro).
     heroResultKey: "hormigon-total",
+    // Fase C4.2 (2026-09-02) — consolidación pre-Equipamiento: volumen de
+    // agua (dato geométrico nuevo, ver fase-c4-2-piscina-integral-
+    // consolidacion.ts) en una tarjeta secundaria propia justo debajo del
+    // hero, en vez de mezclarse en la lista genérica — por eso ambos keys
+    // también están en `excludeFromListKeys`.
+    secondaryHeroResultKeys: ["agua-volumen-m3", "agua-volumen-litros"],
+    // Fase C4.2 — la lista de PricedResults pasa de "15-20 filas planas"
+    // a 4 grupos rotulados (ver auditoría global post-C4: "ResultScreen
+    // rompe la cohesión del configurador"). Enumera EXHAUSTIVAMENTE los
+    // Formula.key isResult:true de C1-C4 (verificado contra la BD real,
+    // ver informe C4.2) — cualquier Formula nueva que no se agregue acá
+    // cae sola a la lista "sin agrupar" al final (ver RESULT_GROUPS),
+    // nunca desaparece en silencio.
+    resultGroups: [
+      {
+        title: "Estructura",
+        keys: ["largo-ext", "ancho-ext", "radio-ext", "diametro-ext", "hormigon-fondo-rect", "hormigon-muros-rect", "hormigon-fondo-circ", "hormigon-muros-circ"],
+      },
+      {
+        title: "Interior",
+        keys: [
+          "area-fondo",
+          "area-muros",
+          "muros-pintura-litros-total",
+          "muros-ceramica-m2-compra",
+          "muros-membrana-m2",
+          "fondo-pintura-litros-total",
+          "fondo-ceramica-m2-compra",
+          "fondo-membrana-m2",
+          "pintura-litros-combinado",
+          "ceramica-m2-combinado",
+          "membrana-m2-combinado",
+        ],
+      },
+      {
+        title: "Excavación",
+        keys: [
+          "excavacion-largo-hoyo-rect",
+          "excavacion-ancho-hoyo-rect",
+          "excavacion-prof-hoyo-rect",
+          "excavacion-diametro-hoyo-circ",
+          "excavacion-prof-hoyo-circ",
+          "excavacion-volumen-excavado",
+          "excavacion-volumen-suelto",
+          "excavacion-capacidad-camion",
+          "excavacion-viajes",
+        ],
+      },
+      {
+        title: "Entorno",
+        keys: [
+          "entorno-area",
+          "entorno-volumen-base",
+          "entorno-volumen-radier-terminado",
+          "entorno-ceramica-m2-compra",
+          "entorno-porcelanato-m2-compra",
+          "entorno-pastelones-unidades",
+        ],
+      },
+    ],
+    // Fase C4.2 — "hormigon-total" ya se ve gigante en el hero (ver
+    // heroResultKey arriba); repetirlo como fila normal dentro de
+    // "Estructura" era la duplicación visual que señaló la auditoría
+    // (sección 4 del pedido C4.2). Los 2 keys de agua tampoco van en la
+    // lista genérica — tienen su propia tarjeta (ver
+    // secondaryHeroResultKeys).
+    excludeFromListKeys: ["hormigon-total", "agua-volumen-m3", "agua-volumen-litros"],
     diagrams: {
       "medidas-rect": {
         shape: "pool-integral-medidas-rect-with-depth",
@@ -1063,6 +1143,35 @@ export const EXCLUDE_FROM_LIST_KEYS: Record<string, string[]> = Object.fromEntri
   Object.entries(MODULE_CONFIG)
     .filter(([, m]) => m.excludeFromListKeys)
     .map(([slug, m]) => [slug, m.excludeFromListKeys!])
+);
+
+// Fase C4.2 (2026-09-02) — mecanismo opt-in para agrupar visualmente la
+// lista genérica de PricedResults bajo encabezados (ej. "ESTRUCTURA" /
+// "INTERIOR" / "EXCAVACIÓN" / "ENTORNO" en piscina-integral), en vez de
+// una sola lista plana. Mismo criterio que RECIPE_GROUPS/
+// DOSIFICACION_GROUPS: config declarativa por Formula.key, sin tocar el
+// motor ni ResultScreen para ningún otro módulo (sin `resultGroups`, el
+// comportamiento es idéntico al de siempre: una sola PricedResults). Un
+// Formula.key que no aparezca en NINGÚN grupo cae a una lista final "sin
+// agrupar" (red de seguridad si se agrega una Formula nueva y se olvida
+// clasificarla, en vez de que desaparezca silenciosamente).
+export const RESULT_GROUPS: Record<string, ResultGroupConfig[]> = Object.fromEntries(
+  Object.entries(MODULE_CONFIG)
+    .filter(([, m]) => m.resultGroups)
+    .map(([slug, m]) => [slug, m.resultGroups!])
+);
+
+// Fase C4.2 — Formula.key (ya isResult:true) que se muestran en una
+// tarjeta secundaria propia justo debajo del hero (ej. Piscina: volumen
+// de agua en m³ y L) en vez de la lista genérica O el hero mismo (ver
+// heroResultKey, que sigue siendo Hormigón total). Sin este prop (la
+// mayoría de los módulos), no se renderiza nada nuevo. Los keys acá
+// listados también deben estar en `excludeFromListKeys` del mismo Module
+// para no duplicarse en la lista genérica.
+export const SECONDARY_HERO_RESULT_KEYS: Record<string, string[]> = Object.fromEntries(
+  Object.entries(MODULE_CONFIG)
+    .filter(([, m]) => m.secondaryHeroResultKeys)
+    .map(([slug, m]) => [slug, m.secondaryHeroResultKeys!])
 );
 
 // Fase 5 (Radier) — dónde va ResultHero (la tarjeta protagonista azul).

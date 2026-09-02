@@ -22,7 +22,9 @@ import { RecipeCard } from "./recipe-card";
 import { DosificacionCard } from "./dosificacion-card";
 import { RefuerzoCard } from "./refuerzo-card";
 import { TechnicalNotesSection } from "./technical-notes-section";
-import type { RecipeGroupConfig, DosificacionGroupConfig, RefuerzoConfig } from "./module-visual-config";
+import type { RecipeGroupConfig, DosificacionGroupConfig, RefuerzoConfig, ResultGroupConfig } from "./module-visual-config";
+import { formatQuantity } from "@/lib/format-number";
+import { pluralizeUnit } from "@/lib/pluralize";
 import type { WizardAnswers } from "./types";
 
 // Aplica el precio de referencia (sugerencia editable) como unitPrice
@@ -68,6 +70,8 @@ export function ResultScreen({
   consolidateNotesKeys,
   refuerzoConfig,
   heroPosition,
+  resultGroups,
+  secondaryHeroResultKeys,
 }: {
   moduleId: string;
   // Asesor de Ejecución (Fase 0/4, 04-ago-2026): junto con `answers`, es
@@ -146,6 +150,13 @@ export function ResultScreen({
   // de siempre); "beforeMaterials" lo mueve justo antes de la lista de
   // materiales (después de dosificación/refuerzo, ver jerarquía de Radier).
   heroPosition?: "top" | "beforeMaterials";
+  // Fase C4.2 (2026-09-02) — ver RESULT_GROUPS en module-visual-config.ts.
+  // Sin este prop (la mayoría de los módulos), la lista genérica de
+  // PricedResults sigue siendo una sola lista plana, sin cambios.
+  resultGroups?: ResultGroupConfig[];
+  // Fase C4.2 — ver SECONDARY_HERO_RESULT_KEYS. Sin este prop, no se
+  // renderiza ninguna tarjeta adicional.
+  secondaryHeroResultKeys?: string[];
 }) {
   const router = useRouter();
   const [promptOpen, setPromptOpen] = useState(false);
@@ -268,6 +279,28 @@ export function ResultScreen({
     ...(excludeFromListKeys ?? []),
   ]);
   const listResults = recipeKeys.size > 0 ? seededResults.filter((r) => !recipeKeys.has(r.key)) : seededResults;
+
+  // Fase C4.2 — resultados de la tarjeta secundaria (ver
+  // secondaryHeroResultKeys/SECONDARY_HERO_RESULT_KEYS), en el orden
+  // declarado por el módulo, descartando los que no calcularon (mismo
+  // criterio de "ausencia de datos resuelve el caso" que recipeSections).
+  const secondaryHeroResults = (secondaryHeroResultKeys ?? [])
+    .map((key) => seededResults.find((r) => r.key === key))
+    .filter((r): r is CalculationResult => r !== undefined);
+
+  // Fase C4.2 — arma cada sección de `resultGroups` filtrando listResults
+  // por sus keys (preserva el orden de Formula.order que ya trae
+  // listResults, el grupo no reordena) y descarta la sección si quedó
+  // vacía (ej. "Interior" cuando el usuario eligió "Sin calcular" para
+  // ambas superficies). `ungroupedResults` es la red de seguridad:
+  // cualquier Formula.key de listResults que no aparezca en NINGÚN grupo
+  // (una Formula nueva agregada sin clasificar) sigue mostrándose, en vez
+  // de desaparecer en silencio.
+  const groupedSections = (resultGroups ?? [])
+    .map((group) => ({ group, items: listResults.filter((r) => group.keys.includes(r.key)) }))
+    .filter((section) => section.items.length > 0);
+  const groupedKeysSet = new Set((resultGroups ?? []).flatMap((g) => g.keys));
+  const ungroupedResults = resultGroups ? listResults.filter((r) => !groupedKeysSet.has(r.key)) : listResults;
   // Nota: se probó ocultar infoResults[0] de la lista de abajo (ya que se
   // repite en el subtítulo de ResultHero), pero en módulos donde
   // infoResults[0] es solo la mitad de un par relacionado (ej. Piscina:
@@ -390,6 +423,45 @@ export function ResultScreen({
 
       {heroPosition !== "beforeMaterials" && heroElement}
 
+      {/* Fase C4.2 — tarjeta secundaria de datos destacados (ver
+          secondaryHeroResultKeys) justo debajo del hero: hoy solo volumen
+          de agua en Piscina (m³ + L), preparado para sumar más KPIs sin
+          rediseño (ver informe C4.2, sección "no ampliar el alcance a un
+          dashboard de KPIs todavía"). Ausente para el resto de los
+          módulos. */}
+      {secondaryHeroResults.length > 0 && (
+        <div className="rounded-2xl p-5 mb-3 bg-white border border-border">
+          <div className="grid gap-2">
+            {secondaryHeroResults.map((r) => {
+              // Fase C4.2 (ajuste final de presentación) — SOLO en esta
+              // tarjeta (secondaryHeroResultKeys), los litros se muestran
+              // redondeados al entero más cercano (ej. "42.412 L" en vez
+              // de "42.411,5 L"). No toca `r.value` (el motor/`results`
+              // real sigue con el decimal completo, disponible para
+              // cualquier otro consumidor — proyecto guardado, prompt de
+              // IA, etc.), no agrega parámetros a `formatQuantity` (queda
+              // igual para los otros 56 módulos) — es puramente el
+              // redondeo de DISPLAY de este bloque, gateado por
+              // `r.unit === "L"` (genérico a cualquier módulo futuro que
+              // use secondaryHeroResultKeys con litros, no hardcodeado a
+              // Piscina).
+              const displayValue = r.unit === "L" ? Math.round(r.value) : r.value;
+              return (
+                <div key={r.key} className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+                  <span className="font-medium text-[15px]">{r.label}</span>
+                  <span className="font-display text-lg font-semibold text-right">
+                    {formatQuantity(displayValue)} <span className="text-sm font-body text-ink-muted">{pluralizeUnit(displayValue, r.unit)}</span>
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+          {secondaryHeroResults[0]?.note && (
+            <p className="mt-2 text-xs text-ink-faint">{secondaryHeroResults[0].note}</p>
+          )}
+        </div>
+      )}
+
       {recalculateField && onRecalculate && (
         <RecalculateField
           label={recalculateField.label}
@@ -468,13 +540,49 @@ export function ResultScreen({
 
       {heroPosition === "beforeMaterials" && heroElement}
 
-      <PricedResults
-        results={listResults}
-        onPricesChange={handlePricesChange}
-        hideFeatured={hidesFeaturedInList}
-        hideTotal={showsHero && anyPriced}
-        suppressNoteForKeys={consolidateNotesKeys}
-      />
+      {resultGroups ? (
+        // Fase C4.2 — en vez de UNA lista plana con los 15-20 resultados
+        // de C1-C4 mezclados (el hallazgo principal de la auditoría
+        // global), cada `resultGroups` section es su propia PricedResults
+        // con un encabezado propio — mismo componente, mismos datos, sin
+        // "hideFeatured"/tratamiento gigante repetido por sección (ya hay
+        // UN protagonista, el hero de arriba) y sin total por sección
+        // (Costos no existe todavía, no hay nada que sumar). Funciona
+        // igual en mobile/desktop: son encabezados + tarjetas, no una
+        // interacción nueva — un usuario ubica la partida por el
+        // encabezado, sin tener que abrir/cerrar nada.
+        <>
+          {groupedSections.map(({ group, items }) => (
+            <div key={group.title} className="mb-5">
+              <p className="font-mono text-xs uppercase tracking-wider text-ink-faint mb-2">{group.title}</p>
+              <PricedResults
+                results={items}
+                onPricesChange={handlePricesChange}
+                hideFeatured
+                hideTotal
+                suppressNoteForKeys={consolidateNotesKeys}
+              />
+            </div>
+          ))}
+          {ungroupedResults.length > 0 && (
+            <PricedResults
+              results={ungroupedResults}
+              onPricesChange={handlePricesChange}
+              hideFeatured={hidesFeaturedInList}
+              hideTotal={showsHero && anyPriced}
+              suppressNoteForKeys={consolidateNotesKeys}
+            />
+          )}
+        </>
+      ) : (
+        <PricedResults
+          results={listResults}
+          onPricesChange={handlePricesChange}
+          hideFeatured={hidesFeaturedInList}
+          hideTotal={showsHero && anyPriced}
+          suppressNoteForKeys={consolidateNotesKeys}
+        />
+      )}
 
       {consolidateNotesKeys && (
         <TechnicalNotesSection results={listResults.filter((r) => consolidateNotesKeys.includes(r.key))} />

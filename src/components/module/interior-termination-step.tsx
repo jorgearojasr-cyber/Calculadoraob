@@ -217,7 +217,7 @@ function MaterialDetailFields({
           onChange={setRendimiento}
         />
         <NumberField
-          label={perdQ?.label ?? "Margen / pérdida"}
+          label={perdQ?.label ?? "Margen de aplicación (%)"}
           unit="%"
           value={perdidaPintura}
           onChange={setPerdidaPintura}
@@ -229,7 +229,7 @@ function MaterialDetailFields({
     const perdQ = findQuestion(questions, `interior-ceramica-perdida-${suffix}`);
     return (
       <div className="mt-3 pl-1">
-        <NumberField label={perdQ?.label ?? "Pérdida de instalación"} unit="%" value={perdidaCeramica} onChange={setPerdidaCeramica} />
+        <NumberField label={perdQ?.label ?? "Pérdida por cortes (%)"} unit="%" value={perdidaCeramica} onChange={setPerdidaCeramica} />
       </div>
     );
   }
@@ -237,7 +237,7 @@ function MaterialDetailFields({
     const perdQ = findQuestion(questions, `interior-membrana-perdida-${suffix}`);
     return (
       <div className="mt-3 pl-1 grid gap-2">
-        <NumberField label={perdQ?.label ?? "Margen / pérdida"} unit="%" value={perdidaMembrana} onChange={setPerdidaMembrana} />
+        <NumberField label={perdQ?.label ?? "Margen de instalación (%)"} unit="%" value={perdidaMembrana} onChange={setPerdidaMembrana} />
         <div className="flex items-start gap-2 rounded-lg bg-concrete px-3 py-2.5">
           <Info className="w-3.5 h-3.5 text-ink-faint flex-shrink-0 mt-0.5" />
           <p className="text-xs text-ink-faint">

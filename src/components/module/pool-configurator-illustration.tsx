@@ -486,7 +486,20 @@ function RectangularPool({
     anchoFontSize = clamp((84 / approxTextWidth(anchoText, anchoFontSize)) * anchoFontSize, 9, anchoFontSize);
   }
   const anchoRefPoint = isExcavation ? excavPleft : showStructure ? oPleft : Pleft;
-  const anchoLabelX = anchoRefPoint.x - 12;
+  // Fase C4.2 -- fix de clipping: en "excavation" el punto de referencia
+  // (excavPleft) se desplaza hacia afuera por el espacio de trabajo y
+  // puede quedar muy cerca del borde izquierdo del viewBox (0-400). Como
+  // el label usa textAnchor="end" (el texto crece hacia la IZQUIERDA
+  // desde este X), "ANCHO HOYO" (más largo que "ANCHO") se salía del
+  // viewBox y quedaba cortado -- confirmado en desktop y mobile (ver
+  // auditoría global post-C4). Se acota anchoLabelX a un mínimo que
+  // garantice espacio suficiente para el label MÁS LARGO posible en este
+  // estado, sin tocar la cota/geometría real (excavPleft/oPleft/Pleft
+  // siguen siendo los mismos puntos, esto solo mueve dónde se ANCLA el
+  // texto cuando el punto real queda demasiado a la izquierda).
+  const anchoLabelText = isExcavation ? "ANCHO HOYO" : "ANCHO";
+  const anchoLabelMinX = approxTextWidth(anchoLabelText, 9) + 20;
+  const anchoLabelX = Math.max(anchoRefPoint.x - 12, anchoLabelMinX);
   const anchoLabelY = anchoRefPoint.y - 2;
 
   const profText = isExcavation ? formatValue(excavation!.profHoyo, "m") : formatValue(profundidad, "m");
