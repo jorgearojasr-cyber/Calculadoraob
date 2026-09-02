@@ -44,6 +44,12 @@ import { formatQuantity } from "@/lib/format-number";
 // valor), 0 tipeado se muestra literal.
 export type InteriorMaterial = "pintura" | "ceramica" | "membrana" | "sin-calcular";
 
+// Fase C4 -- terminaciones de ENTORNO/BORDE, catálogo propio (distinto de
+// InteriorMaterial: acá no hay "pintura"/"membrana", y "radier" es un
+// caso especial que absorbe la base -- ver `PoolEnvironmentStep` y el
+// db-fix C4 para la lógica anti doble conteo).
+export type EnvironmentMaterial = "ceramica" | "porcelanato" | "pastelones" | "radier" | "sin-calcular";
+
 export type PoolConfiguratorIllustrationProps =
   | {
       state: "medidas";
@@ -119,6 +125,36 @@ export type PoolConfiguratorIllustrationProps =
       espacioTrabajoCm: number | null;
       diametroHoyo: number | null;
       profHoyo: number | null;
+    }
+  | {
+      state: "environment";
+      shape: "rectangular";
+      largo: number | null;
+      ancho: number | null;
+      profundidad: number | null;
+      espesorMuroCm: number | null;
+      espesorFondoCm: number | null;
+      anchoEntornoM: number | null;
+      areaEntorno: number | null;
+      terminacion: EnvironmentMaterial | null;
+      // `null` = base nueva sin espesor aún tipeado; `undefined` = no
+      // corresponde mostrar base (ya existe, o terminación=radier absorbe
+      // el espesor en `espesorBaseCm` igual -- ver comentario en
+      // RectangularPool/CircularPool sobre por qué es la MISMA prop para
+      // ambos casos).
+      espesorBaseCm: number | null | undefined;
+    }
+  | {
+      state: "environment";
+      shape: "circular";
+      diametro: number | null;
+      profundidad: number | null;
+      espesorMuroCm: number | null;
+      espesorFondoCm: number | null;
+      anchoEntornoM: number | null;
+      areaEntorno: number | null;
+      terminacion: EnvironmentMaterial | null;
+      espesorBaseCm: number | null | undefined;
     };
 
 function clamp(value: number, min: number, max: number): number {
@@ -167,6 +203,44 @@ function materialFill(value: InteriorMaterial | null): string {
       return "url(#poolcfg-mat-ceramica)";
     case "membrana":
       return "url(#poolcfg-mat-membrana)";
+    default:
+      return "#D9D4CB";
+  }
+}
+
+// Fase C4 -- nombre corto para el pill de terminación de entorno.
+const ENVIRONMENT_MATERIAL_LABELS: Record<EnvironmentMaterial, string> = {
+  ceramica: "Cerámica",
+  porcelanato: "Porcelanato",
+  pastelones: "Pastelones",
+  radier: "Radier terminado",
+  "sin-calcular": "Sin calcular",
+};
+
+function formatEnvironmentMaterial(value: EnvironmentMaterial | null): { text: string; hasValue: boolean } {
+  if (value === null) return { text: "Sin definir", hasValue: false };
+  return { text: ENVIRONMENT_MATERIAL_LABELS[value], hasValue: true };
+}
+
+// Fase C4 -- relleno visual por terminación de ENTORNO, catálogo propio de
+// `materialFill` (distinta paleta/patrones porque son materiales
+// distintos): cerámica reutiliza el mismo patrón de grilla fina que
+// Interior (mismo material real), porcelanato usa una grilla más grande
+// (piezas más grandes que la cerámica), pastelones usa un patrón con
+// módulos bien visibles (imita las piezas grandes reales), radier
+// terminado es hormigón sólido (mismo tono que la losa, para que se lea
+// como "concreto ya terminado") y sin calcular cae al gris neutro de
+// siempre.
+function environmentMaterialFill(value: EnvironmentMaterial | null): string {
+  switch (value) {
+    case "ceramica":
+      return "url(#poolcfg-mat-ceramica)";
+    case "porcelanato":
+      return "url(#poolcfg-mat-porcelanato)";
+    case "pastelones":
+      return "url(#poolcfg-mat-pastelones)";
+    case "radier":
+      return "#ACA79E";
     default:
       return "#D9D4CB";
   }
@@ -223,6 +297,18 @@ const MARKERS = (
       <rect width="10" height="10" fill="#BEE3F8" />
       <rect width="4" height="10" fill="#4A9BC7" />
     </pattern>
+    {/* Fase C4 -- patrones de terminación de ENTORNO. Porcelanato = grilla
+        más grande que la cerámica (piezas mayores, mismo criterio real);
+        pastelones = módulos bien marcados con junta ancha (se ven como
+        piezas individuales, no como una grilla fina). */}
+    <pattern id="poolcfg-mat-porcelanato" width="16" height="16" patternUnits="userSpaceOnUse">
+      <rect width="16" height="16" fill="#E7E2D6" />
+      <rect x="0.6" y="0.6" width="14.8" height="14.8" fill="none" stroke="#B7AE99" strokeWidth="1.2" />
+    </pattern>
+    <pattern id="poolcfg-mat-pastelones" width="18" height="18" patternUnits="userSpaceOnUse">
+      <rect width="18" height="18" fill="#D7CDBB" />
+      <rect x="1.5" y="1.5" width="15" height="15" fill="#C9BEA8" stroke="#A8977C" strokeWidth="1.5" />
+    </pattern>
   </defs>
 );
 
@@ -235,6 +321,7 @@ function RectangularPool({
   materialMuros,
   materialFondo,
   excavation,
+  environment,
 }: {
   largo: number | null;
   ancho: number | null;
@@ -259,10 +346,21 @@ function RectangularPool({
     anchoHoyo: number | null;
     profHoyo: number | null;
   };
+  // Fase C4 -- presente (no undefined) SOLO en state="environment". El
+  // área ya viene calculada por Formula (mismo criterio que `excavation`
+  // con las dimensiones del hoyo) -- este componente NUNCA recalcula
+  // geometría, solo la dibuja.
+  environment?: {
+    anchoEntornoM: number | null;
+    areaEntorno: number | null;
+    terminacion: EnvironmentMaterial | null;
+    espesorBaseCm: number | null | undefined;
+  };
 }) {
   const showStructure = espesorMuroCm !== undefined;
   const isInterior = materialMuros !== undefined;
   const isExcavation = excavation !== undefined;
+  const isEnvironment = environment !== undefined;
   const ratio = clamp(largo && ancho && largo > 0 && ancho > 0 ? largo / ancho : 2, MIN_RATIO, MAX_RATIO);
   const anchoVisual = Math.sqrt(BASE_FOOTPRINT_AREA / ratio);
   const largoVisual = Math.sqrt(BASE_FOOTPRINT_AREA * ratio);
@@ -334,6 +432,42 @@ function RectangularPool({
   const trabajoPillWidth = Math.max(approxTextWidth("TRABAJO", 8), approxTextWidth(trabajoText, 10.5)) + 16;
   const trabajoAnchor = { x: (excavPleft.x + oPleft.x) / 2, y: (excavPleft.y + oPleft.y) / 2 };
 
+  // Fase C4 -- anillo de ENTORNO: mismo truco de offset en píxeles que ya
+  // usa `workPx`/`excavLargo` para el límite de excavación, aplicado
+  // sobre la cara EXTERIOR del muro (nunca sobre el vaso interior --
+  // sección 4 del pedido C4: el entorno arranca de `outerLargo`/
+  // `outerAncho`, no de `largoVisual`/`anchoVisual`). `anchoEntornoM`
+  // viene en METROS (a diferencia del espacio de trabajo de Excavación
+  // que es en cm), así que la escala px/m es propia de este bloque.
+  const envPx = isEnvironment ? clamp((environment!.anchoEntornoM ?? 0) * 26, 14, 60) : 0;
+  const envLargo = outerLargo + envPx * 2;
+  const envAncho = outerAncho + envPx * 2;
+  const envP0 = {
+    x: center.x - (DIR_LARGO.x * envLargo + DIR_ANCHO.x * envAncho) / 2,
+    y: center.y - (DIR_LARGO.y * envLargo + DIR_ANCHO.y * envAncho) / 2,
+  };
+  const envPright = { x: envP0.x + DIR_LARGO.x * envLargo, y: envP0.y + DIR_LARGO.y * envLargo };
+  const envPleft = { x: envP0.x + DIR_ANCHO.x * envAncho, y: envP0.y + DIR_ANCHO.y * envAncho };
+  const envPback = { x: envPright.x + DIR_ANCHO.x * envAncho, y: envPright.y + DIR_ANCHO.y * envAncho };
+  const envTopPts = `${envP0.x},${envP0.y} ${envPright.x},${envPright.y} ${envPback.x},${envPback.y} ${envPleft.x},${envPleft.y}`;
+
+  const envTerminacion = isEnvironment ? formatEnvironmentMaterial(environment!.terminacion ?? null) : { text: "", hasValue: false };
+  const envAnchoText = formatValue(environment?.anchoEntornoM ?? null, "m");
+  const envAnchoPillWidth = Math.max(approxTextWidth("ANCHO ENTORNO", 7.5), approxTextWidth(envAnchoText, 11)) + 16;
+  const envAnchoAnchor = { x: (envPleft.x + oPleft.x) / 2, y: (envPleft.y + oPleft.y) / 2 };
+
+  const envAreaText = formatValue(environment?.areaEntorno ?? null, "m²");
+  const envAreaPillWidth = Math.max(approxTextWidth(envTerminacion.text, 10.5), approxTextWidth(envAreaText, 11)) + 16;
+
+  // Fase C4 -- pill "BASE" solo cuando corresponde mostrar un espesor
+  // (base nueva propia, o radier terminado que absorbe la base -- ver
+  // tipo `espesorBaseCm` en las props). `undefined` = base existente, no
+  // se muestra nada (sección 17/28 del pedido: nunca inventar un espesor
+  // que el usuario no tipeó ni que no aplica).
+  const showEnvBase = isEnvironment && environment!.espesorBaseCm !== undefined;
+  const envBaseText = showEnvBase ? formatEspesor(environment!.espesorBaseCm ?? null) : { text: "", hasValue: false };
+  const envBasePillWidth = Math.max(approxTextWidth("BASE", 8.5), approxTextWidth(envBaseText.text, 10.5)) + 16;
+
   const largoText = isExcavation ? formatValue(excavation!.largoHoyo, "m") : formatValue(largo, "m");
   let largoFontSize = 14;
   const largoLineHalfWidth = Math.max(largoVisual / 2, 34);
@@ -381,6 +515,20 @@ function RectangularPool({
           <rect x="0" y="0" width="400" height="260" fill="#E4D9C4" />
           <polygon points={excavTopPts} fill="#D8C9A8" stroke="#B99B5C" strokeWidth="1.5" strokeDasharray="5 4" />
         </>
+      )}
+      {isEnvironment && (
+        // Fase C4 -- anillo de entorno: mismo truco evenodd que el anillo
+        // de muro (outerTopPts/waterTopPts), pero entre el borde exterior
+        // del muro (outerTopPts) y el nuevo límite de entorno (envTopPts)
+        // -- así el anillo se ve exactamente donde arranca (sección 4:
+        // desde la cara exterior del vaso, nunca desde el agua).
+        <path
+          d={`M${envTopPts.split(" ").join("L")}Z M${outerTopPts.split(" ").join("L")}Z`}
+          fill={environmentMaterialFill(environment!.terminacion ?? null)}
+          fillRule="evenodd"
+          stroke="#8F8A81"
+          strokeWidth="1"
+        />
       )}
       {showStructure ? (
         <>
@@ -465,7 +613,7 @@ function RectangularPool({
           sección 20 del pedido: no saturar con muro/losa/interior en este
           estado); en su lugar, un único pill "TRABAJO" con el espacio de
           trabajo alrededor del vaso. */}
-      {showStructure && !isExcavation && (
+      {showStructure && !isExcavation && !isEnvironment && (
         <>
           <line x1={muroAnchor.x} y1={muroAnchor.y} x2={8 + muroPillWidth / 2} y2={228} stroke="#FF4E00" strokeWidth="1.25" strokeDasharray="3 3" opacity={muro.hasValue ? 0.75 : 0.4} />
           <rect x={8} y={220} width={muroPillWidth} height="36" rx="18" fill="#FFE4D6" />
@@ -498,6 +646,44 @@ function RectangularPool({
           </text>
         </>
       )}
+      {/* Fase C4 -- pills de ENTORNO: ANCHO ENTORNO (izquierda) + ÁREA
+          ENTORNO/terminación (derecha), igual patrón visual que
+          MURO/FONDO pero con estos 2 (o 3, si hay base nueva/radier)
+          datos -- las cotas de Excavación no aparecen acá (sección 22:
+          no saturar con cotas de otro paso). */}
+      {isEnvironment && (
+        <>
+          <line x1={envAnchoAnchor.x} y1={envAnchoAnchor.y} x2={8 + envAnchoPillWidth / 2} y2={228} stroke="#FF4E00" strokeWidth="1.25" strokeDasharray="3 3" opacity="0.75" />
+          <rect x={8} y={220} width={envAnchoPillWidth} height="36" rx="18" fill="#FFE4D6" />
+          <text x={8 + envAnchoPillWidth / 2} y={234} textAnchor="middle" fontSize="7.5" fontWeight="700" letterSpacing="0.03em" fill="#E04500" className="font-display">
+            ANCHO ENTORNO
+          </text>
+          <text x={8 + envAnchoPillWidth / 2} y={248} textAnchor="middle" fontSize="10.5" fontWeight="700" fill="#E04500" className="font-display">
+            {envAnchoText}
+          </text>
+
+          <line x1={(envPback.x + oPback.x) / 2} y1={(envPback.y + oPback.y) / 2} x2={400 - 8 - envAreaPillWidth / 2} y2={228} stroke="#FF4E00" strokeWidth="1.25" strokeDasharray="3 3" opacity="0.75" />
+          <rect x={400 - envAreaPillWidth - 8} y={220} width={envAreaPillWidth} height="36" rx="18" fill="#FFE4D6" />
+          <text x={400 - envAreaPillWidth / 2 - 8} y={234} textAnchor="middle" fontSize="10.5" fontWeight="700" fill="#E04500" className="font-display">
+            {envAreaText}
+          </text>
+          <text x={400 - envAreaPillWidth / 2 - 8} y={247} textAnchor="middle" fontSize="7.5" fontWeight="700" letterSpacing="0.02em" fill="#E04500" className="font-display">
+            {envTerminacion.text}
+          </text>
+
+          {showEnvBase && (
+            <>
+              <rect x={200 - envBasePillWidth / 2} y={4} width={envBasePillWidth} height="36" rx="18" fill="#F9F9F9" />
+              <text x={200} y={18} textAnchor="middle" fontSize="8" fontWeight="700" letterSpacing="0.05em" fill="#5E5850" className="font-display">
+                BASE
+              </text>
+              <text x={200} y={31} textAnchor="middle" fontSize="10.5" fontWeight="700" fill="#002152" className="font-display">
+                {envBaseText.text}
+              </text>
+            </>
+          )}
+        </>
+      )}
 
       {MARKERS}
     </svg>
@@ -512,6 +698,7 @@ function CircularPool({
   materialMuros,
   materialFondo,
   excavation,
+  environment,
 }: {
   diametro: number | null;
   profundidad: number | null;
@@ -524,10 +711,17 @@ function CircularPool({
     diametroHoyo: number | null;
     profHoyo: number | null;
   };
+  environment?: {
+    anchoEntornoM: number | null;
+    areaEntorno: number | null;
+    terminacion: EnvironmentMaterial | null;
+    espesorBaseCm: number | null | undefined;
+  };
 }) {
   const showStructure = espesorMuroCm !== undefined;
   const isInterior = materialMuros !== undefined;
   const isExcavation = excavation !== undefined;
+  const isEnvironment = environment !== undefined;
   const cx = 200;
   const cy = 96;
   const innerRx = 92;
@@ -575,6 +769,21 @@ function CircularPool({
   );
   const trabajoPillWidth = Math.max(approxTextWidth("TRABAJO", 8), approxTextWidth(trabajoText, 10.5)) + 16;
 
+  // Fase C4 -- anillo de entorno circular: offset del muro exterior
+  // (outerRx/outerRy), NUNCA del vaso interior, igual criterio que la
+  // versión rectangular. `anchoEntornoM` en metros, escala propia.
+  const envPx = isEnvironment ? clamp((environment!.anchoEntornoM ?? 0) * 26, 14, 60) : 0;
+  const envRx = outerRx + envPx;
+  const envRy = outerRy + envPx * (innerRy / innerRx);
+  const envTerminacion = isEnvironment ? formatEnvironmentMaterial(environment!.terminacion ?? null) : { text: "", hasValue: false };
+  const envAnchoText = formatValue(environment?.anchoEntornoM ?? null, "m");
+  const envAnchoPillWidth = Math.max(approxTextWidth("ANCHO ENTORNO", 7.5), approxTextWidth(envAnchoText, 11)) + 16;
+  const envAreaText = formatValue(environment?.areaEntorno ?? null, "m²");
+  const envAreaPillWidth = Math.max(approxTextWidth(envTerminacion.text, 10.5), approxTextWidth(envAreaText, 11)) + 16;
+  const showEnvBase = isEnvironment && environment!.espesorBaseCm !== undefined;
+  const envBaseText = showEnvBase ? formatEspesor(environment!.espesorBaseCm ?? null) : { text: "", hasValue: false };
+  const envBasePillWidth = Math.max(approxTextWidth("BASE", 8.5), approxTextWidth(envBaseText.text, 10.5)) + 16;
+
   return (
     <svg viewBox="0 0 400 260" preserveAspectRatio="xMidYMid meet" className="w-full h-auto" role="img" aria-label="Ilustración de la piscina circular">
       {isExcavation && (
@@ -582,6 +791,15 @@ function CircularPool({
           <rect x="0" y="0" width="400" height="260" fill="#E4D9C4" />
           <ellipse cx={cx} cy={cy} rx={excavRx} ry={excavRy} fill="#D8C9A8" stroke="#B99B5C" strokeWidth="1.5" strokeDasharray="5 4" />
         </>
+      )}
+      {isEnvironment && (
+        <path
+          d={`M${cx - envRx},${cy} A${envRx},${envRy} 0 1,0 ${cx + envRx},${cy} A${envRx},${envRy} 0 1,0 ${cx - envRx},${cy} Z M${cx - outerRx},${cy} A${outerRx},${outerRy} 0 1,0 ${cx + outerRx},${cy} A${outerRx},${outerRy} 0 1,0 ${cx - outerRx},${cy} Z`}
+          fill={environmentMaterialFill(environment!.terminacion ?? null)}
+          fillRule="evenodd"
+          stroke="#8F8A81"
+          strokeWidth="1"
+        />
       )}
       {showStructure ? (
         <>
@@ -651,7 +869,7 @@ function CircularPool({
         {profText}
       </text>
 
-      {showStructure && !isExcavation && (
+      {showStructure && !isExcavation && !isEnvironment && (
         <>
           <line x1={cx - innerRx} y1={cy + 2} x2={10 + muroPillWidth / 2} y2={cy + 18} stroke="#FF4E00" strokeWidth="1.25" strokeDasharray="3 3" opacity={muro.hasValue ? 0.75 : 0.4} />
           <rect x={10} y={cy - 6} width={muroPillWidth} height="36" rx="18" fill="#FFE4D6" />
@@ -684,6 +902,39 @@ function CircularPool({
           </text>
         </>
       )}
+      {isEnvironment && (
+        <>
+          <line x1={cx - innerRx} y1={cy + 2} x2={10 + envAnchoPillWidth / 2} y2={cy + 18} stroke="#FF4E00" strokeWidth="1.25" strokeDasharray="3 3" opacity="0.75" />
+          <rect x={10} y={cy - 6} width={envAnchoPillWidth} height="36" rx="18" fill="#FFE4D6" />
+          <text x={10 + envAnchoPillWidth / 2} y={cy + 8} textAnchor="middle" fontSize="7.5" fontWeight="700" letterSpacing="0.03em" fill="#E04500" className="font-display">
+            ANCHO ENTORNO
+          </text>
+          <text x={10 + envAnchoPillWidth / 2} y={cy + 22} textAnchor="middle" fontSize="10.5" fontWeight="700" fill="#E04500" className="font-display">
+            {envAnchoText}
+          </text>
+
+          <line x1={cx + innerRx} y1={cy + 2} x2={400 - 10 - envAreaPillWidth / 2} y2={cy + 18} stroke="#FF4E00" strokeWidth="1.25" strokeDasharray="3 3" opacity="0.75" />
+          <rect x={400 - envAreaPillWidth - 10} y={cy - 6} width={envAreaPillWidth} height="36" rx="18" fill="#FFE4D6" />
+          <text x={400 - envAreaPillWidth / 2 - 10} y={cy + 8} textAnchor="middle" fontSize="10.5" fontWeight="700" fill="#E04500" className="font-display">
+            {envAreaText}
+          </text>
+          <text x={400 - envAreaPillWidth / 2 - 10} y={cy + 21} textAnchor="middle" fontSize="7.5" fontWeight="700" letterSpacing="0.02em" fill="#E04500" className="font-display">
+            {envTerminacion.text}
+          </text>
+
+          {showEnvBase && (
+            <>
+              <rect x={cx - envBasePillWidth / 2} y={4} width={envBasePillWidth} height="36" rx="18" fill="#F9F9F9" />
+              <text x={cx} y={18} textAnchor="middle" fontSize="8" fontWeight="700" letterSpacing="0.05em" fill="#5E5850" className="font-display">
+                BASE
+              </text>
+              <text x={cx} y={31} textAnchor="middle" fontSize="10.5" fontWeight="700" fill="#002152" className="font-display">
+                {envBaseText.text}
+              </text>
+            </>
+          )}
+        </>
+      )}
 
       {MARKERS}
     </svg>
@@ -692,9 +943,13 @@ function CircularPool({
 
 export function PoolConfiguratorIllustration(props: PoolConfiguratorIllustrationProps) {
   const espesorMuroCm =
-    props.state === "estructura" || props.state === "interior" || props.state === "excavation" ? props.espesorMuroCm : undefined;
+    props.state === "estructura" || props.state === "interior" || props.state === "excavation" || props.state === "environment"
+      ? props.espesorMuroCm
+      : undefined;
   const espesorFondoCm =
-    props.state === "estructura" || props.state === "interior" || props.state === "excavation" ? props.espesorFondoCm : undefined;
+    props.state === "estructura" || props.state === "interior" || props.state === "excavation" || props.state === "environment"
+      ? props.espesorFondoCm
+      : undefined;
   const materialMuros = props.state === "interior" ? props.materialMuros : undefined;
   const materialFondo = props.state === "interior" ? props.materialFondo : undefined;
   const excavationRect =
@@ -704,6 +959,15 @@ export function PoolConfiguratorIllustration(props: PoolConfiguratorIllustration
   const excavationCirc =
     props.state === "excavation" && props.shape === "circular"
       ? { espacioTrabajoCm: props.espacioTrabajoCm, diametroHoyo: props.diametroHoyo, profHoyo: props.profHoyo }
+      : undefined;
+  const environment =
+    props.state === "environment"
+      ? {
+          anchoEntornoM: props.anchoEntornoM,
+          areaEntorno: props.areaEntorno,
+          terminacion: props.terminacion,
+          espesorBaseCm: props.espesorBaseCm,
+        }
       : undefined;
 
   return (
@@ -718,6 +982,7 @@ export function PoolConfiguratorIllustration(props: PoolConfiguratorIllustration
           materialMuros={materialMuros}
           materialFondo={materialFondo}
           excavation={excavationRect}
+          environment={environment}
         />
       ) : (
         <CircularPool
@@ -728,6 +993,7 @@ export function PoolConfiguratorIllustration(props: PoolConfiguratorIllustration
           materialMuros={materialMuros}
           materialFondo={materialFondo}
           excavation={excavationCirc}
+          environment={environment}
         />
       )}
       <Note />

@@ -26,23 +26,27 @@
 // así que 4 bloques envuelven a 2 líneas TAMBIÉN en desktop, no solo en
 // mobile -- sin overflow/corte/superposición, pero no "una sola línea
 // cuando hay espacio" porque en esta columna específica no lo hay.
-// Aceptado así para C3 (ver informe C3.1); si se agrega un 5º bloque
-// conviene resolver el tracker de forma definitiva (texto más chico o
-// abreviar labels), no antes.
-const BLOCKS = ["Medidas", "Estructura", "Interior", "Excavación"] as const;
+//
+// Fase C4 -- 5º bloque ("Entorno"), el disparador que C3.1 ya anticipaba.
+// Ajuste EXCLUSIVO de este componente (no una refactorización general):
+// pills más compactos (padding/tipografía reducidos, gap más chico) para
+// que 5 bloques sigan siendo legibles en 2 líneas en vez de 3+ -- sigue
+// siendo el mismo patrón visual (pills + flechas + flex-wrap), no un
+// rediseño del tracker.
+const BLOCKS = ["Medidas", "Estructura", "Interior", "Excavación", "Entorno"] as const;
 
 export function PoolConfiguratorLayout({ activeBlock }: { activeBlock: string }) {
   return (
     <div className="mb-4">
       <p className="font-mono text-xs uppercase tracking-wider text-safety mb-2">Configura tu piscina</p>
-      <div className="flex flex-wrap items-center gap-x-2 gap-y-2 mb-3">
+      <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1.5 mb-3">
         {BLOCKS.map((block, i) => {
           const isActive = block === activeBlock;
           return (
-            <div key={block} className="flex items-center gap-2">
-              {i > 0 && <span className="text-ink-faint text-xs">→</span>}
+            <div key={block} className="flex items-center gap-1.5">
+              {i > 0 && <span className="text-ink-faint text-[10px]">→</span>}
               <span
-                className={`text-xs font-semibold uppercase tracking-wide px-2.5 py-1 rounded-full whitespace-nowrap ${
+                className={`text-[10px] font-semibold uppercase tracking-wide px-2 py-0.5 rounded-full whitespace-nowrap ${
                   isActive ? "bg-action text-white" : "bg-concrete text-ink-faint"
                 }`}
               >

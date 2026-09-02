@@ -10,6 +10,7 @@ import { ApplianceConsumptionStep } from "./appliance-consumption-step";
 import { FoundationStep, isFoundationStepGroup } from "./foundation-step";
 import { InteriorTerminationStep, isInteriorTerminationStepGroup, getInteriorActiveKeys } from "./interior-termination-step";
 import { PoolExcavationStep, isExcavationStepGroup } from "./pool-excavation-step";
+import { PoolEnvironmentStep, isEnvironmentStepGroup } from "./pool-environment-step";
 import { ResultScreen } from "./result-screen";
 import { WizardHeader } from "./wizard-header";
 import { WizardResumeGate } from "./wizard-resume-gate";
@@ -435,6 +436,12 @@ export function ModuleWizard({
   // derivadas, sin pedirlas de nuevo) que no encaja en QuestionGroupStep.
   const isExcavation = Boolean(currentGroup) && isExcavationStepGroup(currentGroup[0]?.stepGroup);
 
+  // Fase C4 (2026-09-02) -- Entorno/Borde del configurador integral de
+  // Piscina: mismo criterio que isExcavation/isInteriorTermination,
+  // geometría/UI propia (área del entorno derivada, sin pedir de nuevo
+  // largo/ancho/diámetro) que no encaja en QuestionGroupStep.
+  const isEnvironment = Boolean(currentGroup) && isEnvironmentStepGroup(currentGroup[0]?.stepGroup);
+
   const stepInitialValues = useMemo(
     () => (currentGroup ? withSuggestedDefaults(currentGroup, answers) : answers),
     [currentGroup, answers]
@@ -464,6 +471,7 @@ export function ModuleWizard({
       isFoundationGroup ||
       isInteriorTermination ||
       isExcavation ||
+      isEnvironment ||
       (Boolean(currentGroup) && hasDiagram(currentGroup[0]?.stepGroup)));
 
   // Fase C1.1 (2026-09-01) — EXCLUSIVO de "piscina-integral": 3 ajustes
@@ -585,6 +593,14 @@ export function ModuleWizard({
             />
           ) : isExcavation ? (
             <PoolExcavationStep
+              key={currentGroup.map((q) => q.id).join("-")}
+              questions={currentGroup}
+              initialValues={stepInitialValues}
+              onAnswer={handleGroupAnswer}
+              onSaveForLater={handleSaveForLater}
+            />
+          ) : isEnvironment ? (
+            <PoolEnvironmentStep
               key={currentGroup.map((q) => q.id).join("-")}
               questions={currentGroup}
               initialValues={stepInitialValues}
