@@ -9,6 +9,7 @@ import { ConditionalRevealStep } from "./conditional-reveal-step";
 import { ApplianceConsumptionStep } from "./appliance-consumption-step";
 import { FoundationStep, isFoundationStepGroup } from "./foundation-step";
 import { InteriorTerminationStep, isInteriorTerminationStepGroup, getInteriorActiveKeys } from "./interior-termination-step";
+import { PoolExcavationStep, isExcavationStepGroup } from "./pool-excavation-step";
 import { ResultScreen } from "./result-screen";
 import { WizardHeader } from "./wizard-header";
 import { WizardResumeGate } from "./wizard-resume-gate";
@@ -428,6 +429,12 @@ export function ModuleWizard({
   // toggle "misma terminación") que no encaja en QuestionGroupStep.
   const isInteriorTermination = Boolean(currentGroup) && isInteriorTerminationStepGroup(currentGroup[0]?.stepGroup);
 
+  // Fase C3 (2026-09-01) -- Excavación automática del configurador
+  // integral de Piscina: mismo criterio que isInteriorTermination/
+  // isFoundationGroup, geometría/UI propia (dimensiones del hoyo
+  // derivadas, sin pedirlas de nuevo) que no encaja en QuestionGroupStep.
+  const isExcavation = Boolean(currentGroup) && isExcavationStepGroup(currentGroup[0]?.stepGroup);
+
   const stepInitialValues = useMemo(
     () => (currentGroup ? withSuggestedDefaults(currentGroup, answers) : answers),
     [currentGroup, answers]
@@ -456,6 +463,7 @@ export function ModuleWizard({
     (showSummaryPanel ||
       isFoundationGroup ||
       isInteriorTermination ||
+      isExcavation ||
       (Boolean(currentGroup) && hasDiagram(currentGroup[0]?.stepGroup)));
 
   // Fase C1.1 (2026-09-01) — EXCLUSIVO de "piscina-integral": 3 ajustes
@@ -569,6 +577,14 @@ export function ModuleWizard({
             />
           ) : isInteriorTermination ? (
             <InteriorTerminationStep
+              key={currentGroup.map((q) => q.id).join("-")}
+              questions={currentGroup}
+              initialValues={stepInitialValues}
+              onAnswer={handleGroupAnswer}
+              onSaveForLater={handleSaveForLater}
+            />
+          ) : isExcavation ? (
+            <PoolExcavationStep
               key={currentGroup.map((q) => q.id).join("-")}
               questions={currentGroup}
               initialValues={stepInitialValues}

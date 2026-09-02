@@ -8,6 +8,7 @@ import {
   type DslValue,
   type InfoResult,
 } from "@/lib/formula-engine";
+import { isNumberAnswerInvalid } from "./answer-validation";
 
 export type NormSummary = {
   id: string;
@@ -47,7 +48,7 @@ export async function calculateModuleAction(
 
     if (question.type === "NUMBER") {
       const num = typeof raw === "number" ? raw : Number(raw);
-      if (!Number.isFinite(num) || num <= 0) {
+      if (isNumberAnswerInvalid(mod.slug, question.key, num)) {
         throw new Error(`Respuesta inválida para "${question.label}".`);
       }
       cleanAnswers[question.key] = num;

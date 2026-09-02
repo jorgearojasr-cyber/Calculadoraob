@@ -28,6 +28,16 @@ import { formatQuantity } from "@/lib/format-number";
 //     sin terminar). Los pills MURO/FONDO pasan a mostrar el nombre de la
 //     terminación en vez del espesor en cm (el espesor ya se ve en la
 //     ilustración de Estructura, acá lo relevante es el material).
+//   - "excavation" (Fase C3, 2026-09-01): MISMA geometria de muro/losa que
+//     "estructura" (espesores reales, sin material) más un bloque de
+//     terreno de fondo y un límite de excavación punteado, desplazado
+//     hacia afuera del muro exterior por el espacio de trabajo (mismo
+//     truco de offset en píxeles que ya usa `wallPx` para el espesor de
+//     muro). Los pills pasan a mostrar las dimensiones del HOYO (ya
+//     calculadas por Formula, se reciben como props -- este componente no
+//     recalcula geometría) en vez de las medidas interiores/espesores,
+//     que en este estado no son el dato relevante (ver sección 20 del
+//     pedido C3).
 //
 // Mismo criterio de "Sin definir" vs "0" que PoolStructureIllustration:
 // un espesor nunca respondido se muestra sin cifra (nunca se inventa un
@@ -85,6 +95,30 @@ export type PoolConfiguratorIllustrationProps =
       espesorFondoCm: number | null;
       materialMuros: InteriorMaterial | null;
       materialFondo: InteriorMaterial | null;
+    }
+  | {
+      state: "excavation";
+      shape: "rectangular";
+      largo: number | null;
+      ancho: number | null;
+      profundidad: number | null;
+      espesorMuroCm: number | null;
+      espesorFondoCm: number | null;
+      espacioTrabajoCm: number | null;
+      largoHoyo: number | null;
+      anchoHoyo: number | null;
+      profHoyo: number | null;
+    }
+  | {
+      state: "excavation";
+      shape: "circular";
+      diametro: number | null;
+      profundidad: number | null;
+      espesorMuroCm: number | null;
+      espesorFondoCm: number | null;
+      espacioTrabajoCm: number | null;
+      diametroHoyo: number | null;
+      profHoyo: number | null;
     };
 
 function clamp(value: number, min: number, max: number): number {
@@ -200,6 +234,7 @@ function RectangularPool({
   espesorFondoCm,
   materialMuros,
   materialFondo,
+  excavation,
 }: {
   largo: number | null;
   ancho: number | null;
@@ -214,9 +249,20 @@ function RectangularPool({
   // espesores de Estructura.
   materialMuros?: InteriorMaterial | null;
   materialFondo?: InteriorMaterial | null;
+  // Fase C3 -- presente (no undefined) SOLO en state="excavation". Las
+  // dimensiones del hoyo YA vienen calculadas por Formula (este
+  // componente no las recalcula, solo las muestra) -- geometría de
+  // muro/losa sigue siendo la real de Estructura, sin cambios.
+  excavation?: {
+    espacioTrabajoCm: number | null;
+    largoHoyo: number | null;
+    anchoHoyo: number | null;
+    profHoyo: number | null;
+  };
 }) {
   const showStructure = espesorMuroCm !== undefined;
   const isInterior = materialMuros !== undefined;
+  const isExcavation = excavation !== undefined;
   const ratio = clamp(largo && ancho && largo > 0 && ancho > 0 ? largo / ancho : 2, MIN_RATIO, MAX_RATIO);
   const anchoVisual = Math.sqrt(BASE_FOOTPRINT_AREA / ratio);
   const largoVisual = Math.sqrt(BASE_FOOTPRINT_AREA * ratio);
@@ -267,7 +313,28 @@ function RectangularPool({
   const waterRightFace = `${P0.x},${P0.y} ${Pright.x},${Pright.y} ${Prightb.x},${Prightb.y} ${P0b.x},${P0b.y}`;
   const waterLeftFace = `${P0.x},${P0.y} ${Pleft.x},${Pleft.y} ${Pleftb.x},${Pleftb.y} ${P0b.x},${P0b.y}`;
 
-  const largoText = formatValue(largo, "m");
+  // Fase C3 -- límite de excavación: mismo truco de offset en píxeles que
+  // ya usa `wallPx`/`outerLargo`/`outerAncho` para el espesor de muro,
+  // aplicado una vez más sobre el borde EXTERIOR del muro (no sobre el
+  // vaso interior) para representar el espacio de trabajo.
+  const workPx = isExcavation
+    ? clamp(avgHorizontal * 0.05 + (excavation!.espacioTrabajoCm ?? 0) * 0.55, 14, 46)
+    : 0;
+  const excavLargo = outerLargo + workPx * 2;
+  const excavAncho = outerAncho + workPx * 2;
+  const excavP0 = {
+    x: center.x - (DIR_LARGO.x * excavLargo + DIR_ANCHO.x * excavAncho) / 2,
+    y: center.y - (DIR_LARGO.y * excavLargo + DIR_ANCHO.y * excavAncho) / 2,
+  };
+  const excavPright = { x: excavP0.x + DIR_LARGO.x * excavLargo, y: excavP0.y + DIR_LARGO.y * excavLargo };
+  const excavPleft = { x: excavP0.x + DIR_ANCHO.x * excavAncho, y: excavP0.y + DIR_ANCHO.y * excavAncho };
+  const excavPback = { x: excavPright.x + DIR_ANCHO.x * excavAncho, y: excavPright.y + DIR_ANCHO.y * excavAncho };
+  const excavTopPts = `${excavP0.x},${excavP0.y} ${excavPright.x},${excavPright.y} ${excavPback.x},${excavPback.y} ${excavPleft.x},${excavPleft.y}`;
+  const trabajoText = formatValue(excavation?.espacioTrabajoCm !== undefined && excavation?.espacioTrabajoCm !== null ? excavation.espacioTrabajoCm / 100 : null, "m");
+  const trabajoPillWidth = Math.max(approxTextWidth("TRABAJO", 8), approxTextWidth(trabajoText, 10.5)) + 16;
+  const trabajoAnchor = { x: (excavPleft.x + oPleft.x) / 2, y: (excavPleft.y + oPleft.y) / 2 };
+
+  const largoText = isExcavation ? formatValue(excavation!.largoHoyo, "m") : formatValue(largo, "m");
   let largoFontSize = 14;
   const largoLineHalfWidth = Math.max(largoVisual / 2, 34);
   const largoTextMaxWidth = largoLineHalfWidth * 2 - 16;
@@ -279,16 +346,16 @@ function RectangularPool({
   const largoCotaCx = (P0.x + Pright.x) / 2;
   const largoPillWidth = Math.max(approxTextWidth(largoText, largoFontSize) + 18, 46);
 
-  const anchoText = formatValue(ancho, "m");
+  const anchoText = isExcavation ? formatValue(excavation!.anchoHoyo, "m") : formatValue(ancho, "m");
   let anchoFontSize = 12;
   if (approxTextWidth(anchoText, anchoFontSize) > 84) {
     anchoFontSize = clamp((84 / approxTextWidth(anchoText, anchoFontSize)) * anchoFontSize, 9, anchoFontSize);
   }
-  const anchoRefPoint = showStructure ? oPleft : Pleft;
+  const anchoRefPoint = isExcavation ? excavPleft : showStructure ? oPleft : Pleft;
   const anchoLabelX = anchoRefPoint.x - 12;
   const anchoLabelY = anchoRefPoint.y - 2;
 
-  const profText = formatValue(profundidad, "m");
+  const profText = isExcavation ? formatValue(excavation!.profHoyo, "m") : formatValue(profundidad, "m");
   const profFontSize = 11;
   const profLabelWidth = Math.max(approxTextWidth("PROF.", 8.5), approxTextWidth(profText, profFontSize)) + 16;
   const profPillX = 372 - profLabelWidth;
@@ -304,6 +371,17 @@ function RectangularPool({
 
   return (
     <svg viewBox="0 0 400 260" preserveAspectRatio="xMidYMid meet" className="w-full h-auto" role="img" aria-label="Ilustración de la piscina rectangular">
+      {isExcavation && (
+        <>
+          {/* Fase C3 -- bloque de terreno de fondo + límite de excavación
+              punteado (offset del muro exterior por el espacio de
+              trabajo). Da el contexto "PISCINA -> MURO -> ESPACIO DE
+              TRABAJO -> LÍMITE DE EXCAVACIÓN" pedido -- el vaso y el muro
+              son exactamente los mismos que en "estructura". */}
+          <rect x="0" y="0" width="400" height="260" fill="#E4D9C4" />
+          <polygon points={excavTopPts} fill="#D8C9A8" stroke="#B99B5C" strokeWidth="1.5" strokeDasharray="5 4" />
+        </>
+      )}
       {showStructure ? (
         <>
           {/* Losa de fondo (hormigón), extendida bajo los muros */}
@@ -339,7 +417,7 @@ function RectangularPool({
         <line x1={anchoRefPoint.x - 4} y1={anchoRefPoint.y + 4} x2={Pleft.x + 4} y2={Pleft.y - 4} markerStart="url(#poolcfg-arrow-navy-start)" markerEnd="url(#poolcfg-arrow-navy-end)" />
       </g>
       <text x={anchoLabelX} y={anchoLabelY - 13} textAnchor="end" fontSize="9" fontWeight="700" letterSpacing="0.05em" fill="#5E5850" className="font-display">
-        ANCHO
+        {isExcavation ? "ANCHO HOYO" : "ANCHO"}
       </text>
       <text x={anchoLabelX} y={anchoLabelY} textAnchor="end" fontSize={anchoFontSize} fontWeight="700" fill="#002152" className="font-display">
         {anchoText}
@@ -357,7 +435,7 @@ function RectangularPool({
       />
       <rect x={largoCotaCx - largoPillWidth / 2} y={largoCotaY - 10} width={largoPillWidth} height="20" rx="10" fill="#F9F9F9" />
       <text x={largoCotaCx} y={largoCotaY - 4.5} textAnchor="middle" fontSize="8.5" fontWeight="700" letterSpacing="0.05em" fill="#5E5850" className="font-display">
-        LARGO
+        {isExcavation ? "LARGO HOYO" : "LARGO"}
       </text>
       <text x={largoCotaCx} y={largoCotaY + 7.5} textAnchor="middle" fontSize={largoFontSize} fontWeight="700" fill="#002152" className="font-display">
         {largoText}
@@ -377,13 +455,17 @@ function RectangularPool({
       />
       <rect x={profPillX} y={profPillY} width={profLabelWidth} height={profPillHeight} rx={profPillHeight / 2} fill="#F9F9F9" />
       <text x={profPillX + profLabelWidth / 2} y={profPillY + 14} textAnchor="middle" fontSize="8" fontWeight="700" letterSpacing="0.05em" fill="#5E5850" className="font-display">
-        PROF.
+        {isExcavation ? "PROF. HOYO" : "PROF."}
       </text>
       <text x={profPillX + profLabelWidth / 2} y={profPillY + 27} textAnchor="middle" fontSize={profFontSize} fontWeight="700" fill="#002152" className="font-display">
         {profText}
       </text>
 
-      {showStructure && (
+      {/* Fase C3 -- en "excavation" los pills MURO/FONDO no aportan (ver
+          sección 20 del pedido: no saturar con muro/losa/interior en este
+          estado); en su lugar, un único pill "TRABAJO" con el espacio de
+          trabajo alrededor del vaso. */}
+      {showStructure && !isExcavation && (
         <>
           <line x1={muroAnchor.x} y1={muroAnchor.y} x2={8 + muroPillWidth / 2} y2={228} stroke="#FF4E00" strokeWidth="1.25" strokeDasharray="3 3" opacity={muro.hasValue ? 0.75 : 0.4} />
           <rect x={8} y={220} width={muroPillWidth} height="36" rx="18" fill="#FFE4D6" />
@@ -404,6 +486,18 @@ function RectangularPool({
           </text>
         </>
       )}
+      {isExcavation && (
+        <>
+          <line x1={trabajoAnchor.x} y1={trabajoAnchor.y} x2={8 + trabajoPillWidth / 2} y2={228} stroke="#B99B5C" strokeWidth="1.25" strokeDasharray="3 3" opacity="0.85" />
+          <rect x={8} y={220} width={trabajoPillWidth} height="36" rx="18" fill="#F1E9D8" />
+          <text x={8 + trabajoPillWidth / 2} y={234} textAnchor="middle" fontSize="8" fontWeight="700" letterSpacing="0.05em" fill="#8A6D2F" className="font-display">
+            TRABAJO
+          </text>
+          <text x={8 + trabajoPillWidth / 2} y={248} textAnchor="middle" fontSize="10.5" fontWeight="700" fill="#8A6D2F" className="font-display">
+            {trabajoText}
+          </text>
+        </>
+      )}
 
       {MARKERS}
     </svg>
@@ -417,6 +511,7 @@ function CircularPool({
   espesorFondoCm,
   materialMuros,
   materialFondo,
+  excavation,
 }: {
   diametro: number | null;
   profundidad: number | null;
@@ -424,9 +519,15 @@ function CircularPool({
   espesorFondoCm: number | null | undefined;
   materialMuros?: InteriorMaterial | null;
   materialFondo?: InteriorMaterial | null;
+  excavation?: {
+    espacioTrabajoCm: number | null;
+    diametroHoyo: number | null;
+    profHoyo: number | null;
+  };
 }) {
   const showStructure = espesorMuroCm !== undefined;
   const isInterior = materialMuros !== undefined;
+  const isExcavation = excavation !== undefined;
   const cx = 200;
   const cy = 96;
   const innerRx = 92;
@@ -450,10 +551,10 @@ function CircularPool({
   const outerFloorCy = cy + depthPx + floorPx;
   const innerFloorCy = cy + depthPx;
 
-  const diametroText = formatValue(diametro, "m");
+  const diametroText = isExcavation ? formatValue(excavation!.diametroHoyo, "m") : formatValue(diametro, "m");
   const diametroPillWidth = Math.max(approxTextWidth(diametroText, 13) + 18, 58);
 
-  const profText = formatValue(profundidad, "m");
+  const profText = isExcavation ? formatValue(excavation!.profHoyo, "m") : formatValue(profundidad, "m");
   const profLabelWidth = Math.max(approxTextWidth("PROF.", 8.5), approxTextWidth(profText, 11)) + 16;
   const profPillX = 372 - profLabelWidth;
   const profPillY = 24;
@@ -462,8 +563,26 @@ function CircularPool({
   const muroPillWidth = Math.max(approxTextWidth("MURO", 8.5), approxTextWidth(muro.text, 11)) + 16;
   const fondoPillWidth = Math.max(approxTextWidth("FONDO", 8.5), approxTextWidth(fondo.text, 11)) + 16;
 
+  // Fase C3 -- límite de excavación circular: anillo exterior offset del
+  // muro exterior por el espacio de trabajo (mismo criterio de offset en
+  // píxeles que `wallPx`).
+  const workPx = isExcavation ? clamp(innerRx * 0.06 + (excavation!.espacioTrabajoCm ?? 0) * 0.5, 14, 46) : 0;
+  const excavRx = outerRx + workPx;
+  const excavRy = outerRy + workPx * (innerRy / innerRx);
+  const trabajoText = formatValue(
+    excavation?.espacioTrabajoCm !== undefined && excavation?.espacioTrabajoCm !== null ? excavation.espacioTrabajoCm / 100 : null,
+    "m"
+  );
+  const trabajoPillWidth = Math.max(approxTextWidth("TRABAJO", 8), approxTextWidth(trabajoText, 10.5)) + 16;
+
   return (
     <svg viewBox="0 0 400 260" preserveAspectRatio="xMidYMid meet" className="w-full h-auto" role="img" aria-label="Ilustración de la piscina circular">
+      {isExcavation && (
+        <>
+          <rect x="0" y="0" width="400" height="260" fill="#E4D9C4" />
+          <ellipse cx={cx} cy={cy} rx={excavRx} ry={excavRy} fill="#D8C9A8" stroke="#B99B5C" strokeWidth="1.5" strokeDasharray="5 4" />
+        </>
+      )}
       {showStructure ? (
         <>
           <ellipse cx={cx} cy={outerFloorCy} rx={outerFloorRx} ry={outerFloorRy} fill="#8F8A81" stroke="#6E6A62" strokeWidth="1" />
@@ -494,7 +613,7 @@ function CircularPool({
 
       <rect x={cx - diametroPillWidth / 2} y={cy - innerRy - 30} width={diametroPillWidth} height="20" rx="10" fill="#F9F9F9" />
       <text x={cx} y={cy - innerRy - 23.5} textAnchor="middle" fontSize="8.5" fontWeight="700" letterSpacing="0.05em" fill="#5E5850" className="font-display">
-        DIÁMETRO
+        {isExcavation ? "DIÁMETRO HOYO" : "DIÁMETRO"}
       </text>
       <text x={cx} y={cy - innerRy - 10.5} textAnchor="middle" fontSize="12.5" fontWeight="700" fill="#002152" className="font-display">
         {diametroText}
@@ -526,13 +645,13 @@ function CircularPool({
       />
       <rect x={profPillX} y={profPillY} width={profLabelWidth} height={profPillHeight} rx={profPillHeight / 2} fill="#F9F9F9" />
       <text x={profPillX + profLabelWidth / 2} y={profPillY + 14} textAnchor="middle" fontSize="8" fontWeight="700" letterSpacing="0.05em" fill="#5E5850" className="font-display">
-        PROF.
+        {isExcavation ? "PROF. HOYO" : "PROF."}
       </text>
       <text x={profPillX + profLabelWidth / 2} y={profPillY + 27} textAnchor="middle" fontSize="11" fontWeight="700" fill="#002152" className="font-display">
         {profText}
       </text>
 
-      {showStructure && (
+      {showStructure && !isExcavation && (
         <>
           <line x1={cx - innerRx} y1={cy + 2} x2={10 + muroPillWidth / 2} y2={cy + 18} stroke="#FF4E00" strokeWidth="1.25" strokeDasharray="3 3" opacity={muro.hasValue ? 0.75 : 0.4} />
           <rect x={10} y={cy - 6} width={muroPillWidth} height="36" rx="18" fill="#FFE4D6" />
@@ -553,6 +672,18 @@ function CircularPool({
           </text>
         </>
       )}
+      {isExcavation && (
+        <>
+          <line x1={cx - innerRx} y1={cy + 2} x2={10 + trabajoPillWidth / 2} y2={cy + 18} stroke="#B99B5C" strokeWidth="1.25" strokeDasharray="3 3" opacity="0.85" />
+          <rect x={10} y={cy - 6} width={trabajoPillWidth} height="36" rx="18" fill="#F1E9D8" />
+          <text x={10 + trabajoPillWidth / 2} y={cy + 8} textAnchor="middle" fontSize="8" fontWeight="700" letterSpacing="0.05em" fill="#8A6D2F" className="font-display">
+            TRABAJO
+          </text>
+          <text x={10 + trabajoPillWidth / 2} y={cy + 22} textAnchor="middle" fontSize="10.5" fontWeight="700" fill="#8A6D2F" className="font-display">
+            {trabajoText}
+          </text>
+        </>
+      )}
 
       {MARKERS}
     </svg>
@@ -560,10 +691,20 @@ function CircularPool({
 }
 
 export function PoolConfiguratorIllustration(props: PoolConfiguratorIllustrationProps) {
-  const espesorMuroCm = props.state === "estructura" || props.state === "interior" ? props.espesorMuroCm : undefined;
-  const espesorFondoCm = props.state === "estructura" || props.state === "interior" ? props.espesorFondoCm : undefined;
+  const espesorMuroCm =
+    props.state === "estructura" || props.state === "interior" || props.state === "excavation" ? props.espesorMuroCm : undefined;
+  const espesorFondoCm =
+    props.state === "estructura" || props.state === "interior" || props.state === "excavation" ? props.espesorFondoCm : undefined;
   const materialMuros = props.state === "interior" ? props.materialMuros : undefined;
   const materialFondo = props.state === "interior" ? props.materialFondo : undefined;
+  const excavationRect =
+    props.state === "excavation" && props.shape === "rectangular"
+      ? { espacioTrabajoCm: props.espacioTrabajoCm, largoHoyo: props.largoHoyo, anchoHoyo: props.anchoHoyo, profHoyo: props.profHoyo }
+      : undefined;
+  const excavationCirc =
+    props.state === "excavation" && props.shape === "circular"
+      ? { espacioTrabajoCm: props.espacioTrabajoCm, diametroHoyo: props.diametroHoyo, profHoyo: props.profHoyo }
+      : undefined;
 
   return (
     <div>
@@ -576,6 +717,7 @@ export function PoolConfiguratorIllustration(props: PoolConfiguratorIllustration
           espesorFondoCm={espesorFondoCm}
           materialMuros={materialMuros}
           materialFondo={materialFondo}
+          excavation={excavationRect}
         />
       ) : (
         <CircularPool
@@ -585,6 +727,7 @@ export function PoolConfiguratorIllustration(props: PoolConfiguratorIllustration
           espesorFondoCm={espesorFondoCm}
           materialMuros={materialMuros}
           materialFondo={materialFondo}
+          excavation={excavationCirc}
         />
       )}
       <Note />

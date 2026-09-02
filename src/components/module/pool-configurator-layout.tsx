@@ -9,24 +9,40 @@
 // VolumeStep ya arma (mismo grid, mismos campos, mismo mecanismo de
 // guardado/draft/recálculo -- MOTOR/PERSISTENCIA genérica, UI específica).
 //
-// C1 tenía 2 bloques (Medidas, Estructura); Fase C2 (2026-09-01) agrega
-// "Interior" (terminación de muros/fondo) como tercer bloque -- el arreglo
-// sigue admitiendo más adelante (Excavación/Entorno, fases C3+) sin
-// cambiar esta firma, basta con extender `BLOCKS` cuando existan.
-const BLOCKS = ["Medidas", "Estructura", "Interior"] as const;
+// C1 tenía 2 bloques (Medidas, Estructura); C2 agregó "Interior"; Fase C3
+// (2026-09-01) agrega "Excavación" como cuarto bloque -- el arreglo sigue
+// admitiendo más adelante (Entorno/Equipamiento, fases C4+) sin cambiar
+// esta firma, basta con extender `BLOCKS` cuando existan.
+//
+// Fase C3 -- bug real encontrado al verificar mobile a 390px: con 4
+// bloques la fila `flex` (sin wrap) ya no cabía y desbordaba la página
+// completa en horizontal (confirmado con scrollWidth > innerWidth). Se
+// agrega `flex-wrap` + `gap-y-2` para que en pantallas angostas pase a 2
+// líneas en vez de desbordar.
+//
+// Fase C3.1 -- medido: la columna real de este tracker en desktop
+// (grid `md:grid-cols-[1fr_1.4fr]` + sidebar "Tu proyecto" de 260px, ver
+// module-wizard.tsx) queda angosta (~240px incluso a 1280px de ventana),
+// así que 4 bloques envuelven a 2 líneas TAMBIÉN en desktop, no solo en
+// mobile -- sin overflow/corte/superposición, pero no "una sola línea
+// cuando hay espacio" porque en esta columna específica no lo hay.
+// Aceptado así para C3 (ver informe C3.1); si se agrega un 5º bloque
+// conviene resolver el tracker de forma definitiva (texto más chico o
+// abreviar labels), no antes.
+const BLOCKS = ["Medidas", "Estructura", "Interior", "Excavación"] as const;
 
 export function PoolConfiguratorLayout({ activeBlock }: { activeBlock: string }) {
   return (
     <div className="mb-4">
       <p className="font-mono text-xs uppercase tracking-wider text-safety mb-2">Configura tu piscina</p>
-      <div className="flex items-center gap-2 mb-3">
+      <div className="flex flex-wrap items-center gap-x-2 gap-y-2 mb-3">
         {BLOCKS.map((block, i) => {
           const isActive = block === activeBlock;
           return (
             <div key={block} className="flex items-center gap-2">
               {i > 0 && <span className="text-ink-faint text-xs">→</span>}
               <span
-                className={`text-xs font-semibold uppercase tracking-wide px-2.5 py-1 rounded-full ${
+                className={`text-xs font-semibold uppercase tracking-wide px-2.5 py-1 rounded-full whitespace-nowrap ${
                   isActive ? "bg-action text-white" : "bg-concrete text-ink-faint"
                 }`}
               >
