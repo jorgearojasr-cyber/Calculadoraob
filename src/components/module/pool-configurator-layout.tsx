@@ -33,7 +33,15 @@
 // que 5 bloques sigan siendo legibles en 2 líneas en vez de 3+ -- sigue
 // siendo el mismo patrón visual (pills + flechas + flex-wrap), no un
 // rediseño del tracker.
-const BLOCKS = ["Medidas", "Estructura", "Interior", "Excavación", "Entorno"] as const;
+//
+// Fase C5 (2026-09-02) -- 6º bloque ("Equipamiento"). A diferencia de los
+// 5 anteriores, PoolEquipmentStep NO arma un grid interno de ilustración
+// (ver ese componente: sin dibujo a propósito), así que este tracker
+// queda con TODO el ancho de la columna principal disponible (sin
+// competir con una ilustración al lado) -- verificado en vivo que sigue
+// legible en 2 líneas tanto en mobile como en desktop con los mismos
+// pills compactos de C4, sin necesitar otro ajuste de tamaño.
+const BLOCKS = ["Medidas", "Estructura", "Interior", "Excavación", "Entorno", "Equipamiento"] as const;
 
 export function PoolConfiguratorLayout({ activeBlock }: { activeBlock: string }) {
   return (

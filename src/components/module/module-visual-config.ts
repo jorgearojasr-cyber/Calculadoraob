@@ -204,7 +204,14 @@ export type ModuleVisualConfig = {
 // nuevo) y `keys` son los Formula.key (ya isResult:true) que van bajo
 // ese encabezado, en el mismo orden en que ya vienen de `results`
 // (Formula.order asc) — el grupo no reordena, solo filtra y rotula.
-export type ResultGroupConfig = { title: string; keys: string[] };
+// `infoKeys` (Fase C5, 2026-09-02) — opcional: Variable.key isResult:true
+// (InfoResult, texto informativo — ver Bomba/Filtro/Skimmers/Retornos de
+// Equipamiento) que se muestran DENTRO de este mismo grupo, después de
+// sus `keys` numéricos — mismo mecanismo que ya usa el bloque genérico de
+// infoResults de ResultScreen, solo que agrupado en vez de suelto arriba
+// de todo. Sin `infoKeys` (la mayoría de los grupos), el grupo se
+// comporta exactamente igual que antes de agregar este campo.
+export type ResultGroupConfig = { title: string; keys: string[]; infoKeys?: string[] };
 
 // Fase 5 (Radier) — arma la RefuerzoCard a partir de 2 InfoResult (estado
 // + explicación, ver Variable.key) más una nota estática (no depende de
@@ -948,6 +955,18 @@ export const MODULE_CONFIG: Record<string, ModuleVisualConfig> = {
           "entorno-porcelanato-m2-compra",
           "entorno-pastelones-unidades",
         ],
+      },
+      // Fase C5 (2026-09-02) — Equipamiento hidráulico BÁSICO (sección 1
+      // del pedido: no es diseño hidráulico). `keys` son los 2 únicos
+      // resultados numéricos reales (caudal objetivo + el mismo valor
+      // mostrado como criterio del filtro); `infoKeys` son los 3
+      // criterios de selección sin cifra inventada (Bomba/Skimmers/
+      // Retornos — ver InfoResult, Variable TEXT isResult:true, mismo
+      // mecanismo que RefuerzoConfig).
+      {
+        title: "Equipamiento",
+        keys: ["equipamiento-caudal-recirculacion-m3h", "equipamiento-filtro-caudal-minimo-m3h"],
+        infoKeys: ["equipamiento-bomba-criterio", "equipamiento-skimmers-criterio", "equipamiento-retornos-criterio"],
       },
     ],
     // Fase C4.2 — "hormigon-total" ya se ve gigante en el hero (ver

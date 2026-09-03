@@ -26,6 +26,7 @@ import type { RecipeGroupConfig, DosificacionGroupConfig, RefuerzoConfig, Result
 import { formatQuantity } from "@/lib/format-number";
 import { pluralizeUnit } from "@/lib/pluralize";
 import type { WizardAnswers } from "./types";
+import { selectHeroPrimaryInfo } from "./result-screen-helpers";
 
 // Aplica el precio de referencia (sugerencia editable) como unitPrice
 // inicial a cada línea de resultado que aún no tiene uno propio. `previous`
@@ -297,10 +298,22 @@ export function ResultScreen({
   // (una Formula nueva agregada sin clasificar) sigue mostrándose, en vez
   // de desaparecer en silencio.
   const groupedSections = (resultGroups ?? [])
-    .map((group) => ({ group, items: listResults.filter((r) => group.keys.includes(r.key)) }))
-    .filter((section) => section.items.length > 0);
+    .map((group) => ({
+      group,
+      items: listResults.filter((r) => group.keys.includes(r.key)),
+      // Fase C5 — InfoResult (Variable TEXT isResult:true, ej. Bomba/
+      // Skimmers/Retornos de Equipamiento) que van DENTRO de este mismo
+      // grupo, ver ResultGroupConfig.infoKeys.
+      infoItems: (group.infoKeys ?? [])
+        .map((key) => infoResults.find((i) => i.key === key))
+        .filter((i): i is InfoResult => i !== undefined),
+    }))
+    .filter((section) => section.items.length > 0 || section.infoItems.length > 0);
   const groupedKeysSet = new Set((resultGroups ?? []).flatMap((g) => g.keys));
   const ungroupedResults = resultGroups ? listResults.filter((r) => !groupedKeysSet.has(r.key)) : listResults;
+  // Fase C5 — los InfoResult ya mostrados dentro de un grupo (infoKeys)
+  // no deben repetirse en el bloque genérico de infoResults más abajo.
+  const groupedInfoKeysSet = new Set((resultGroups ?? []).flatMap((g) => g.infoKeys ?? []));
   // Nota: se probó ocultar infoResults[0] de la lista de abajo (ya que se
   // repite en el subtítulo de ResultHero), pero en módulos donde
   // infoResults[0] es solo la mitad de un par relacionado (ej. Piscina:
@@ -404,12 +417,28 @@ export function ResultScreen({
   // los módulos) o justo antes de "Materiales" (ver HERO_POSITIONS) — se
   // arma UNA vez acá y se inserta en el punto que corresponda, para no
   // duplicar el JSX.
+  //
+  // Fase C5 — bug real encontrado en vivo: `infoResults[0]` sin filtrar
+  // podía caer en un InfoResult que YA se muestra dentro de un
+  // `resultGroups` (ej. "Bomba" de Equipamiento), duplicándolo también
+  // como subtítulo del hero. Variable no tiene un campo de orden propio
+  // (a diferencia de Formula.order), así que el orden de `infoResults`
+  // depende del orden de lectura de la BD, no de un criterio explícito —
+  // cualquier InfoResult agrupado puede terminar en la posición 0. Se
+  // excluyen acá los mismos keys que ya se excluyen del bloque genérico
+  // de infoResults (groupedInfoKeysSet + refuerzoConfig), para que el
+  // subtítulo del hero solo tome un InfoResult que NO se muestre ya en
+  // otro lugar.
+  const heroExcludeKeys = new Set(groupedInfoKeysSet);
+  if (refuerzoConfig?.estadoKey) heroExcludeKeys.add(refuerzoConfig.estadoKey);
+  if (refuerzoConfig?.explicacionKey) heroExcludeKeys.add(refuerzoConfig.explicacionKey);
+  const heroPrimaryInfo = selectHeroPrimaryInfo(infoResults, heroExcludeKeys);
   const heroElement = showsHero && heroResult && (
     <ResultHero
       moduleName={moduleName}
       result={heroResult}
       otherMaterialNames={otherMaterialNames}
-      primaryInfo={infoResults[0] ?? null}
+      primaryInfo={heroPrimaryInfo}
       total={anyPriced ? approxTotal : null}
     />
   );
@@ -475,13 +504,24 @@ export function ResultScreen({
           por separado (ver refuerzoData + RefuerzoCard, más abajo) — se
           sacan del bloque genérico de infoResults para no mostrarlas dos
           veces. Ningún otro módulo usa estas keys, así que este filtro es
-          un no-op para el resto. */}
+          un no-op para el resto. Fase C5: mismo criterio para cualquier
+          infoKey ya mostrada dentro de un `resultGroups` (ver
+          groupedInfoKeysSet) — evita que Bomba/Skimmers/Retornos
+          aparezcan acá ARRIBA de todo Y de nuevo dentro de "Equipamiento". */}
       {infoResults.filter(
-        (info) => info.key !== refuerzoConfig?.estadoKey && info.key !== refuerzoConfig?.explicacionKey
+        (info) =>
+          info.key !== refuerzoConfig?.estadoKey &&
+          info.key !== refuerzoConfig?.explicacionKey &&
+          !groupedInfoKeysSet.has(info.key)
       ).length > 0 && (
         <div className="grid gap-3 mb-3">
           {infoResults
-            .filter((info) => info.key !== refuerzoConfig?.estadoKey && info.key !== refuerzoConfig?.explicacionKey)
+            .filter(
+              (info) =>
+                info.key !== refuerzoConfig?.estadoKey &&
+                info.key !== refuerzoConfig?.explicacionKey &&
+                !groupedInfoKeysSet.has(info.key)
+            )
             .map((info) => (
               <div key={info.key} className="rounded-2xl p-5 bg-white border border-border">
                 <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
@@ -552,16 +592,33 @@ export function ResultScreen({
         // interacción nueva — un usuario ubica la partida por el
         // encabezado, sin tener que abrir/cerrar nada.
         <>
-          {groupedSections.map(({ group, items }) => (
+          {groupedSections.map(({ group, items, infoItems }) => (
             <div key={group.title} className="mb-5">
               <p className="font-mono text-xs uppercase tracking-wider text-ink-faint mb-2">{group.title}</p>
-              <PricedResults
-                results={items}
-                onPricesChange={handlePricesChange}
-                hideFeatured
-                hideTotal
-                suppressNoteForKeys={consolidateNotesKeys}
-              />
+              {items.length > 0 && (
+                <PricedResults
+                  results={items}
+                  onPricesChange={handlePricesChange}
+                  hideFeatured
+                  hideTotal
+                  suppressNoteForKeys={consolidateNotesKeys}
+                />
+              )}
+              {/* Fase C5 — criterios informativos (Bomba/Skimmers/
+                  Retornos): mismo tratamiento visual que ya usa el bloque
+                  genérico de infoResults (tarjeta blanca, label izquierda/
+                  valor derecha), solo que agrupados acá adentro en vez de
+                  sueltos arriba de todo. */}
+              {infoItems.length > 0 && (
+                <div className={`grid gap-3 ${items.length > 0 ? "mt-3" : ""}`}>
+                  {infoItems.map((info) => (
+                    <div key={info.key} className="rounded-2xl p-5 bg-white border border-border">
+                      <p className="font-medium text-[15px] mb-1">{info.label}</p>
+                      <p className="text-sm text-ink-muted">{String(info.value)}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           ))}
           {ungroupedResults.length > 0 && (
