@@ -12,6 +12,8 @@ import { InteriorTerminationStep, isInteriorTerminationStepGroup, getInteriorAct
 import { PoolExcavationStep, isExcavationStepGroup } from "./pool-excavation-step";
 import { PoolEnvironmentStep, isEnvironmentStepGroup } from "./pool-environment-step";
 import { PoolEquipmentStep, isEquipmentStepGroup } from "./pool-equipment-step";
+import { PoolCostsStep, isCostsStepGroup } from "./pool-costs-step";
+import { getCostsActiveKeys } from "./pool-costs-active-keys";
 import { ResultScreen } from "./result-screen";
 import { WizardHeader } from "./wizard-header";
 import { WizardResumeGate } from "./wizard-resume-gate";
@@ -37,6 +39,7 @@ import {
   HERO_POSITIONS,
   RESULT_GROUPS,
   SECONDARY_HERO_RESULT_KEYS,
+  COSTOS_CONFIG,
 } from "./module-visual-config";
 
 function isQuestionVisible(question: WizardQuestion, answers: WizardAnswers): boolean {
@@ -388,9 +391,20 @@ export function ModuleWizard({
     // terminación" está activo). Gateado por stepGroup: no afecta a
     // ningún otro módulo, que no tiene preguntas con ese stepGroup.
     const interiorActive = getInteriorActiveKeys(answers);
+    // Fase C6.1 (2026-09-02) -- mismo principio que interiorActive, esta
+    // vez para las 10 preguntas de precio de Costos (piscina-integral):
+    // varias dependen de una condición compuesta (OR entre 2 keys, o
+    // terminación+base-existente) que `visibleIfQuestionKey` no puede
+    // expresar. `getCostsActiveKeys` es la MISMA función que usa
+    // PoolCostsStep para decidir qué precio pedir — sección 8 del pedido
+    // C6.1: "CostsStep y TU PROYECTO deben provenir de la misma lógica",
+    // nunca una matriz de condiciones duplicada acá. Gateado por
+    // stepGroup "costs": no afecta a ningún otro módulo.
+    const costsActive = getCostsActiveKeys(answers);
     return questions
       .filter((question) => isQuestionVisible(question, answers))
       .filter((question) => !isInteriorTerminationStepGroup(question.stepGroup) || interiorActive.has(question.key))
+      .filter((question) => !isCostsStepGroup(question.stepGroup) || costsActive.has(question.key))
       // Respuestas TEXT que son un blob JSON (ej. el desglose de Consumo
       // eléctrico, ver appliance-consumption-step.tsx) son para consumo
       // interno del cálculo, no algo legible para mostrar acá — regla
@@ -401,6 +415,26 @@ export function ModuleWizard({
       })
       .map((question) => {
         const raw = answers[question.key];
+        // Fase C6.1 -- una pregunta de precio de Costos que SÍ aplica
+        // (pasó el filtro de arriba) pero no fue respondida no es una
+        // configuración incompleta: es opcional por diseño (sección 9/10
+        // del pedido). `optional` la saca del conteo "N de N respondidas"
+        // y `pendingLabel` reemplaza el genérico "Pendiente" (que
+        // sugeriría un error) por un texto coherente con esa semántica.
+        if (isCostsStepGroup(question.stepGroup)) {
+          if (raw === undefined || raw === "") {
+            return {
+              questionKey: question.key,
+              label: question.label,
+              value: "—",
+              answered: false,
+              optional: true,
+              pendingLabel: "Sin precio ingresado",
+            };
+          }
+          const unit = question.unit ? pluralizeUnit(Number(raw), question.unit) : "";
+          return { questionKey: question.key, label: question.label, value: `${raw} ${unit}`.trim(), answered: true, optional: true };
+        }
         if (question.type === "SELECT") {
           const option = question.options.find((o) => o.key === raw);
           return { questionKey: question.key, label: question.label, value: option?.label ?? "—", answered: raw !== undefined };
@@ -451,6 +485,11 @@ export function ModuleWizard({
   // propósito, ver PoolEquipmentStep) que no encaja en QuestionGroupStep.
   const isEquipment = Boolean(currentGroup) && isEquipmentStepGroup(currentGroup[0]?.stepGroup);
 
+  // Fase C6 (2026-09-02) -- Costos del configurador integral de Piscina:
+  // mismo criterio que isEquipment/isEnvironment, geometría/UI propia
+  // (ver PoolCostsStep) que no encaja en QuestionGroupStep.
+  const isCosts = Boolean(currentGroup) && isCostsStepGroup(currentGroup[0]?.stepGroup);
+
   const stepInitialValues = useMemo(
     () => (currentGroup ? withSuggestedDefaults(currentGroup, answers) : answers),
     [currentGroup, answers]
@@ -482,6 +521,7 @@ export function ModuleWizard({
       isExcavation ||
       isEnvironment ||
       isEquipment ||
+      isCosts ||
       (Boolean(currentGroup) && hasDiagram(currentGroup[0]?.stepGroup)));
 
   // Fase C1.1 (2026-09-01) — EXCLUSIVO de "piscina-integral": 3 ajustes
@@ -625,6 +665,15 @@ export function ModuleWizard({
               onAnswer={handleGroupAnswer}
               onSaveForLater={handleSaveForLater}
             />
+          ) : isCosts ? (
+            <PoolCostsStep
+              key={currentGroup.map((q) => q.id).join("-")}
+              questions={currentGroup}
+              initialValues={stepInitialValues}
+              moduleId={moduleId}
+              onAnswer={handleGroupAnswer}
+              onSaveForLater={handleSaveForLater}
+            />
           ) : currentGroup.length > 1 || hasAreaToggle(currentGroup[0].stepGroup) ? (
             <QuestionGroupStep
               key={currentGroup.map((q) => q.id).join("-")}
@@ -718,6 +767,7 @@ export function ModuleWizard({
           excludeFromListKeys={moduleSlug ? EXCLUDE_FROM_LIST_KEYS[moduleSlug] : undefined}
           resultGroups={moduleSlug ? RESULT_GROUPS[moduleSlug] : undefined}
           secondaryHeroResultKeys={moduleSlug ? SECONDARY_HERO_RESULT_KEYS[moduleSlug] : undefined}
+          costosConfig={moduleSlug ? COSTOS_CONFIG[moduleSlug] : undefined}
           consolidateNotesKeys={moduleSlug ? CONSOLIDATE_NOTES_KEYS[moduleSlug] : undefined}
           refuerzoConfig={moduleSlug ? REFUERZO_CONFIG[moduleSlug] : undefined}
           heroPosition={moduleSlug ? HERO_POSITIONS[moduleSlug] : undefined}

@@ -22,8 +22,8 @@ import { RecipeCard } from "./recipe-card";
 import { DosificacionCard } from "./dosificacion-card";
 import { RefuerzoCard } from "./refuerzo-card";
 import { TechnicalNotesSection } from "./technical-notes-section";
-import type { RecipeGroupConfig, DosificacionGroupConfig, RefuerzoConfig, ResultGroupConfig } from "./module-visual-config";
-import { formatQuantity } from "@/lib/format-number";
+import type { RecipeGroupConfig, DosificacionGroupConfig, RefuerzoConfig, ResultGroupConfig, CostosConfig } from "./module-visual-config";
+import { formatQuantity, formatClp } from "@/lib/format-number";
 import { pluralizeUnit } from "@/lib/pluralize";
 import type { WizardAnswers } from "./types";
 import { selectHeroPrimaryInfo } from "./result-screen-helpers";
@@ -73,6 +73,7 @@ export function ResultScreen({
   heroPosition,
   resultGroups,
   secondaryHeroResultKeys,
+  costosConfig,
 }: {
   moduleId: string;
   // Asesor de Ejecución (Fase 0/4, 04-ago-2026): junto con `answers`, es
@@ -158,6 +159,10 @@ export function ResultScreen({
   // Fase C4.2 — ver SECONDARY_HERO_RESULT_KEYS. Sin este prop, no se
   // renderiza ninguna tarjeta adicional.
   secondaryHeroResultKeys?: string[];
+  // Fase C6 (2026-09-02) — ver CostosConfig/COSTOS_CONFIG. Sin este prop
+  // (todos los módulos salvo piscina-integral), no se renderiza ningún
+  // bloque de Costos — comportamiento idéntico al de siempre.
+  costosConfig?: CostosConfig;
 }) {
   const router = useRouter();
   const [promptOpen, setPromptOpen] = useState(false);
@@ -288,6 +293,23 @@ export function ResultScreen({
   const secondaryHeroResults = (secondaryHeroResultKeys ?? [])
     .map((key) => seededResults.find((r) => r.key === key))
     .filter((r): r is CalculationResult => r !== undefined);
+
+  // Fase C6 (2026-09-02) — desglose de Costos (ver CostosConfig). Una
+  // partida solo aparece si su `quantityKey` calculó esta vez (ej. no
+  // eligió esa terminación) — `subtotal` queda `undefined` si el precio
+  // no fue respondido, DISTINTO de $0 (ver comentario en
+  // fase-c6-piscina-integral-costos.ts: `defined()` sobre la Variable de
+  // precio). El total suma solo los subtotales presentes.
+  const costosItems = (costosConfig?.partidas ?? [])
+    .map((p) => {
+      const quantity = seededResults.find((r) => r.key === p.quantityKey);
+      if (!quantity) return null;
+      const subtotalResult = seededResults.find((r) => r.key === p.subtotalKey);
+      return { label: p.label, quantity, subtotal: subtotalResult?.value };
+    })
+    .filter((item): item is { label: string; quantity: CalculationResult; subtotal: number | undefined } => item !== null);
+  const costosTotal = costosItems.reduce((sum, item) => sum + (item.subtotal ?? 0), 0);
+  const anyCostosPriced = costosItems.some((item) => item.subtotal !== undefined);
 
   // Fase C4.2 — arma cada sección de `resultGroups` filtrando listResults
   // por sus keys (preserva el orden de Formula.order que ya trae
@@ -488,6 +510,45 @@ export function ResultScreen({
           {secondaryHeroResults[0]?.note && (
             <p className="mt-2 text-xs text-ink-faint">{secondaryHeroResults[0].note}</p>
           )}
+        </div>
+      )}
+
+      {/* Fase C6 (2026-09-02) — "Costo estimado" (sección 32 del pedido:
+          card destacada ANTES de las secciones técnicas, sin desplazar el
+          hero de Hormigón/Volumen de agua). Copy del total deliberadamente
+          NO dice "Costo total de la piscina" (sección 30: sería engañoso —
+          no incluye mano de obra, Equipamiento, ni partidas sin precio). */}
+      {costosItems.length > 0 && (
+        <div className="rounded-2xl p-5 mb-3 bg-navy/[0.04] border border-navy/20">
+          <p className="font-mono text-xs uppercase tracking-wider text-ink-faint mb-2">Costo estimado</p>
+          {anyCostosPriced ? (
+            <>
+              <div className="flex items-baseline justify-between gap-4">
+                <span className="font-semibold text-[15px]">Total de partidas cotizadas</span>
+                <span className="font-display text-2xl font-bold whitespace-nowrap">{formatClp(costosTotal)}</span>
+              </div>
+              <p className="mt-1 text-xs text-ink-muted">
+                No incluye mano de obra, equipamiento ni partidas sin precio ingresado.
+              </p>
+            </>
+          ) : (
+            <p className="text-sm text-ink-muted">Todavía no ingresaste precios.</p>
+          )}
+          <div className="mt-3 pt-3 border-t border-navy/10 grid gap-2">
+            {costosItems.map(({ label, quantity, subtotal }) => (
+              <div key={quantity.key} className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-0.5">
+                <span className="text-sm text-ink-muted">
+                  {label}{" "}
+                  <span className="text-xs text-ink-faint">
+                    ({formatQuantity(quantity.value)} {pluralizeUnit(quantity.value, quantity.unit)})
+                  </span>
+                </span>
+                <span className="text-sm font-medium text-right whitespace-nowrap">
+                  {subtotal !== undefined ? formatClp(subtotal) : <span className="text-ink-faint">Sin precio ingresado</span>}
+                </span>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 

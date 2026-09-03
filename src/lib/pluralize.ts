@@ -42,6 +42,18 @@ const INVARIANT = new Set([
   "%",
   "kwh/mes",
   "$/kwh",
+  // Fase C6 (2026-09-02) — Question.unit de los 10 precios de Costos del
+  // configurador integral de Piscina ("$/m³", "$/viaje", etc., mismo
+  // patrón compuesto "$/X" que ya cubría "$/kwh"). Sin esto, TU PROYECTO
+  // mostraba un bug real y visible: "100000 $/m³es" (pluralizeWord
+  // agregando "es" a la primera palabra "$/m³" como si fuera una palabra
+  // normal en consonante) — encontrado en vivo durante la verificación de
+  // C6.
+  "$/m³",
+  "$/viaje",
+  "$/l",
+  "$/m²",
+  "$/unidad",
   "capa",
   "capas",
   "advertencia",

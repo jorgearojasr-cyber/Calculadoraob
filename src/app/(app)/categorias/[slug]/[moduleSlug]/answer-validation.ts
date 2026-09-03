@@ -15,13 +15,28 @@ function moduleQuestionKey(moduleSlug: string, questionKey: string): string {
   return `${moduleSlug}::${questionKey}`;
 }
 
-// Único caso real hoy: "Preparación bajo losa" del configurador integral
-// de Piscina ("piscina-integral") -- ver fase-c3-piscina-integral-
-// excavacion.ts. Su propio helpText documenta el 0 como valor válido
-// ("si no corresponde, déjalo en 0 cm"), a diferencia de cualquier otra
-// pregunta NUMBER del catálogo (largo, ancho, profundidad, capacidad de
-// camión...), donde 0 sigue sin sentido y debe seguir rechazándose.
-const ZERO_ALLOWED_BY_MODULE_AND_KEY = new Set([moduleQuestionKey("piscina-integral", "excavacion-preparacion-losa-cm")]);
+// Fase C6 (2026-09-02) -- Costos del configurador integral de Piscina:
+// las 10 preguntas NUMBER de precio unitario ($/m³, $/L, $/viaje, etc.)
+// son el segundo caso real de "0 válido" -- a diferencia de una medida
+// física (largo, ancho, profundidad...), un precio en $0 tiene sentido
+// real (sección 19/49 del pedido C6: "permitir 0 si el usuario quiere
+// indicar que la partida no tiene costo para él", distinto de dejarla
+// vacía/sin responder). Mismo scope Module+Question que el caso de
+// "Preparación bajo losa" -- no se amplía la excepción a todo el
+// catálogo de precios (ningún otro módulo usa este mecanismo).
+const ZERO_ALLOWED_BY_MODULE_AND_KEY = new Set([
+  moduleQuestionKey("piscina-integral", "excavacion-preparacion-losa-cm"),
+  moduleQuestionKey("piscina-integral", "costos-precio-hormigon-m3"),
+  moduleQuestionKey("piscina-integral", "costos-precio-retiro-viaje"),
+  moduleQuestionKey("piscina-integral", "costos-precio-pintura-litro"),
+  moduleQuestionKey("piscina-integral", "costos-precio-ceramica-interior-m2"),
+  moduleQuestionKey("piscina-integral", "costos-precio-membrana-m2"),
+  moduleQuestionKey("piscina-integral", "costos-precio-base-entorno-m3"),
+  moduleQuestionKey("piscina-integral", "costos-precio-radier-terminado-m3"),
+  moduleQuestionKey("piscina-integral", "costos-precio-ceramica-entorno-m2"),
+  moduleQuestionKey("piscina-integral", "costos-precio-porcelanato-entorno-m2"),
+  moduleQuestionKey("piscina-integral", "costos-precio-pastelon-unidad"),
+]);
 
 /**
  * true si `num` es una respuesta NUMBER inválida para esta Question de

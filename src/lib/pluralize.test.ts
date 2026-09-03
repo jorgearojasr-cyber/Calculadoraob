@@ -59,3 +59,23 @@ describe("pluralizeUnit — fix C2.1 (unidades de litros, Pintura para piscina)"
     expect(pluralizeUnit(2, "m²/l")).toBe("m²/l");
   });
 });
+
+// Fase C6.1 (2026-09-02) — cobertura de las 5 unidades "$/X" agregadas a
+// INVARIANT en C6 (bug real encontrado en vivo: "100000 $/m³es" en TU
+// PROYECTO, antes del fix — mismo patrón de bug que C2.1 ya había
+// corregido para "L").
+describe("pluralizeUnit — precios de Costos (Fase C6, piscina-integral)", () => {
+  const units = ["$/m³", "$/viaje", "$/l", "$/m²", "$/unidad"];
+
+  it("nunca pluraliza estas 5 unidades, sin importar la cantidad", () => {
+    for (const unit of units) {
+      expect(pluralizeUnit(1, unit)).toBe(unit);
+      expect(pluralizeUnit(0, unit)).toBe(unit);
+      expect(pluralizeUnit(100000, unit)).toBe(unit);
+    }
+  });
+
+  it('regresión del bug real: "$/m³" ya NO se convierte en "$/m³es"', () => {
+    expect(pluralizeUnit(100000, "$/m³")).toBe("$/m³");
+  });
+});

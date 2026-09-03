@@ -35,3 +35,46 @@ describe("isNumberAnswerInvalid — excepción C3 (piscina-integral / excavacion
     expect(isNumberAnswerInvalid("piscina-integral", "excavacion-preparacion-losa-cm", Infinity)).toBe(true);
   });
 });
+
+// Fase C6 (2026-09-02) — mismo mecanismo scopeado Module+Question, esta
+// vez para las 10 preguntas de precio de Costos (sección 19/49 del pedido
+// C6: "0 explícito" debe ser una respuesta válida y distinta de dejar el
+// precio vacío/sin responder).
+describe("isNumberAnswerInvalid — excepción C6 (piscina-integral / precios de Costos)", () => {
+  const precioKeys = [
+    "costos-precio-hormigon-m3",
+    "costos-precio-retiro-viaje",
+    "costos-precio-pintura-litro",
+    "costos-precio-ceramica-interior-m2",
+    "costos-precio-membrana-m2",
+    "costos-precio-base-entorno-m3",
+    "costos-precio-radier-terminado-m3",
+    "costos-precio-ceramica-entorno-m2",
+    "costos-precio-porcelanato-entorno-m2",
+    "costos-precio-pastelon-unidad",
+  ];
+
+  it("0 explícito es válido para las 10 preguntas de precio", () => {
+    for (const key of precioKeys) {
+      expect(isNumberAnswerInvalid("piscina-integral", key, 0)).toBe(false);
+    }
+  });
+
+  it("un positivo sigue siendo válido", () => {
+    for (const key of precioKeys) {
+      expect(isNumberAnswerInvalid("piscina-integral", key, 100000)).toBe(false);
+    }
+  });
+
+  it("un negativo se rechaza incluso en la excepción (sección 50: no permitir negativos)", () => {
+    for (const key of precioKeys) {
+      expect(isNumberAnswerInvalid("piscina-integral", key, -1)).toBe(true);
+    }
+  });
+
+  it("la MISMA key en otro Module NO hereda la excepción — 0 sigue inválido", () => {
+    for (const key of precioKeys) {
+      expect(isNumberAnswerInvalid("otro-modulo-cualquiera", key, 0)).toBe(true);
+    }
+  });
+});

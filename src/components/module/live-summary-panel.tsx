@@ -7,6 +7,18 @@ export type SummaryItem = {
   label: string;
   value: string;
   answered: boolean;
+  // Fase C6.1 (2026-09-02) -- opcional: true para una pregunta genuinamente
+  // opcional (ej. los 10 precios de Costos en piscina-integral) que NO
+  // debe contar hacia "N de N respondidas" ni sentirse como una
+  // configuración incompleta cuando queda sin responder. Sin este campo
+  // (todos los ítems de siempre), el conteo funciona exactamente igual
+  // que antes -- ver answeredCount/countLabel más abajo.
+  optional?: boolean;
+  // Fase C6.1 -- texto a mostrar en vez de "Pendiente" cuando `answered`
+  // es false (ej. "Sin precio ingresado") -- sin este campo, se muestra
+  // "Pendiente" como siempre. Pensado para preguntas opcionales donde
+  // "Pendiente" sugeriría incorrectamente que falta completar algo.
+  pendingLabel?: string;
 };
 
 // Panel de resumen en vivo, genérico para cualquier módulo — nuevo
@@ -37,7 +49,7 @@ function SummaryList({ items, onEditItem }: { items: SummaryItem[]; onEditItem: 
           <div className="min-w-0">
             <dt className="text-xs text-ink-faint">{item.label}</dt>
             <dd className={`text-sm font-medium truncate ${item.answered ? "text-ink" : "text-ink-faint"}`}>
-              {item.answered ? item.value : "Pendiente"}
+              {item.answered ? item.value : item.pendingLabel ?? "Pendiente"}
             </dd>
           </div>
           {item.answered && (
@@ -65,8 +77,16 @@ export function LiveSummaryPanel({
   onEditItem: (questionKey: string) => void;
   title?: string;
 }) {
-  const answeredCount = items.filter((i) => i.answered).length;
-  const countLabel = `${answeredCount} de ${items.length} respondidas`;
+  // Fase C6.1 -- ítems `optional` (ver SummaryItem) quedan fuera del
+  // denominador y del numerador: no deben hacer que un proyecto completo
+  // se vea incompleto (ej. "17 de 23 respondidas" cuando en realidad las
+  // 10 preguntas de precio de Costos son todas opcionales y el usuario
+  // puede terminar sin responder ninguna). Sin ítems `optional` (todos los
+  // módulos salvo piscina-integral/Costos), el cálculo es idéntico al de
+  // siempre.
+  const requiredItems = items.filter((i) => !i.optional);
+  const answeredCount = requiredItems.filter((i) => i.answered).length;
+  const countLabel = `${answeredCount} de ${requiredItems.length} respondidas`;
 
   return (
     <>

@@ -195,7 +195,30 @@ export type ModuleVisualConfig = {
   resultGroups?: ResultGroupConfig[];
   // Ver SECONDARY_HERO_RESULT_KEYS.
   secondaryHeroResultKeys?: string[];
+  // Ver COSTOS_CONFIG.
+  costos?: CostosConfig;
 };
+
+// Fase C6 (2026-09-02) — "Costos" del configurador integral de Piscina:
+// a diferencia de RESULT_GROUPS (agrupa Formula.key ya existentes bajo un
+// encabezado, reutilizando <PricedResults>), Costos necesita su PROPIO
+// bloque (formato CLP, "Sin precio ingresado" para la ausencia real de
+// precio, un total agregado) — ver sección 32/33 del pedido C6: card
+// destacada antes de las secciones técnicas, NO mezclada dentro de
+// ESTRUCTURA/INTERIOR/EXCAVACIÓN/ENTORNO. `quantityKey` es SIEMPRE una
+// Formula.key isResult:true YA existente (o, para Pintura/Cerámica/
+// Membrana interior, una nueva Formula "canónica" que resuelve el mismo
+// dilema de doble conteo que ya resolvía `pintura-litros-combinado` —
+// ver fase-c6-piscina-integral-costos.ts) — Costos nunca recalcula una
+// cantidad en paralelo, solo la reutiliza. `subtotalKey` es una Formula
+// nueva, condicionada a `defined(<variable de precio>)`: SOLO existe en
+// `results` cuando el usuario respondió esa pregunta de precio (con
+// cualquier valor >= 0, incluido 0 explícito) — su AUSENCIA en `results`
+// es la señal de "sin precio ingresado", nunca un $0 inventado. Ambas
+// keys deben estar también en `excludeFromListKeys` del mismo Module,
+// para no duplicarse en la lista genérica "sin agrupar".
+export type CostosPartidaConfig = { quantityKey: string; subtotalKey: string; label: string };
+export type CostosConfig = { partidas: CostosPartidaConfig[] };
 
 // Fase C4.2 (2026-09-02) — un grupo visual de la lista genérica de
 // PricedResults (ver RESULT_GROUPS más abajo). `title` se pinta como
@@ -974,8 +997,52 @@ export const MODULE_CONFIG: Record<string, ModuleVisualConfig> = {
     // "Estructura" era la duplicación visual que señaló la auditoría
     // (sección 4 del pedido C4.2). Los 2 keys de agua tampoco van en la
     // lista genérica — tienen su propia tarjeta (ver
-    // secondaryHeroResultKeys).
-    excludeFromListKeys: ["hormigon-total", "agua-volumen-m3", "agua-volumen-litros"],
+    // secondaryHeroResultKeys). Fase C6 — mismo criterio para las 3
+    // cantidades "canónicas" de Costos (evitan mostrar la misma cifra que
+    // ya se ve en "Interior" una segunda vez) y las 10 Formula de
+    // subtotal (viven en su propia card "Costo estimado", ver
+    // costosConfig más abajo, nunca en la lista genérica).
+    excludeFromListKeys: [
+      "hormigon-total",
+      "agua-volumen-m3",
+      "agua-volumen-litros",
+      "costos-pintura-cantidad-litros",
+      "costos-ceramica-cantidad-m2",
+      "costos-membrana-cantidad-m2",
+      "costos-hormigon-estructura-subtotal",
+      "costos-retiro-tierra-subtotal",
+      "costos-pintura-interior-subtotal",
+      "costos-ceramica-interior-subtotal",
+      "costos-membrana-interior-subtotal",
+      "costos-base-entorno-subtotal",
+      "costos-radier-terminado-subtotal",
+      "costos-ceramica-entorno-subtotal",
+      "costos-porcelanato-entorno-subtotal",
+      "costos-pastelones-subtotal",
+    ],
+    // Fase C6 (2026-09-02) — Costos de materiales y partidas cotizadas
+    // (sección 2 del pedido: SOLO las partidas con cantidad objetiva
+    // aprobada — nunca mano de obra, Equipamiento, ni excavación en m³).
+    // `quantityKey` reutiliza la cantidad YA calculada por C1-C4.2
+    // (hormigon-total, excavacion-viajes, entorno-*) o la nueva Formula
+    // "canónica" de Pintura/Cerámica/Membrana interior (evita doble
+    // conteo cuando muros y fondo usan terminaciones distintas, ver
+    // fase-c6-piscina-integral-costos.ts). `subtotalKey` solo aparece en
+    // `results` si el precio fue respondido (ver DSL `defined`).
+    costos: {
+      partidas: [
+        { quantityKey: "hormigon-total", subtotalKey: "costos-hormigon-estructura-subtotal", label: "Hormigón de estructura" },
+        { quantityKey: "excavacion-viajes", subtotalKey: "costos-retiro-tierra-subtotal", label: "Retiro de tierra" },
+        { quantityKey: "costos-pintura-cantidad-litros", subtotalKey: "costos-pintura-interior-subtotal", label: "Pintura interior" },
+        { quantityKey: "costos-ceramica-cantidad-m2", subtotalKey: "costos-ceramica-interior-subtotal", label: "Cerámica/mosaico interior" },
+        { quantityKey: "costos-membrana-cantidad-m2", subtotalKey: "costos-membrana-interior-subtotal", label: "Membrana interior" },
+        { quantityKey: "entorno-volumen-base", subtotalKey: "costos-base-entorno-subtotal", label: "Hormigón base/radier del entorno" },
+        { quantityKey: "entorno-volumen-radier-terminado", subtotalKey: "costos-radier-terminado-subtotal", label: "Radier/hormigón terminado del entorno" },
+        { quantityKey: "entorno-ceramica-m2-compra", subtotalKey: "costos-ceramica-entorno-subtotal", label: "Cerámica exterior del entorno" },
+        { quantityKey: "entorno-porcelanato-m2-compra", subtotalKey: "costos-porcelanato-entorno-subtotal", label: "Porcelanato exterior del entorno" },
+        { quantityKey: "entorno-pastelones-unidades", subtotalKey: "costos-pastelones-subtotal", label: "Pastelones del entorno" },
+      ],
+    },
     diagrams: {
       "medidas-rect": {
         shape: "pool-integral-medidas-rect-with-depth",
@@ -1191,6 +1258,16 @@ export const SECONDARY_HERO_RESULT_KEYS: Record<string, string[]> = Object.fromE
   Object.entries(MODULE_CONFIG)
     .filter(([, m]) => m.secondaryHeroResultKeys)
     .map(([slug, m]) => [slug, m.secondaryHeroResultKeys!])
+);
+
+// Ver CostosConfig — mismo patrón Object.fromEntries que el resto de este
+// archivo. Sin `costos` (todos los módulos salvo piscina-integral), el
+// comportamiento de ResultScreen es idéntico al de siempre: sin bloque de
+// Costos.
+export const COSTOS_CONFIG: Record<string, CostosConfig> = Object.fromEntries(
+  Object.entries(MODULE_CONFIG)
+    .filter(([, m]) => m.costos)
+    .map(([slug, m]) => [slug, m.costos!])
 );
 
 // Fase 5 (Radier) — dónde va ResultHero (la tarjeta protagonista azul).
