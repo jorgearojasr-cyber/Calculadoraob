@@ -4,6 +4,7 @@ import { ArrowLeft, ChevronRight } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { getCategoryIcon } from "@/lib/category-icons";
 import { ProjectCard } from "@/components/project-card";
+import { getExtraVisibleSlugs } from "@/lib/module-visibility";
 
 export const revalidate = 3600;
 
@@ -24,11 +25,16 @@ export default async function CategoryPage({ params }: { params: { slug: string 
     }
   }
 
+  // Fase C7.3 — permite que piscina-integral aparezca en el listado de
+  // categoría en Vercel Preview/local aunque published=false, sin tocar la
+  // fila en la BD (ver module-visibility.ts). En producción real
+  // getExtraVisibleSlugs() devuelve [] y el `where` queda igual que antes.
+  const extraSlugs = getExtraVisibleSlugs();
   const category = await prisma.category.findUnique({
     where: { slug: params.slug },
     include: {
       modules: {
-        where: { published: true },
+        where: extraSlugs.length > 0 ? { OR: [{ published: true }, { slug: { in: extraSlugs } }] } : { published: true },
         orderBy: { name: "asc" },
         include: { _count: { select: { questions: true } } },
       },

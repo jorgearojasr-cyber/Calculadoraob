@@ -4,6 +4,7 @@ import { ModuleWizard } from "@/components/module/module-wizard";
 import type { WizardQuestion } from "@/components/module/types";
 import type { ModuleGuideData } from "@/components/module/guide-section";
 import { SHAPE_LABELS } from "@/lib/plan-shape";
+import { getExtraVisibleSlugs } from "@/lib/module-visibility";
 
 // Sprint UX "Construir una piscina" (03-ago-2026), ítem 4: resuelve — server
 // side, antes de renderizar el wizard — a qué fase se debe continuar si el
@@ -138,8 +139,17 @@ export default async function ModulePage({
     [key: string]: string | string[] | undefined;
   };
 }) {
+  // Fase C7.3 — permite abrir piscina-integral por URL directa en Vercel
+  // Preview/local aunque published=false, sin tocar la fila en la BD (ver
+  // module-visibility.ts). En producción real getExtraVisibleSlugs()
+  // devuelve [] y el `where` queda igual que antes (solo published=true).
+  const extraSlugs = getExtraVisibleSlugs();
   const mod = await prisma.module.findFirst({
-    where: { slug: params.moduleSlug, published: true, category: { slug: params.slug } },
+    where: {
+      slug: params.moduleSlug,
+      category: { slug: params.slug },
+      ...(extraSlugs.length > 0 ? { OR: [{ published: true }, { slug: { in: extraSlugs } }] } : { published: true }),
+    },
     include: {
       category: true,
       questions: {
