@@ -79,3 +79,23 @@ describe("pluralizeUnit — precios de Costos (Fase C6, piscina-integral)", () =
     expect(pluralizeUnit(100000, "$/m³")).toBe("$/m³");
   });
 });
+
+// Fase C7.2 (2026-09-03) — cobertura de "CLP" (Formula.unit real de los
+// subtotales de Costos, mostrado tal cual en la vista de solo lectura de
+// un SavedProject — proyectos/[id]/page.tsx). Bug real encontrado en vivo
+// al reabrir un proyecto guardado: "2.954.003 CLPes".
+describe('pluralizeUnit — "CLP" (Fase C7.2, snapshot de SavedProject)', () => {
+  it('"CLP" nunca se pluraliza, sin importar la cantidad', () => {
+    expect(pluralizeUnit(1, "CLP")).toBe("CLP");
+    expect(pluralizeUnit(0, "CLP")).toBe("CLP");
+    expect(pluralizeUnit(2954003, "CLP")).toBe("CLP");
+  });
+
+  it("la comparación no distingue mayúsculas/minúsculas (mismo criterio que el resto de INVARIANT)", () => {
+    expect(pluralizeUnit(2954003, "clp")).toBe("clp");
+  });
+
+  it('regresión del bug real: "CLP" ya NO se convierte en "CLPes"', () => {
+    expect(pluralizeUnit(2954003, "CLP")).toBe("CLP");
+  });
+});

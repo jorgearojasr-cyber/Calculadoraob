@@ -54,6 +54,14 @@ const INVARIANT = new Set([
   "$/l",
   "$/m²",
   "$/unidad",
+  // Fase C7.2 (2026-09-03) — Formula.unit "CLP" de los 5 subtotales de
+  // Costos (fase-c6-piscina-integral-costos.ts), mostrados tal cual (sin
+  // pasar por formatClp) en la vista de solo lectura de un SavedProject
+  // guardado (proyectos/[id]/page.tsx, que reutiliza <PricedResults> de
+  // forma genérica). Sin esto: "2.954.003 CLPes" — mismo patrón de bug ya
+  // corregido en C6 para "$/m³" etc., encontrado en vivo al reabrir un
+  // proyecto guardado real durante C7.1.
+  "clp",
   "capa",
   "capas",
   "advertencia",

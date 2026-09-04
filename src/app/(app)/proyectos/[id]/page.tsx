@@ -45,9 +45,22 @@ export default async function SavedProjectPage({ params }: { params: { id: strin
         <div className="grid gap-3 mt-8 mb-3">
           {result.infoResults.map((info) => (
             <div key={info.key} className="rounded-2xl p-5 bg-white border border-border">
-              <div className="flex items-baseline justify-between gap-4">
+              {/* Fase C7.2 (2026-09-03) -- bug real encontrado en vivo al
+                  reabrir un SavedProject con InfoResult largos (Bomba/
+                  Skimmers/Retornos de Equipamiento, fase C5): `whitespace-
+                  nowrap` forzaba la frase completa en una sola línea,
+                  expandiendo la vista a ~2046px y generando overflow
+                  horizontal real. Mismo patrón ya probado sin este problema
+                  en result-screen.tsx (bloque genérico de infoResults):
+                  `flex-wrap` en el contenedor + sin whitespace-nowrap en el
+                  valor -- deja que la fila entera baje de línea si hace
+                  falta, y que el texto largo haga wrap normal dentro de su
+                  propio ancho. Valores cortos (ej. "$0", "6 horas") no se
+                  ven afectados: siguen cabiendo en una sola línea porque
+                  wrap normal no rompe una palabra/frase que ya cabe. */}
+              <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
                 <span className="font-medium text-[15px]">{info.label}</span>
-                <span className="font-display text-lg font-semibold whitespace-nowrap">
+                <span className="font-display text-lg font-semibold text-right">
                   {String(info.value)}
                 </span>
               </div>
