@@ -430,20 +430,21 @@ export function ModuleWizard({
               answered: false,
               optional: true,
               pendingLabel: "Sin precio ingresado",
+              stepGroup: question.stepGroup,
             };
           }
           const unit = question.unit ? pluralizeUnit(Number(raw), question.unit) : "";
-          return { questionKey: question.key, label: question.label, value: `${raw} ${unit}`.trim(), answered: true, optional: true };
+          return { questionKey: question.key, label: question.label, value: `${raw} ${unit}`.trim(), answered: true, optional: true, stepGroup: question.stepGroup };
         }
         if (question.type === "SELECT") {
           const option = question.options.find((o) => o.key === raw);
-          return { questionKey: question.key, label: question.label, value: option?.label ?? "—", answered: raw !== undefined };
+          return { questionKey: question.key, label: question.label, value: option?.label ?? "—", answered: raw !== undefined, stepGroup: question.stepGroup };
         }
         if (raw === undefined || raw === "") {
-          return { questionKey: question.key, label: question.label, value: "—", answered: false };
+          return { questionKey: question.key, label: question.label, value: "—", answered: false, stepGroup: question.stepGroup };
         }
         const unit = question.unit ? pluralizeUnit(Number(raw), question.unit) : "";
-        return { questionKey: question.key, label: question.label, value: `${raw} ${unit}`.trim(), answered: true };
+        return { questionKey: question.key, label: question.label, value: `${raw} ${unit}`.trim(), answered: true, stepGroup: question.stepGroup };
       });
   }, [questions, answers]);
 

@@ -19,6 +19,15 @@ export type SummaryItem = {
   // "Pendiente" como siempre. Pensado para preguntas opcionales donde
   // "Pendiente" sugeriría incorrectamente que falta completar algo.
   pendingLabel?: string;
+  // Fase Pre-Producción — "UX final del configurador de piscina"
+  // (2026-09-04): mismo Question.stepGroup de siempre, propagado acá SOLO
+  // para que ResultScreen pueda agrupar "Editar valores" por bloque
+  // (Medidas/Estructura/.../Costos) en piscina-integral — ver
+  // groupAnswersSummaryByStep en result-screen-helpers.ts. Este componente
+  // (LiveSummaryPanel) no lo lee ni cambia su comportamiento con este
+  // campo; queda disponible para quien arme `items` sin afectar a los
+  // otros ~56 módulos, que simplemente no lo setean.
+  stepGroup?: string | null;
 };
 
 // Panel de resumen en vivo, genérico para cualquier módulo — nuevo
@@ -38,7 +47,12 @@ export type SummaryItem = {
 // persistente, no la interacción principal del paso — se le da espacio
 // recién en lg (1024px) para no competir por ancho con el formulario/
 // diagrama a los 768px (probado en vivo, quedaba apretado).
-function SummaryList({ items, onEditItem }: { items: SummaryItem[]; onEditItem: (questionKey: string) => void }) {
+// Exportado (Fase Pre-Producción, 2026-09-04) para que ResultScreen pueda
+// reusar EXACTAMENTE la misma fila (label/valor/"Cambiar") dentro del
+// bloque "Editar valores" agrupado de piscina-integral, en vez de
+// reimplementar el mismo markup a mano en 2 lugares — mismo criterio ya
+// usado para otros helpers compartidos del framework.
+export function SummaryList({ items, onEditItem }: { items: SummaryItem[]; onEditItem: (questionKey: string) => void }) {
   return (
     <dl className="grid gap-0.5">
       {items.map((item) => (

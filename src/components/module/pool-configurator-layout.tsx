@@ -41,7 +41,7 @@
 // competir con una ilustración al lado) -- verificado en vivo que sigue
 // legible en 2 líneas tanto en mobile como en desktop con los mismos
 // pills compactos de C4, sin necesitar otro ajuste de tamaño.
-const BLOCKS = ["Medidas", "Estructura", "Interior", "Excavación", "Entorno", "Equipamiento"] as const;
+const BLOCKS = ["Medidas", "Estructura", "Interior", "Excavación", "Borde", "Equipamiento"] as const;
 
 export function PoolConfiguratorLayout({ activeBlock }: { activeBlock: string }) {
   return (

@@ -234,7 +234,14 @@ export type CostosConfig = { partidas: CostosPartidaConfig[] };
 // infoResults de ResultScreen, solo que agrupado en vez de suelto arriba
 // de todo. Sin `infoKeys` (la mayoría de los grupos), el grupo se
 // comporta exactamente igual que antes de agregar este campo.
-export type ResultGroupConfig = { title: string; keys: string[]; infoKeys?: string[] };
+// `summaryKeys` (Fase Pre-Producción, "UX final del configurador de
+// piscina", 2026-09-04) — Formula.key opcionales para el resumen de una
+// línea que se muestra cuando el grupo está colapsado (ej. "144,65 m³ · 19
+// viajes"). Se buscan en TODOS los `results`, no solo en `keys` de este
+// grupo (permite reusar un resultado que vive en `excludeFromListKeys`,
+// ej. "hormigon-total"). Sin este campo, el grupo simplemente no muestra
+// resumen al estar colapsado — comportamiento seguro por defecto.
+export type ResultGroupConfig = { title: string; keys: string[]; infoKeys?: string[]; summaryKeys?: string[] };
 
 // Fase 5 (Radier) — arma la RefuerzoCard a partir de 2 InfoResult (estado
 // + explicación, ver Variable.key) más una nota estática (no depende de
@@ -937,6 +944,10 @@ export const MODULE_CONFIG: Record<string, ModuleVisualConfig> = {
       {
         title: "Estructura",
         keys: ["largo-ext", "ancho-ext", "radio-ext", "diametro-ext", "hormigon-fondo-rect", "hormigon-muros-rect", "hormigon-fondo-circ", "hormigon-muros-circ"],
+        // Reusa "hormigon-total" (ya excluido de la lista, ver
+        // excludeFromListKeys — vive gigante en el hero) como resumen del
+        // grupo colapsado — sección 22 del pedido, sin fórmula nueva.
+        summaryKeys: ["hormigon-total"],
       },
       {
         title: "Interior",
@@ -953,6 +964,10 @@ export const MODULE_CONFIG: Record<string, ModuleVisualConfig> = {
           "ceramica-m2-combinado",
           "membrana-m2-combinado",
         ],
+        // Solo UNA de las 3 "-combinado" calcula por sesión (depende de la
+        // terminación elegida) — buildGroupSummaryText muestra la que
+        // exista, sin necesidad de saber cuál fue de antemano.
+        summaryKeys: ["pintura-litros-combinado", "ceramica-m2-combinado", "membrana-m2-combinado"],
       },
       {
         title: "Excavación",
@@ -967,9 +982,13 @@ export const MODULE_CONFIG: Record<string, ModuleVisualConfig> = {
           "excavacion-capacidad-camion",
           "excavacion-viajes",
         ],
+        summaryKeys: ["excavacion-volumen-suelto", "excavacion-viajes"],
       },
       {
-        title: "Entorno",
+        // Fase Pre-Producción (2026-09-04) -- "Entorno" -> "Borde de la
+        // piscina" (sección 12/13 del pedido): copy visible únicamente,
+        // las keys internas (entorno-*) no cambian.
+        title: "Borde de la piscina",
         keys: [
           "entorno-area",
           "entorno-volumen-base",
@@ -978,6 +997,7 @@ export const MODULE_CONFIG: Record<string, ModuleVisualConfig> = {
           "entorno-porcelanato-m2-compra",
           "entorno-pastelones-unidades",
         ],
+        summaryKeys: ["entorno-area"],
       },
       // Fase C5 (2026-09-02) — Equipamiento hidráulico BÁSICO (sección 1
       // del pedido: no es diseño hidráulico). `keys` son los 2 únicos
@@ -990,6 +1010,7 @@ export const MODULE_CONFIG: Record<string, ModuleVisualConfig> = {
         title: "Equipamiento",
         keys: ["equipamiento-caudal-recirculacion-m3h", "equipamiento-filtro-caudal-minimo-m3h"],
         infoKeys: ["equipamiento-bomba-criterio", "equipamiento-skimmers-criterio", "equipamiento-retornos-criterio"],
+        summaryKeys: ["equipamiento-caudal-recirculacion-m3h"],
       },
     ],
     // Fase C4.2 — "hormigon-total" ya se ve gigante en el hero (ver

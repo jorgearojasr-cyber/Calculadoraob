@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowRight, Check, Copy, FolderPlus, Pencil, RotateCcw, Sparkles } from "lucide-react";
+import { ArrowRight, Check, ChevronDown, Copy, FolderPlus, Pencil, RotateCcw, Sparkles } from "lucide-react";
 import { buildCalculationPrompt, buildRestartLabel } from "@/lib/prompt-generator";
 import type { CalculationResult, InfoResult } from "@/lib/formula-engine";
 import type { CalculateModuleResult, NormSummary } from "@/app/(app)/categorias/[slug]/[moduleSlug]/actions";
@@ -15,7 +15,7 @@ import { ResultHero } from "./result-hero";
 import { GuideSection, type ModuleGuideData } from "./guide-section";
 import { PhotoGallery } from "./photo-gallery";
 import { RecalculateField } from "./recalculate-field";
-import { LiveSummaryPanel, type SummaryItem } from "./live-summary-panel";
+import { LiveSummaryPanel, SummaryList, type SummaryItem } from "./live-summary-panel";
 import { ExecutionAdvisorPanel } from "./execution-advisor-panel";
 import { getExecutionAdvisorReport, type InformeEjecucionUI } from "@/lib/execution-advisor/action";
 import { RecipeCard } from "./recipe-card";
@@ -26,7 +26,7 @@ import type { RecipeGroupConfig, DosificacionGroupConfig, RefuerzoConfig, Result
 import { formatQuantity, formatClp } from "@/lib/format-number";
 import { pluralizeUnit } from "@/lib/pluralize";
 import type { WizardAnswers } from "./types";
-import { selectHeroPrimaryInfo } from "./result-screen-helpers";
+import { selectHeroPrimaryInfo, buildGroupSummaryText, groupAnswersSummaryByStep } from "./result-screen-helpers";
 
 // Aplica el precio de referencia (sugerencia editable) como unitPrice
 // inicial a cada línea de resultado que aún no tiene uno propio. `previous`
@@ -642,46 +642,57 @@ export function ResultScreen({
       {heroPosition === "beforeMaterials" && heroElement}
 
       {resultGroups ? (
-        // Fase C4.2 — en vez de UNA lista plana con los 15-20 resultados
-        // de C1-C4 mezclados (el hallazgo principal de la auditoría
-        // global), cada `resultGroups` section es su propia PricedResults
-        // con un encabezado propio — mismo componente, mismos datos, sin
-        // "hideFeatured"/tratamiento gigante repetido por sección (ya hay
-        // UN protagonista, el hero de arriba) y sin total por sección
-        // (Costos no existe todavía, no hay nada que sumar). Funciona
-        // igual en mobile/desktop: son encabezados + tarjetas, no una
-        // interacción nueva — un usuario ubica la partida por el
-        // encabezado, sin tener que abrir/cerrar nada.
+        // Fase Pre-Producción — "UX final del configurador de piscina"
+        // (2026-09-04), secciones 18-22: cada grupo pasa a ser un
+        // <details> colapsado por defecto (accesible por teclado/lector de
+        // pantalla nativamente, mismo patrón ya usado en LiveSummaryPanel
+        // — no se inventa un mecanismo de accordion nuevo), con un resumen
+        // de una línea (ver buildGroupSummaryText/summaryKeys) para que el
+        // usuario sepa qué hay adentro sin tener que abrirlo. EXCLUSIVO de
+        // módulos con `resultGroups` (hoy, solo piscina-integral) — el
+        // resto de los ~56 módulos sigue con la lista plana de siempre
+        // (rama `else` más abajo, sin cambios).
         <>
-          {groupedSections.map(({ group, items, infoItems }) => (
-            <div key={group.title} className="mb-5">
-              <p className="font-mono text-xs uppercase tracking-wider text-ink-faint mb-2">{group.title}</p>
-              {items.length > 0 && (
-                <PricedResults
-                  results={items}
-                  onPricesChange={handlePricesChange}
-                  hideFeatured
-                  hideTotal
-                  suppressNoteForKeys={consolidateNotesKeys}
-                />
-              )}
-              {/* Fase C5 — criterios informativos (Bomba/Skimmers/
-                  Retornos): mismo tratamiento visual que ya usa el bloque
-                  genérico de infoResults (tarjeta blanca, label izquierda/
-                  valor derecha), solo que agrupados acá adentro en vez de
-                  sueltos arriba de todo. */}
-              {infoItems.length > 0 && (
-                <div className={`grid gap-3 ${items.length > 0 ? "mt-3" : ""}`}>
-                  {infoItems.map((info) => (
-                    <div key={info.key} className="rounded-2xl p-5 bg-white border border-border">
-                      <p className="font-medium text-[15px] mb-1">{info.label}</p>
-                      <p className="text-sm text-ink-muted">{String(info.value)}</p>
+          {groupedSections.map(({ group, items, infoItems }) => {
+            const summaryText = buildGroupSummaryText(group.summaryKeys, seededResults);
+            return (
+              <details key={group.title} className="group mb-3 rounded-2xl border border-border bg-white overflow-hidden">
+                <summary className="flex items-center justify-between gap-3 px-5 py-4 cursor-pointer list-none">
+                  <div className="min-w-0">
+                    <p className="font-mono text-xs uppercase tracking-wider text-ink-faint">{group.title}</p>
+                    {summaryText && <p className="text-sm font-semibold text-ink mt-0.5">{summaryText}</p>}
+                  </div>
+                  <ChevronDown className="w-4 h-4 text-ink-faint flex-shrink-0 transition-transform group-open:rotate-180" />
+                </summary>
+                <div className="px-5 pb-5 pt-1 border-t border-border">
+                  {items.length > 0 && (
+                    <PricedResults
+                      results={items}
+                      onPricesChange={handlePricesChange}
+                      hideFeatured
+                      hideTotal
+                      suppressNoteForKeys={consolidateNotesKeys}
+                    />
+                  )}
+                  {/* Fase C5 — criterios informativos (Bomba/Skimmers/
+                      Retornos): mismo tratamiento visual que ya usa el bloque
+                      genérico de infoResults (tarjeta blanca, label izquierda/
+                      valor derecha), solo que agrupados acá adentro en vez de
+                      sueltos arriba de todo. */}
+                  {infoItems.length > 0 && (
+                    <div className={`grid gap-3 ${items.length > 0 ? "mt-3" : ""}`}>
+                      {infoItems.map((info) => (
+                        <div key={info.key} className="rounded-2xl p-5 bg-white border border-border">
+                          <p className="font-medium text-[15px] mb-1">{info.label}</p>
+                          <p className="text-sm text-ink-muted">{String(info.value)}</p>
+                        </div>
+                      ))}
                     </div>
-                  ))}
+                  )}
                 </div>
-              )}
-            </div>
-          ))}
+              </details>
+            );
+          })}
           {ungroupedResults.length > 0 && (
             <PricedResults
               results={ungroupedResults}
@@ -719,7 +730,44 @@ export function ResultScreen({
       <PhotoGallery photos={approvedPhotos ?? []} />
 
       <div className="mt-8">
-        <LiveSummaryPanel items={answersSummary} onEditItem={onEditField} title="Con estos datos calculamos" />
+        {resultGroups ? (
+          // Fase Pre-Producción — secciones 23-25 del pedido: en vez de
+          // 18+ filas todas visibles de una ("Con estos datos calculamos"),
+          // un solo bloque "Editar valores" colapsado por defecto,
+          // agrupado por el mismo stepGroup que ya organiza el wizard
+          // (Medidas/Estructura/.../Costos) — reusa SummaryList (misma fila
+          // "Cambiar" de siempre) para que sea la MISMA experiencia, no una
+          // nueva. RESULTADOS (cantidades calculadas, arriba) y RESPUESTAS
+          // (lo que el usuario ingresó, acá) quedan visualmente separados
+          // sección 28 del pedido — nunca mezclados en un mismo bloque.
+          // EXCLUSIVO de piscina-integral (mismo gate que los accordions de
+          // resultGroups) — el resto de los módulos sigue con
+          // LiveSummaryPanel sin cambios (rama `else`).
+          (() => {
+            const requiredItems = answersSummary.filter((i) => !i.optional);
+            const answeredCount = requiredItems.filter((i) => i.answered).length;
+            const countLabel = `${answeredCount} de ${requiredItems.length} respondidas`;
+            const groupedAnswers = groupAnswersSummaryByStep(answersSummary);
+            return (
+              <details className="group rounded-2xl border border-border bg-concrete">
+                <summary className="flex items-center justify-between gap-3 px-5 py-4 cursor-pointer list-none">
+                  <span className="font-mono text-xs uppercase tracking-wider text-ink-muted">Editar valores</span>
+                  <span className="font-mono text-[11px] text-ink-faint flex-shrink-0">{countLabel}</span>
+                </summary>
+                <div className="px-5 pb-4">
+                  {groupedAnswers.map(({ title, items }) => (
+                    <div key={title} className="mb-4 last:mb-0">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-ink-faint mb-1">{title}</p>
+                      <SummaryList items={items} onEditItem={onEditField} />
+                    </div>
+                  ))}
+                </div>
+              </details>
+            );
+          })()
+        ) : (
+          <LiveSummaryPanel items={answersSummary} onEditItem={onEditField} title="Con estos datos calculamos" />
+        )}
       </div>
 
       <div className="mt-8 flex flex-wrap items-center gap-3">

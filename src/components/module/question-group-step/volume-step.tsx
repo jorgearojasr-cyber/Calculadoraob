@@ -17,6 +17,16 @@ import { SubmitActions } from "./submit-actions";
 import { capitalize } from "../dimension-utils/formatting";
 import { toFieldNum } from "../dimension-utils/parsing";
 import { useVolumePreview, type VolumeField } from "./hooks/useVolumePreview";
+import { ReferenceHint } from "../reference-hint";
+
+// Fase Pre-Producción — "Ayudas referenciales" (2026-09-04), sección 3:
+// valores de referencia SOLO para una estimación preliminar, nunca
+// aplicados en silencio (ver ReferenceHint). Exclusivo del paso Estructura
+// de piscina-integral (isIntegralEstructura) — ningún otro módulo con
+// VolumeStep (Radier, Fundación, Piscina standalone, Excavación) se ve
+// afectado.
+const ESTRUCTURA_MURO_REFERENCIA_CM = "15";
+const ESTRUCTURA_LOSA_REFERENCIA_CM = "20";
 
 // Mismo motivo que FieldRow: nivel superior para no recrear el tipo de
 // componente en cada render de VolumeStep.
@@ -417,6 +427,39 @@ export function VolumeStep({
             />
           ))}
         </div>
+
+        {/* Fase Pre-Producción — "Ayudas referenciales" sección 3: exclusivo
+            de Estructura de piscina-integral. Un solo botón aplica AMBOS
+            espesores a la vez (muro=questions[0], losa=depthQuestion) —
+            siguen siendo campos NUMBER editables normales después, el
+            usuario puede cambiar cualquiera de los dos como si los hubiera
+            tipeado a mano. */}
+        {isIntegralEstructura && (
+          <ReferenceHint
+            text="Si todavía no tienes un diseño estructural, puedes usar estos valores solo para estimar cantidades: muros 15 cm, fondo/losa 20 cm. Los espesores definitivos dependen de las dimensiones, profundidad, terreno y solución estructural."
+            actionLabel="Usar valores referenciales (muro 15 cm, losa 20 cm)"
+            onApply={() => {
+              setValue(questions[0].key, ESTRUCTURA_MURO_REFERENCIA_CM);
+              setValue(depthQuestion.key, ESTRUCTURA_LOSA_REFERENCIA_CM);
+            }}
+          />
+        )}
+
+        {/* Fase Pre-Producción — sección 4: tarjeta informativa de refuerzo
+            estructural, exclusiva de Estructura de piscina-integral. Solo
+            copy -- no crea Variable/Formula ni calcula kg de acero,
+            diámetro, separación o malla comercial (esto NO es un cálculo
+            de armadura, ver spec). */}
+        {isIntegralEstructura && (
+          <div className="mt-3 rounded-xl px-4 py-3 bg-concrete">
+            <p className="text-sm font-semibold mb-1">Refuerzo estructural</p>
+            <p className="text-xs text-ink-muted">
+              Una piscina de hormigón debe considerar armadura de acero en muros y losa. El diámetro, separación,
+              cantidad y disposición de barras o mallas deben definirse mediante cálculo estructural. ObraBien
+              estima aquí el hormigón; no dimensiona el acero de refuerzo.
+            </p>
+          </div>
+        )}
 
         {/* Fase B (2026-08-31): Piscina Paso 2 (espesores) no arma un
             volumen/superficie real con solo 2 espesores — este paso nunca

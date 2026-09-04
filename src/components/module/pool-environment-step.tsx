@@ -7,6 +7,15 @@ import { formatQuantity } from "@/lib/format-number";
 import { PoolConfiguratorLayout } from "./pool-configurator-layout";
 import { PoolConfiguratorIllustration } from "./pool-configurator-illustration";
 import type { EnvironmentMaterial } from "./pool-configurator-illustration";
+import { ReferenceHint } from "./reference-hint";
+
+// Fase Pre-Producción — "Ayudas referenciales" (2026-09-04), secciones
+// 12-16: "Entorno" -> "Borde de la piscina" en todo el copy visible de
+// este paso (keys internas entorno-*/stepGroup "environment" sin tocar,
+// no aportan nada cambiarlas). Referencias de espesor/pérdida, nunca
+// precargadas (ver ReferenceHint).
+const BASE_RADIER_REFERENCIA_CM = "10";
+const PERDIDA_CORTES_REFERENCIA = "10";
 
 // Paso "Entorno / Borde" del configurador integral de Piscina (Fase C4,
 // 2026-09-02) -- EXCLUSIVO de "piscina-integral", mismo criterio ya
@@ -282,14 +291,14 @@ export function PoolEnvironmentStep({
   return (
     <div className="bg-white rounded-2xl border border-border shadow-sm p-5 md:p-8 grid md:grid-cols-[1fr_1.4fr] md:gap-10 md:items-start">
       <div className="order-1">
-        <PoolConfiguratorLayout activeBlock="Entorno" />
+        <PoolConfiguratorLayout activeBlock="Borde" />
 
         <div className="md:hidden mb-5 rounded-2xl bg-[#F3F7FB] p-4">
           <PoolConfiguratorIllustration {...illustrationProps} />
         </div>
 
         <div className="rounded-2xl bg-concrete px-5 py-4 mb-5">
-          <p className="text-sm text-ink-muted">Área estimada del entorno:</p>
+          <p className="text-sm text-ink-muted">Área estimada del borde:</p>
           <p className="font-display text-2xl font-semibold text-ink mt-1">
             {areaEntorno !== null ? `${formatQuantity(areaEntorno)} m²` : "—"}
           </p>
@@ -305,7 +314,7 @@ export function PoolEnvironmentStep({
 
         <div className="grid gap-5">
           <div>
-            <p className="text-sm font-medium mb-1.5">{anchoQ?.label ?? "Ancho del entorno/borde"}</p>
+            <p className="text-sm font-medium mb-1.5">{anchoQ?.label ?? "Ancho del borde alrededor de la piscina"}</p>
             <div className="flex items-center gap-2 rounded-xl px-4 py-3 bg-white border border-border focus-within:border-ink">
               <input
                 type="text"
@@ -319,7 +328,7 @@ export function PoolEnvironmentStep({
             </div>
             <p className="mt-1 text-xs text-ink-faint">
               {anchoQ?.helpText ??
-                "Indica cuánto quieres extender el entorno alrededor de la piscina, medido desde la cara exterior del vaso."}
+                "Indica cuánto piso o superficie quieres dejar alrededor de la piscina, medido desde la cara exterior del muro."}
             </p>
           </div>
 
@@ -358,6 +367,11 @@ export function PoolEnvironmentStep({
               <p className="mt-1 text-xs text-ink-faint">
                 {espesorRadierQ?.helpText ?? "El espesor definitivo depende del uso, terreno y solución constructiva."}
               </p>
+              <ReferenceHint
+                text="Referencia para estimación: 10 cm. El espesor definitivo depende del terreno, uso y solución constructiva."
+                actionLabel="Usar 10 cm"
+                onApply={() => setEspesorRadier(BASE_RADIER_REFERENCIA_CM)}
+              />
               <div className="mt-2 flex items-start gap-2 rounded-lg bg-concrete px-3 py-2.5">
                 <Info className="w-3.5 h-3.5 text-ink-faint flex-shrink-0 mt-0.5" />
                 <p className="text-xs text-ink-faint">
@@ -404,6 +418,11 @@ export function PoolEnvironmentStep({
               <p className="mt-1 text-xs text-ink-faint">
                 {espesorBaseQ?.helpText ?? "El espesor definitivo depende del uso, terreno y solución constructiva."}
               </p>
+              <ReferenceHint
+                text="Referencia para estimación: 10 cm. El espesor definitivo depende del terreno, uso y solución constructiva."
+                actionLabel="Usar 10 cm"
+                onApply={() => setEspesorBase(BASE_RADIER_REFERENCIA_CM)}
+              />
             </div>
           )}
 
@@ -421,6 +440,11 @@ export function PoolEnvironmentStep({
                 />
                 <span className="font-mono text-xs text-ink-muted flex-shrink-0">%</span>
               </div>
+              <ReferenceHint
+                text="Referencia para una instalación normal: 10%. Puede aumentar si existen muchos cortes, diagonales o patrones especiales."
+                actionLabel="Usar 10%"
+                onApply={() => setPerdida(PERDIDA_CORTES_REFERENCIA)}
+              />
               {compraConPerdida !== null && (
                 <p className="mt-1 text-xs text-ink-faint">
                   Compra estimada: {formatQuantity(compraConPerdida)} m²

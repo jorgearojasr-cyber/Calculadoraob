@@ -5,6 +5,16 @@ import { ArrowRight, Check, Info } from "lucide-react";
 import type { WizardQuestion } from "./types";
 import { PoolConfiguratorLayout } from "./pool-configurator-layout";
 import { PoolConfiguratorIllustration, type InteriorMaterial } from "./pool-configurator-illustration";
+import { ReferenceHint } from "./reference-hint";
+
+// Fase Pre-Producción — "Ayudas referenciales" (2026-09-04), secciones 5-7
+// y 16: valores de referencia SOLO para una estimación inicial, nunca
+// aplicados en silencio -- el usuario los aplica con un botón explícito y
+// puede editarlos después como cualquier campo normal (ver ReferenceHint).
+const PINTURA_MANOS_REFERENCIA = "3";
+const PINTURA_RENDIMIENTO_REFERENCIA = "8";
+const MARGEN_APLICACION_REFERENCIA = "10";
+const PERDIDA_CORTES_REFERENCIA = "10";
 
 // Paso "Interior" del configurador integral de Piscina (Fase C2,
 // 2026-09-01) -- EXCLUSIVO de "piscina-integral", mismo criterio ya
@@ -216,12 +226,30 @@ function MaterialDetailFields({
           value={rendimiento}
           onChange={setRendimiento}
         />
-        <NumberField
-          label={perdQ?.label ?? "Margen de aplicación (%)"}
-          unit="%"
-          value={perdidaPintura}
-          onChange={setPerdidaPintura}
+        {/* Fase Pre-Producción, secciones 5-6: un solo botón aplica manos +
+            rendimiento juntos -- ambos campos siguen editables después. */}
+        <ReferenceHint
+          text="Como referencia inicial para una piscina nueva puedes considerar 3 manos y un rendimiento aprox. de 8 m²/L por mano. Revisa siempre la ficha técnica del producto elegido."
+          actionLabel="Usar referencia de pintura (3 manos, 8 m²/L)"
+          onApply={() => {
+            setManos(PINTURA_MANOS_REFERENCIA);
+            setRendimiento(PINTURA_RENDIMIENTO_REFERENCIA);
+          }}
         />
+        <div>
+          <NumberField
+            label={perdQ?.label ?? "Margen de aplicación (%)"}
+            unit="%"
+            helpText="Agrega un porcentaje extra para considerar pérdidas durante la aplicación. Ej: 10% significa que calcularemos una reserva adicional del 10%."
+            value={perdidaPintura}
+            onChange={setPerdidaPintura}
+          />
+          <ReferenceHint
+            text="Como referencia puedes usar un margen del 10%."
+            actionLabel="Usar 10%"
+            onApply={() => setPerdidaPintura(MARGEN_APLICACION_REFERENCIA)}
+          />
+        </div>
       </div>
     );
   }
@@ -230,6 +258,11 @@ function MaterialDetailFields({
     return (
       <div className="mt-3 pl-1">
         <NumberField label={perdQ?.label ?? "Pérdida por cortes (%)"} unit="%" value={perdidaCeramica} onChange={setPerdidaCeramica} />
+        <ReferenceHint
+          text="Referencia para una instalación normal: 10%. Puede aumentar si existen muchos cortes, diagonales o patrones especiales."
+          actionLabel="Usar 10%"
+          onApply={() => setPerdidaCeramica(PERDIDA_CORTES_REFERENCIA)}
+        />
       </div>
     );
   }

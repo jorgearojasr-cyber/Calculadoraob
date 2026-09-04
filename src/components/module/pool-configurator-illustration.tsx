@@ -453,7 +453,7 @@ function RectangularPool({
 
   const envTerminacion = isEnvironment ? formatEnvironmentMaterial(environment!.terminacion ?? null) : { text: "", hasValue: false };
   const envAnchoText = formatValue(environment?.anchoEntornoM ?? null, "m");
-  const envAnchoPillWidth = Math.max(approxTextWidth("ANCHO ENTORNO", 7.5), approxTextWidth(envAnchoText, 11)) + 16;
+  const envAnchoPillWidth = Math.max(approxTextWidth("ANCHO BORDE", 7.5), approxTextWidth(envAnchoText, 11)) + 16;
   const envAnchoAnchor = { x: (envPleft.x + oPleft.x) / 2, y: (envPleft.y + oPleft.y) / 2 };
 
   const envAreaText = formatValue(environment?.areaEntorno ?? null, "m²");
@@ -659,7 +659,7 @@ function RectangularPool({
           </text>
         </>
       )}
-      {/* Fase C4 -- pills de ENTORNO: ANCHO ENTORNO (izquierda) + ÁREA
+      {/* Fase C4 -- pills de ENTORNO: ANCHO BORDE (izquierda) + ÁREA
           ENTORNO/terminación (derecha), igual patrón visual que
           MURO/FONDO pero con estos 2 (o 3, si hay base nueva/radier)
           datos -- las cotas de Excavación no aparecen acá (sección 22:
@@ -669,7 +669,7 @@ function RectangularPool({
           <line x1={envAnchoAnchor.x} y1={envAnchoAnchor.y} x2={8 + envAnchoPillWidth / 2} y2={228} stroke="#FF4E00" strokeWidth="1.25" strokeDasharray="3 3" opacity="0.75" />
           <rect x={8} y={220} width={envAnchoPillWidth} height="36" rx="18" fill="#FFE4D6" />
           <text x={8 + envAnchoPillWidth / 2} y={234} textAnchor="middle" fontSize="7.5" fontWeight="700" letterSpacing="0.03em" fill="#E04500" className="font-display">
-            ANCHO ENTORNO
+            ANCHO BORDE
           </text>
           <text x={8 + envAnchoPillWidth / 2} y={248} textAnchor="middle" fontSize="10.5" fontWeight="700" fill="#E04500" className="font-display">
             {envAnchoText}
@@ -790,7 +790,7 @@ function CircularPool({
   const envRy = outerRy + envPx * (innerRy / innerRx);
   const envTerminacion = isEnvironment ? formatEnvironmentMaterial(environment!.terminacion ?? null) : { text: "", hasValue: false };
   const envAnchoText = formatValue(environment?.anchoEntornoM ?? null, "m");
-  const envAnchoPillWidth = Math.max(approxTextWidth("ANCHO ENTORNO", 7.5), approxTextWidth(envAnchoText, 11)) + 16;
+  const envAnchoPillWidth = Math.max(approxTextWidth("ANCHO BORDE", 7.5), approxTextWidth(envAnchoText, 11)) + 16;
   const envAreaText = formatValue(environment?.areaEntorno ?? null, "m²");
   const envAreaPillWidth = Math.max(approxTextWidth(envTerminacion.text, 10.5), approxTextWidth(envAreaText, 11)) + 16;
   const showEnvBase = isEnvironment && environment!.espesorBaseCm !== undefined;
@@ -920,7 +920,7 @@ function CircularPool({
           <line x1={cx - innerRx} y1={cy + 2} x2={10 + envAnchoPillWidth / 2} y2={cy + 18} stroke="#FF4E00" strokeWidth="1.25" strokeDasharray="3 3" opacity="0.75" />
           <rect x={10} y={cy - 6} width={envAnchoPillWidth} height="36" rx="18" fill="#FFE4D6" />
           <text x={10 + envAnchoPillWidth / 2} y={cy + 8} textAnchor="middle" fontSize="7.5" fontWeight="700" letterSpacing="0.03em" fill="#E04500" className="font-display">
-            ANCHO ENTORNO
+            ANCHO BORDE
           </text>
           <text x={10 + envAnchoPillWidth / 2} y={cy + 22} textAnchor="middle" fontSize="10.5" fontWeight="700" fill="#E04500" className="font-display">
             {envAnchoText}

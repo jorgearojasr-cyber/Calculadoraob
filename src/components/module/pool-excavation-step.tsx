@@ -6,6 +6,12 @@ import type { WizardQuestion } from "./types";
 import { formatQuantity } from "@/lib/format-number";
 import { PoolConfiguratorLayout } from "./pool-configurator-layout";
 import { PoolConfiguratorIllustration } from "./pool-configurator-illustration";
+import { ReferenceHint } from "./reference-hint";
+
+// Fase Pre-Producción — "Ayudas referenciales" (2026-09-04), sección 10:
+// referencia práctica para el espacio de trabajo, nunca precargada (ver
+// ReferenceHint).
+const ESPACIO_TRABAJO_REFERENCIA_CM = "50";
 
 // Paso "Excavación" del configurador integral de Piscina (Fase C3,
 // 2026-09-01) -- EXCLUSIVO de "piscina-integral", mismo criterio ya
@@ -209,12 +215,15 @@ export function PoolExcavationStep({
         <div className="rounded-2xl bg-concrete px-5 py-4 mb-5">
           <p className="text-sm text-ink-muted">Con las medidas de tu piscina, estimamos una excavación de:</p>
           <p className="font-display text-2xl font-semibold text-ink mt-1">{dimsText ?? "—"}</p>
-          <p className="text-xs text-ink-faint mt-2">Puedes ajustar los parámetros que influyen en esta estimación.</p>
+          <p className="text-xs text-ink-faint mt-2">
+            Las medidas del vaso ya consideran los muros. El espacio de trabajo se suma por fuera.
+          </p>
+          <p className="text-xs text-ink-faint mt-1">Puedes ajustar los parámetros que influyen en esta estimación.</p>
         </div>
 
         <div className="grid gap-5">
           <div>
-            <p className="text-sm font-medium mb-1.5">{espacioQ?.label ?? "Espacio de trabajo alrededor"}</p>
+            <p className="text-sm font-medium mb-1.5">{espacioQ?.label ?? "Espacio para trabajar alrededor de la piscina"}</p>
             <div className="flex items-center gap-2 rounded-xl px-4 py-3 bg-white border border-border focus-within:border-ink">
               <input
                 type="text"
@@ -228,8 +237,15 @@ export function PoolExcavationStep({
             </div>
             <p className="mt-1 text-xs text-ink-faint">
               {espacioQ?.helpText ??
-                "Espacio adicional necesario alrededor del vaso para ejecutar los trabajos de construcción. Depende del sistema constructivo y de las condiciones de la obra."}
+                "Es el espacio extra que se excava por fuera de los muros para poder trabajar durante la construcción. No corresponde al espesor del muro."}
             </p>
+            {/* Fase Pre-Producción, sección 10: referencia práctica, nunca
+                precargada -- no se llama "norma". */}
+            <ReferenceHint
+              text="Como referencia preliminar puedes considerar entre 30 y 60 cm, según el sistema constructivo y el espacio necesario para trabajar."
+              actionLabel="Usar 50 cm"
+              onApply={() => setEspacioTrabajo(ESPACIO_TRABAJO_REFERENCIA_CM)}
+            />
           </div>
 
           <div>
