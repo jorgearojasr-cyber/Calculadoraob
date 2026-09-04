@@ -22,12 +22,15 @@ export const TASK_IMAGES: Record<string, string> = {
   "construir-una-piscina": "/images/categorias/piscina.png",
 };
 
-// "Construir una piscina" no tiene un módulo único que represente a
-// "piscina en general" — enlaza al selector de forma con fotos que ya
-// vive en /grupos/piscinas, igual que antes de este rediseño.
-export const TASK_HREF_OVERRIDES: Record<string, string> = {
-  "construir-una-piscina": "/grupos/piscinas",
-};
+// Vacío desde la fase "piscina-integral como experiencia principal"
+// (2026-09-04). Antes, "Construir una piscina" no tenía un módulo único
+// que representara a "piscina en general", así que este override la
+// enlazaba a /grupos/piscinas (el selector de forma con fotos). Ahora la
+// ProjectTask tiene un único ProjectTaskModule hacia piscina-integral, así
+// que el href genérico `/empezar/${slug}` (ver getPopularTasks abajo) ya
+// redirige directo al configurador con el mínimo de clics — sin necesidad
+// de un override hardcodeado.
+export const TASK_HREF_OVERRIDES: Record<string, string> = {};
 
 export type PopularTaskCard = {
   id: string;
