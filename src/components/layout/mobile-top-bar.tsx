@@ -8,15 +8,7 @@ import { Logo } from "@/components/brand/logo";
 import { SignOutButton } from "@/components/auth/sign-out-button";
 import type { NavUser } from "./user-menu";
 import { isWizardRoute } from "@/lib/is-wizard-route";
-
-// Mismos 3 ítems que no caben en las 4 pestañas fijas del BottomNav
-// (Inicio/Proyectos/Mis proyectos/Perfil ya cubren lo demás) + los
-// botones de sesión, espejo del lado derecho del TopNav de desktop.
-const DRAWER_LINKS = [
-  { href: "/guias", label: "Guías y consejos" },
-  { href: "/galeria", label: "Biblioteca" },
-  { href: "/acerca-de", label: "Acerca de nosotros" },
-];
+import { SITE_NAV_ITEMS } from "@/lib/site-nav";
 
 const SIMPLIFIED_ROUTES = new Set(["/login", "/registro"]);
 
@@ -66,7 +58,7 @@ export function MobileTopBar({ user }: { user: NavUser }) {
           </div>
 
           <nav className="grid gap-1 mb-6">
-            {DRAWER_LINKS.map((item) => (
+            {SITE_NAV_ITEMS.map((item) => (
               <Link
                 key={item.href}
                 href={item.href}

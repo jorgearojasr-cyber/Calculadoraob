@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { getCategoryIcon } from "@/lib/category-icons";
 import { ProjectCard } from "@/components/project-card";
 import { getExtraVisibleSlugs } from "@/lib/module-visibility";
+import { getDisplayStepCount } from "@/lib/module-step-count";
 
 export const revalidate = 3600;
 
@@ -103,7 +104,7 @@ export default async function CategoryPage({ params }: { params: { slug: string 
                   title={mod.name}
                   categoryLabel={category.name}
                   imageUrl={mod.imageUrl}
-                  stepCount={mod._count.questions}
+                  stepCount={getDisplayStepCount(mod.slug, mod._count.questions)}
                 />
               ))}
             </div>

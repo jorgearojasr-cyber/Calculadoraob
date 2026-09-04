@@ -5,15 +5,7 @@ import { usePathname } from "next/navigation";
 import { Logo } from "@/components/brand/logo";
 import { UserMenu, type NavUser } from "./user-menu";
 import { isWizardRoute } from "@/lib/is-wizard-route";
-
-const NAV_ITEMS = [
-  { href: "/", label: "Inicio", match: (p: string) => p === "/" },
-  { href: "/#empezar", label: "Calculadoras", match: () => false },
-  { href: "/guias", label: "Guías y consejos", match: (p: string) => p.startsWith("/guias") },
-  { href: "/inspecciones", label: "Inspecciones", match: (p: string) => p.startsWith("/inspecciones") },
-  { href: "/galeria", label: "Biblioteca", match: (p: string) => p.startsWith("/galeria") },
-  { href: "/acerca-de", label: "Acerca de nosotros", match: (p: string) => p.startsWith("/acerca-de") },
-];
+import { SITE_NAV_ITEMS, isSiteNavItemActive } from "@/lib/site-nav";
 
 // Rutas donde el nav se muestra "simplificado" — solo el logo, sin ítems
 // ni botones de sesión, para no mostrar "Iniciar sesión" redundante
@@ -38,8 +30,8 @@ export function TopNav({ isAdmin, user }: { isAdmin: boolean; user: NavUser }) {
       {!isSimplified && (
         <>
           <nav className="flex items-center gap-7 ml-[34px]">
-            {NAV_ITEMS.map((item) => {
-              const active = item.match(pathname);
+            {SITE_NAV_ITEMS.map((item) => {
+              const active = isSiteNavItemActive(item.href, pathname);
               return (
                 <Link
                   key={item.href}

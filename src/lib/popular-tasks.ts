@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { getDisplayStepCount } from "@/lib/module-step-count";
 
 // Selección curada a mano (no hay datos reales de popularidad todavía) —
 // compartida entre el carrusel del Hero (Home) y, antes del rediseño de
@@ -57,7 +58,7 @@ export async function getPopularTasks(): Promise<PopularTaskCard[]> {
       moduleLinks: {
         orderBy: { order: "asc" },
         take: 1,
-        include: { module: { select: { imageUrl: true, _count: { select: { questions: true } } } } },
+        include: { module: { select: { slug: true, imageUrl: true, _count: { select: { questions: true } } } } },
       },
     },
   });
@@ -76,6 +77,6 @@ export async function getPopularTasks(): Promise<PopularTaskCard[]> {
       // sin tocar este archivo de nuevo.
       image: TASK_IMAGES[t.slug] ?? t.moduleLinks[0]?.module.imageUrl ?? null,
       groupName: t.group.name,
-      stepCount: t.moduleLinks[0]?.module._count.questions ?? null,
+      stepCount: getDisplayStepCount(t.moduleLinks[0]?.module.slug, t.moduleLinks[0]?.module._count.questions),
     }));
 }

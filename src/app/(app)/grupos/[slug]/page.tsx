@@ -8,6 +8,7 @@ import { GROUP_ICON_CHIP_CLASS, getGroupCountLabel } from "@/lib/group-colors";
 import { GroupChip } from "@/components/home/group-chip";
 import { ProjectCard } from "@/components/project-card";
 import { TASK_IMAGES } from "@/lib/popular-tasks";
+import { getDisplayStepCount } from "@/lib/module-step-count";
 
 export const dynamic = "force-dynamic";
 
@@ -78,7 +79,7 @@ export default async function GroupDetailPage({ params }: { params: Promise<{ sl
         // menos preciso que una foto por forma, pero más útil que nada.
         imageUrl: link.imageUrl ?? link.module.imageUrl ?? TASK_IMAGES[task.slug] ?? null,
         title: link.module.name,
-        stepCount: link.module._count.questions,
+        stepCount: getDisplayStepCount(link.module.slug, link.module._count.questions),
       }));
     }
     const singleLink = task.moduleLinks[0];
@@ -90,7 +91,7 @@ export default async function GroupDetailPage({ params }: { params: Promise<{ sl
         // fotos ya aprobadas y visibles en el carrusel de Home.
         imageUrl: TASK_IMAGES[task.slug] ?? task.imageUrl ?? singleLink?.imageUrl ?? singleLink?.module.imageUrl ?? null,
         title: task.name,
-        stepCount: singleLink?.module._count.questions ?? null,
+        stepCount: getDisplayStepCount(singleLink?.module.slug, singleLink?.module._count.questions),
       },
     ];
   });
