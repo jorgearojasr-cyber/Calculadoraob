@@ -54,9 +54,20 @@ const HORAS_OPTIONS: { key: Horas; label: string }[] = [
 // precedente de texto fijo mostrado sin pregunta asociada).
 const BOMBA_CRITERIO =
   "Selecciona una bomba cuya curva de funcionamiento entregue al menos el caudal objetivo, considerando la altura manométrica y las pérdidas de carga de la instalación.";
+// Fase C7 (2026-09-04) -- basado en la investigación técnica aprobada
+// (sección 8/14 del pedido): un rango EDUCATIVO de altura manométrica
+// total (TDH) para instalaciones residenciales, nunca un TDH calculado
+// para "esta" instalación (depende de tuberías/longitud/diámetro/
+// accesorios/desnivel/filtro, ninguno de los cuales pide la app). No
+// recomienda HP ni modelo.
+const BOMBA_TDH_EDUCATIVO =
+  "Como referencia educativa, muchas instalaciones residenciales trabajan en un rango aproximado de 8–14 m de altura manométrica total (TDH). Revisa en la curva de la bomba que entregue al menos el caudal objetivo dentro del rango real de tu instalación. El TDH real depende de las tuberías, su longitud y diámetro, los accesorios, el desnivel y el filtro — no se puede calcular sin esos datos.";
 const FILTRO_CRITERIO = "Selecciona un filtro cuyo caudal nominal admisible sea igual o superior al caudal objetivo.";
+// Fase C7, sección 16 del pedido: ampliado con "ubicación de los retornos"
+// como factor -- sin tabla automática (investigación técnica: no hay
+// respaldo suficiente para automatizar públicamente en Chile).
 const SKIMMERS_CRITERIO =
-  "Definir según diseño hidráulico. La cantidad y ubicación dependen de la superficie, geometría, circulación y condiciones de la piscina.";
+  "Definir según diseño hidráulico. La cantidad depende de la superficie, geometría, circulación y ubicación de los retornos.";
 const RETORNOS_CRITERIO = "Definir según diseño hidráulico. La cantidad y ubicación deben definirse según el sistema de circulación.";
 
 export function PoolEquipmentStep({
@@ -127,7 +138,14 @@ export function PoolEquipmentStep({
           )}
         </p>
         {caudalM3h !== null && (
-          <p className="text-sm text-ink-muted mt-2">Caudal de recirculación estimado: {formatQuantity(caudalM3h)} m³/h</p>
+          <>
+            <p className="text-sm text-ink-muted mt-2">Caudal de recirculación estimado: {formatQuantity(caudalM3h)} m³/h</p>
+            {/* Fase C7, sección 13 del pedido: explicar qué significa el
+                número, no solo mostrarlo. */}
+            <p className="text-xs text-ink-faint mt-1">
+              Este número indica cuánto agua debe mover aproximadamente el sistema por hora.
+            </p>
+          </>
         )}
       </div>
 
@@ -162,7 +180,11 @@ export function PoolEquipmentStep({
         <div className="grid gap-3">
           <div className="rounded-xl border border-border bg-white px-4 py-3">
             <p className="text-sm font-semibold mb-1">Bomba</p>
+            {caudalM3h !== null && (
+              <p className="text-sm font-medium mb-1">Tu piscina requiere {formatQuantity(caudalM3h)} m³/h.</p>
+            )}
             <p className="text-xs text-ink-muted">{BOMBA_CRITERIO}</p>
+            <p className="text-xs text-ink-muted mt-2">{BOMBA_TDH_EDUCATIVO}</p>
           </div>
           <div className="rounded-xl border border-border bg-white px-4 py-3">
             <p className="text-sm font-semibold mb-1">Filtro</p>

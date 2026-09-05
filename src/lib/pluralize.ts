@@ -26,6 +26,12 @@ const IRREGULAR: Record<string, string> = {
 const INVARIANT = new Set([
   "a",
   "w",
+  // Fase C7 (2026-09-04) — Question.unit "s" (segundos, abreviado) del
+  // campo de Llenado (fase-c7-piscina-integral-llenado.ts). Sin esto:
+  // "40 ses" en "Tu proyecto"/"Editar valores" (mismo patrón de bug ya
+  // corregido para "CLP"/"L/min" -- "s" no termina en vocal, se le
+  // agregaba "es").
+  "s",
   "$",
   "cm",
   "kg",
@@ -62,6 +68,12 @@ const INVARIANT = new Set([
   // corregido en C6 para "$/m³" etc., encontrado en vivo al reabrir un
   // proyecto guardado real durante C7.1.
   "clp",
+  // Fase C7 (2026-09-04) — Formula.unit "L/min" del caudal medido de
+  // Llenado (fase-c7-piscina-integral-llenado.ts). Sin esto: "15 L/mines"
+  // (mismo patrón de bug ya corregido para "$/m³"/"CLP" — "L/min" no
+  // termina en vocal, pluralizeWord le agregaba "es" a la primera
+  // "palabra" completa "L/min").
+  "l/min",
   "capa",
   "capas",
   "advertencia",

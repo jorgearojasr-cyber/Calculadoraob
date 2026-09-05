@@ -41,7 +41,8 @@
 // competir con una ilustración al lado) -- verificado en vivo que sigue
 // legible en 2 líneas tanto en mobile como en desktop con los mismos
 // pills compactos de C4, sin necesitar otro ajuste de tamaño.
-const BLOCKS = ["Medidas", "Estructura", "Interior", "Excavación", "Borde", "Equipamiento"] as const;
+// Fase C7 (2026-09-04) -- 7º bloque ("Llenado"), después de Equipamiento.
+const BLOCKS = ["Medidas", "Estructura", "Interior", "Excavación", "Borde", "Equipamiento", "Llenado"] as const;
 
 export function PoolConfiguratorLayout({ activeBlock }: { activeBlock: string }) {
   return (

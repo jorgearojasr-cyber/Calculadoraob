@@ -942,27 +942,43 @@ export const MODULE_CONFIG: Record<string, ModuleVisualConfig> = {
     // nunca desaparece en silencio.
     resultGroups: [
       {
+        // Fase C7 (2026-09-04, sección 6 del pedido) -- reordenado:
+        // HORMIGÓN primero (lo que importa para presupuesto), DIMENSIONES
+        // EXTERIORES después (dato de control). El orden de despliegue de
+        // un grupo lo decide result-screen.tsx ordenando `items` según la
+        // posición en ESTE array (no según Formula.order, que sigue
+        // gobernando el orden de CÓMPUTO/dependencias sin tocarse) — ver
+        // buildGroupSummaryText/groupedSections. "radio-ext" se retira de
+        // la lista: pasó a isResult:false (fase-c7-piscina-integral-
+        // ocultar-radio.ts, solo metadata, expression/condition intactas)
+        // -- "diametro-ext" sigue mostrándose normalmente.
         title: "Estructura",
-        keys: ["largo-ext", "ancho-ext", "radio-ext", "diametro-ext", "hormigon-fondo-rect", "hormigon-muros-rect", "hormigon-fondo-circ", "hormigon-muros-circ"],
+        keys: ["hormigon-fondo-rect", "hormigon-muros-rect", "hormigon-fondo-circ", "hormigon-muros-circ", "largo-ext", "ancho-ext", "diametro-ext"],
         // Reusa "hormigon-total" (ya excluido de la lista, ver
         // excludeFromListKeys — vive gigante en el hero) como resumen del
         // grupo colapsado — sección 22 del pedido, sin fórmula nueva.
         summaryKeys: ["hormigon-total"],
       },
       {
+        // Fase C7 (sección 7 del pedido) -- reordenado: SUPERFICIE (fondo/
+        // muros) primero, luego MATERIAL (total combinado -- solo si
+        // ambas superficies coinciden -- / fondo / muros). No se creó un
+        // "área total" nueva (no existe esa Formula y el pedido prohíbe
+        // crear una solo para esto — sección 7: "usar únicamente
+        // resultados ya existentes").
         title: "Interior",
         keys: [
           "area-fondo",
           "area-muros",
-          "muros-pintura-litros-total",
-          "muros-ceramica-m2-compra",
-          "muros-membrana-m2",
-          "fondo-pintura-litros-total",
-          "fondo-ceramica-m2-compra",
-          "fondo-membrana-m2",
           "pintura-litros-combinado",
           "ceramica-m2-combinado",
           "membrana-m2-combinado",
+          "fondo-pintura-litros-total",
+          "fondo-ceramica-m2-compra",
+          "fondo-membrana-m2",
+          "muros-pintura-litros-total",
+          "muros-ceramica-m2-compra",
+          "muros-membrana-m2",
         ],
         // Solo UNA de las 3 "-combinado" calcula por sesión (depende de la
         // terminación elegida) — buildGroupSummaryText muestra la que
@@ -970,29 +986,34 @@ export const MODULE_CONFIG: Record<string, ModuleVisualConfig> = {
         summaryKeys: ["pintura-litros-combinado", "ceramica-m2-combinado", "membrana-m2-combinado"],
       },
       {
+        // Fase C7 (sección 9 del pedido) -- reordenado: volumen excavado /
+        // tierra suelta / viajes primero (lo que importa), dimensiones del
+        // hoyo y capacidad de camión como detalle después.
         title: "Excavación",
         keys: [
-          "excavacion-largo-hoyo-rect",
-          "excavacion-ancho-hoyo-rect",
-          "excavacion-prof-hoyo-rect",
-          "excavacion-diametro-hoyo-circ",
-          "excavacion-prof-hoyo-circ",
           "excavacion-volumen-excavado",
           "excavacion-volumen-suelto",
-          "excavacion-capacidad-camion",
           "excavacion-viajes",
+          "excavacion-largo-hoyo-rect",
+          "excavacion-ancho-hoyo-rect",
+          "excavacion-diametro-hoyo-circ",
+          "excavacion-prof-hoyo-rect",
+          "excavacion-prof-hoyo-circ",
+          "excavacion-capacidad-camion",
         ],
         summaryKeys: ["excavacion-volumen-suelto", "excavacion-viajes"],
       },
       {
         // Fase Pre-Producción (2026-09-04) -- "Entorno" -> "Borde de la
         // piscina" (sección 12/13 del pedido): copy visible únicamente,
-        // las keys internas (entorno-*) no cambian.
+        // las keys internas (entorno-*) no cambian. Fase C7 (sección 12
+        // de este pedido) -- reordenado: BASE (volumen) -> SUPERFICIE
+        // (área) -> TERMINACIÓN (cerámica/porcelanato/pastelones).
         title: "Borde de la piscina",
         keys: [
-          "entorno-area",
           "entorno-volumen-base",
           "entorno-volumen-radier-terminado",
+          "entorno-area",
           "entorno-ceramica-m2-compra",
           "entorno-porcelanato-m2-compra",
           "entorno-pastelones-unidades",
@@ -1011,6 +1032,18 @@ export const MODULE_CONFIG: Record<string, ModuleVisualConfig> = {
         keys: ["equipamiento-caudal-recirculacion-m3h", "equipamiento-filtro-caudal-minimo-m3h"],
         infoKeys: ["equipamiento-bomba-criterio", "equipamiento-skimmers-criterio", "equipamiento-retornos-criterio"],
         summaryKeys: ["equipamiento-caudal-recirculacion-m3h"],
+      },
+      // Fase C7 (2026-09-04) — Llenado (sección 18-21 del pedido): grupo
+      // opcional -- si el usuario respondió "No" (o no llegó a responder),
+      // ninguna de las 2 keys calcula (Formula.condition = defined(),
+      // mismo mecanismo que los 10 precios opcionales de Costos) y el
+      // grupo completo desaparece solo (mismo `.filter(section => items
+      // .length > 0 ...)` genérico que ya oculta "Interior" con "Sin
+      // calcular") — nunca queda un grupo vacío ni un "Pendiente" fantasma.
+      {
+        title: "Llenado",
+        keys: ["llenado-caudal-l-min", "llenado-tiempo-horas"],
+        summaryKeys: ["llenado-tiempo-horas"],
       },
     ],
     // Fase C4.2 — "hormigon-total" ya se ve gigante en el hero (ver
@@ -1057,11 +1090,11 @@ export const MODULE_CONFIG: Record<string, ModuleVisualConfig> = {
         { quantityKey: "costos-pintura-cantidad-litros", subtotalKey: "costos-pintura-interior-subtotal", label: "Pintura interior" },
         { quantityKey: "costos-ceramica-cantidad-m2", subtotalKey: "costos-ceramica-interior-subtotal", label: "Cerámica/mosaico interior" },
         { quantityKey: "costos-membrana-cantidad-m2", subtotalKey: "costos-membrana-interior-subtotal", label: "Membrana interior" },
-        { quantityKey: "entorno-volumen-base", subtotalKey: "costos-base-entorno-subtotal", label: "Hormigón base/radier del entorno" },
-        { quantityKey: "entorno-volumen-radier-terminado", subtotalKey: "costos-radier-terminado-subtotal", label: "Radier/hormigón terminado del entorno" },
-        { quantityKey: "entorno-ceramica-m2-compra", subtotalKey: "costos-ceramica-entorno-subtotal", label: "Cerámica exterior del entorno" },
-        { quantityKey: "entorno-porcelanato-m2-compra", subtotalKey: "costos-porcelanato-entorno-subtotal", label: "Porcelanato exterior del entorno" },
-        { quantityKey: "entorno-pastelones-unidades", subtotalKey: "costos-pastelones-subtotal", label: "Pastelones del entorno" },
+        { quantityKey: "entorno-volumen-base", subtotalKey: "costos-base-entorno-subtotal", label: "Hormigón base/radier del borde" },
+        { quantityKey: "entorno-volumen-radier-terminado", subtotalKey: "costos-radier-terminado-subtotal", label: "Radier/hormigón terminado del borde" },
+        { quantityKey: "entorno-ceramica-m2-compra", subtotalKey: "costos-ceramica-entorno-subtotal", label: "Cerámica del borde" },
+        { quantityKey: "entorno-porcelanato-m2-compra", subtotalKey: "costos-porcelanato-entorno-subtotal", label: "Porcelanato del borde" },
+        { quantityKey: "entorno-pastelones-unidades", subtotalKey: "costos-pastelones-subtotal", label: "Pastelones del borde" },
       ],
     },
     diagrams: {

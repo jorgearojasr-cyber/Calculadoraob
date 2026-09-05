@@ -219,6 +219,25 @@ export function PoolExcavationStep({
             Las medidas del vaso ya consideran los muros. El espacio de trabajo se suma por fuera.
           </p>
           <p className="text-xs text-ink-faint mt-1">Puedes ajustar los parámetros que influyen en esta estimación.</p>
+          {/* Fase C7, sección 10 del pedido: desglose educativo de cómo se
+              arma la profundidad del hoyo, usando SOLO valores reales ya
+              ingresados por el usuario -- sin crear una Formula nueva
+              (los 3 componentes ya existen: profundidad interior + espesor
+              de losa + preparación bajo losa, ver profHoyoRect/profHoyoCirc
+              arriba, misma suma exacta que calcula el motor). */}
+          {(() => {
+            const profundidadInterior = isCircular ? profundidadCirc : profundidadRect;
+            const profHoyo = isCircular ? profHoyoCirc : profHoyoRect;
+            if (profundidadInterior === null || espesorFondoCm === null || profHoyo === null) return null;
+            const preparacionCm = toNumOrNull(preparacionLosa) ?? 0;
+            return (
+              <p className="text-xs text-ink-faint mt-2 pt-2 border-t border-border/60">
+                Cómo se forma la profundidad del hoyo: {formatQuantity(profundidadInterior)} m (profundidad
+                interior) + {formatQuantity(espesorFondoCm / 100)} m (losa) + {formatQuantity(preparacionCm / 100)} m
+                (preparación bajo losa) = {formatQuantity(profHoyo)} m.
+              </p>
+            );
+          })()}
         </div>
 
         <div className="grid gap-5">
@@ -265,6 +284,15 @@ export function PoolExcavationStep({
               {preparacionQ?.helpText ??
                 "Agrega aquí cualquier espesor adicional que necesites considerar bajo la losa. Si no corresponde, déjalo en 0 cm."}
             </p>
+            {/* Fase C7, sección 11 del pedido: educativo, sin asumir que
+                siempre es estabilizado -- basado en la investigación
+                técnica aprobada (varias soluciones posibles según terreno). */}
+            {(toNumOrNull(preparacionLosa) ?? 0) > 0 && (
+              <p className="mt-2 text-xs text-ink-faint bg-concrete rounded-lg px-3 py-2.5">
+                Este espesor puede corresponder, según el proyecto y el terreno, a una base granular/estabilizada,
+                mejoramiento, hormigón de limpieza, drenaje u otra preparación.
+              </p>
+            )}
           </div>
 
           <div>

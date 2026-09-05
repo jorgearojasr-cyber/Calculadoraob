@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { selectHeroPrimaryInfo, buildGroupSummaryText, groupAnswersSummaryByStep } from "./result-screen-helpers";
+import { selectHeroPrimaryInfo, buildGroupSummaryText, groupAnswersSummaryByStep, sortResultsByKeyOrder } from "./result-screen-helpers";
 import type { InfoResult, CalculationResult } from "@/lib/formula-engine";
 
 // Fase C5.1 — cubre exactamente los 4 casos pedidos para el fix de
@@ -177,5 +177,55 @@ describe("groupAnswersSummaryByStep (Fase Pre-Producción)", () => {
 
   it("lista vacía -> lista de grupos vacía", () => {
     expect(groupAnswersSummaryByStep([])).toEqual([]);
+  });
+
+  // Fase C7 (2026-09-04): "fill" (stepGroup real de Llenado, ver
+  // fase-c7-piscina-integral-llenado.ts) se muestra como "Llenado", y su
+  // posición en "Editar valores" va después de Equipamiento, antes de
+  // Costos -- mismo orden real del wizard.
+  it('"fill" se muestra como "Llenado", entre Equipamiento y Costos', () => {
+    const items = [
+      item("costos-precio-hormigon-m3", "costs"),
+      item("equipamiento-tiempo-recirculacion-h", "equipment"),
+      item("llenado-segundos-balde", "fill"),
+    ];
+    const groups = groupAnswersSummaryByStep(items);
+    expect(groups.map((g) => g.title)).toEqual(["Equipamiento", "Llenado", "Costos"]);
+  });
+});
+
+describe("sortResultsByKeyOrder (Fase C7)", () => {
+  const r = (key: string) => ({ key });
+
+  it("reordena por la posición de cada key en `order`, sin importar el orden de entrada", () => {
+    const items = [r("hormigon-fondo-rect"), r("largo-ext"), r("hormigon-muros-rect"), r("ancho-ext")];
+    const order = ["hormigon-fondo-rect", "hormigon-muros-rect", "largo-ext", "ancho-ext"];
+    expect(sortResultsByKeyOrder(items, order).map((i) => i.key)).toEqual([
+      "hormigon-fondo-rect",
+      "hormigon-muros-rect",
+      "largo-ext",
+      "ancho-ext",
+    ]);
+  });
+
+  it("una key que no está en `order` cae al final, sin desaparecer", () => {
+    const items = [r("desconocida"), r("largo-ext"), r("hormigon-fondo-rect")];
+    const order = ["hormigon-fondo-rect", "largo-ext"];
+    expect(sortResultsByKeyOrder(items, order).map((i) => i.key)).toEqual([
+      "hormigon-fondo-rect",
+      "largo-ext",
+      "desconocida",
+    ]);
+  });
+
+  it("no muta el array original", () => {
+    const items = [r("b"), r("a")];
+    const original = [...items];
+    sortResultsByKeyOrder(items, ["a", "b"]);
+    expect(items).toEqual(original);
+  });
+
+  it("lista vacía -> lista vacía", () => {
+    expect(sortResultsByKeyOrder([], ["a", "b"])).toEqual([]);
   });
 });

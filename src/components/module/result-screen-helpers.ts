@@ -42,6 +42,24 @@ export function selectHeroPrimaryInfo(infoResults: InfoResult[], excludeKeys: Se
 // resumen). Si ninguna key de `summaryKeys` calculó esta vez (ej. otra
 // terminación), devuelve `null` y el grupo simplemente no muestra resumen
 // — nunca "0" ni un valor inventado.
+// Fase C7 (2026-09-04, sección 6-12 del pedido): ordena `items` (ya
+// filtrados por `group.keys`) según la POSICIÓN de cada key en ese mismo
+// array, en vez del orden de cómputo (Formula.order) que traían por
+// construcción. Deliberadamente independiente de Formula.order — reordenar
+// solo la PRESENTACIÓN (ej. mostrar "Hormigón" antes que "Dimensiones
+// exteriores" en Estructura) sin tocar el orden real de dependencias entre
+// Formulas (ej. "pintura-litros-combinado" debe CALCULARSE después de
+// "muros-pintura-litros-total"/"fondo-pintura-litros-total" para poder
+// referenciarlos, aunque en pantalla se muestre antes). Una key que no
+// está en `order` cae al final, en el orden relativo que traía.
+export function sortResultsByKeyOrder<T extends { key: string }>(items: T[], order: string[]): T[] {
+  const indexOf = (key: string) => {
+    const i = order.indexOf(key);
+    return i === -1 ? order.length : i;
+  };
+  return [...items].sort((a, b) => indexOf(a.key) - indexOf(b.key));
+}
+
 export function buildGroupSummaryText(summaryKeys: string[] | undefined, results: CalculationResult[]): string | null {
   if (!summaryKeys || summaryKeys.length === 0) return null;
   const parts = summaryKeys
@@ -71,6 +89,7 @@ const STEP_GROUP_DISPLAY_TITLES: Record<string, string> = {
   excavation: "Excavación",
   environment: "Borde de la piscina",
   equipment: "Equipamiento",
+  fill: "Llenado",
   costs: "Costos",
 };
 
@@ -96,6 +115,7 @@ const STEP_GROUP_DISPLAY_ORDER = [
   "Excavación",
   "Borde de la piscina",
   "Equipamiento",
+  "Llenado",
   "Costos",
 ];
 

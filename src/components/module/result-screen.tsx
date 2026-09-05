@@ -26,7 +26,7 @@ import type { RecipeGroupConfig, DosificacionGroupConfig, RefuerzoConfig, Result
 import { formatQuantity, formatClp } from "@/lib/format-number";
 import { pluralizeUnit } from "@/lib/pluralize";
 import type { WizardAnswers } from "./types";
-import { selectHeroPrimaryInfo, buildGroupSummaryText, groupAnswersSummaryByStep } from "./result-screen-helpers";
+import { selectHeroPrimaryInfo, buildGroupSummaryText, groupAnswersSummaryByStep, sortResultsByKeyOrder } from "./result-screen-helpers";
 
 // Aplica el precio de referencia (sugerencia editable) como unitPrice
 // inicial a cada línea de resultado que aún no tiene uno propio. `previous`
@@ -322,7 +322,19 @@ export function ResultScreen({
   const groupedSections = (resultGroups ?? [])
     .map((group) => ({
       group,
-      items: listResults.filter((r) => group.keys.includes(r.key)),
+      // Fase C7 (2026-09-04) -- `items` se ordena según la posición de cada
+      // key en `group.keys` (orden de PRESENTACIÓN), no según Formula.order
+      // (que sigue gobernando el orden de CÓMPUTO/dependencias entre
+      // Formulas -- ej. "pintura-litros-combinado" debe calcularse DESPUÉS
+      // de "muros-pintura-litros-total"/"fondo-pintura-litros-total" para
+      // poder referenciarlos, aunque en pantalla se quiera mostrar antes).
+      // Antes de este cambio, `filter` preservaba el orden de cómputo tal
+      // cual, acoplando presentación a dependencias -- ahora son
+      // independientes, sin tocar ninguna Formula.expression/condition.
+      items: sortResultsByKeyOrder(
+        listResults.filter((r) => group.keys.includes(r.key)),
+        group.keys
+      ),
       // Fase C5 — InfoResult (Variable TEXT isResult:true, ej. Bomba/
       // Skimmers/Retornos de Equipamiento) que van DENTRO de este mismo
       // grupo, ver ResultGroupConfig.infoKeys.
@@ -689,6 +701,23 @@ export function ResultScreen({
                       ))}
                     </div>
                   )}
+                  {/* Fase C7, sección 8 del pedido: en piscinas circulares
+                      el área del fondo y de los muros puede coincidir por
+                      la geometría -- no es un error de cálculo. Ayuda
+                      breve SOLO cuando de verdad coinciden (nunca un
+                      warning genérico que sature la interfaz). */}
+                  {group.title === "Interior" &&
+                    (() => {
+                      const fondo = items.find((r) => r.key === "area-fondo")?.value;
+                      const muros = items.find((r) => r.key === "area-muros")?.value;
+                      if (fondo === undefined || muros === undefined) return null;
+                      if (Math.abs(fondo - muros) > 0.005) return null;
+                      return (
+                        <p className="mt-3 text-xs text-ink-faint bg-concrete rounded-lg px-3 py-2.5">
+                          En algunas geometrías circulares las áreas de fondo y muros pueden coincidir.
+                        </p>
+                      );
+                    })()}
                 </div>
               </details>
             );

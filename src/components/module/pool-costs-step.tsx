@@ -50,11 +50,11 @@ const PARTIDAS = [
   { quantityKey: "costos-pintura-cantidad-litros", priceQuestionKey: "costos-precio-pintura-litro", label: "Pintura interior" },
   { quantityKey: "costos-ceramica-cantidad-m2", priceQuestionKey: "costos-precio-ceramica-interior-m2", label: "Cerámica/mosaico interior" },
   { quantityKey: "costos-membrana-cantidad-m2", priceQuestionKey: "costos-precio-membrana-m2", label: "Membrana interior" },
-  { quantityKey: "entorno-volumen-base", priceQuestionKey: "costos-precio-base-entorno-m3", label: "Hormigón base/radier del entorno" },
-  { quantityKey: "entorno-volumen-radier-terminado", priceQuestionKey: "costos-precio-radier-terminado-m3", label: "Radier/hormigón terminado del entorno" },
-  { quantityKey: "entorno-ceramica-m2-compra", priceQuestionKey: "costos-precio-ceramica-entorno-m2", label: "Cerámica exterior del entorno" },
-  { quantityKey: "entorno-porcelanato-m2-compra", priceQuestionKey: "costos-precio-porcelanato-entorno-m2", label: "Porcelanato exterior del entorno" },
-  { quantityKey: "entorno-pastelones-unidades", priceQuestionKey: "costos-precio-pastelon-unidad", label: "Pastelones del entorno" },
+  { quantityKey: "entorno-volumen-base", priceQuestionKey: "costos-precio-base-entorno-m3", label: "Hormigón base/radier del borde" },
+  { quantityKey: "entorno-volumen-radier-terminado", priceQuestionKey: "costos-precio-radier-terminado-m3", label: "Radier/hormigón terminado del borde" },
+  { quantityKey: "entorno-ceramica-m2-compra", priceQuestionKey: "costos-precio-ceramica-entorno-m2", label: "Cerámica del borde" },
+  { quantityKey: "entorno-porcelanato-m2-compra", priceQuestionKey: "costos-precio-porcelanato-entorno-m2", label: "Porcelanato del borde" },
+  { quantityKey: "entorno-pastelones-unidades", priceQuestionKey: "costos-precio-pastelon-unidad", label: "Pastelones del borde" },
 ] as const;
 
 // "" -> sin precio ingresado (se omite del payload, nunca $0 inventado).

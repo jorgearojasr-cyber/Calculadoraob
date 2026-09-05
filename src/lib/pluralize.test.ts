@@ -99,3 +99,35 @@ describe('pluralizeUnit — "CLP" (Fase C7.2, snapshot de SavedProject)', () => 
     expect(pluralizeUnit(2954003, "CLP")).toBe("CLP");
   });
 });
+
+// Fase C7 (2026-09-04) — cobertura de "L/min" (Formula.unit real del
+// caudal medido de Llenado, fase-c7-piscina-integral-llenado.ts). Bug real
+// encontrado en vivo en ResultScreen: "15 L/mines".
+describe('pluralizeUnit — "L/min" (Fase C7, Llenado)', () => {
+  it('"L/min" nunca se pluraliza, sin importar la cantidad', () => {
+    expect(pluralizeUnit(1, "L/min")).toBe("L/min");
+    expect(pluralizeUnit(15, "L/min")).toBe("L/min");
+  });
+
+  it("la comparación no distingue mayúsculas/minúsculas (mismo criterio que el resto de INVARIANT)", () => {
+    expect(pluralizeUnit(15, "l/min")).toBe("l/min");
+  });
+
+  it('regresión del bug real: "L/min" ya NO se convierte en "L/mines"', () => {
+    expect(pluralizeUnit(15, "L/min")).toBe("L/min");
+  });
+});
+
+// Fase C7 (2026-09-04) — cobertura de "s" (Question.unit real de
+// "llenado-segundos-balde", fase-c7-piscina-integral-llenado.ts). Bug real
+// encontrado en vivo en "Editar valores"/"Tu proyecto": "40 ses".
+describe('pluralizeUnit — "s" (Fase C7, segundos de Llenado)', () => {
+  it('"s" nunca se pluraliza, sin importar la cantidad', () => {
+    expect(pluralizeUnit(1, "s")).toBe("s");
+    expect(pluralizeUnit(40, "s")).toBe("s");
+  });
+
+  it('regresión del bug real: "s" ya NO se convierte en "ses"', () => {
+    expect(pluralizeUnit(40, "s")).toBe("s");
+  });
+});

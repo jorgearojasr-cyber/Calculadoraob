@@ -445,6 +445,33 @@ export function VolumeStep({
           />
         )}
 
+        {/* Fase C7 (2026-09-04) -- tarjeta informativa "Hormigón para
+            piscina", basada en la investigación técnica aprobada
+            (secciones 2-4 del pedido): recomendación de premezclado +
+            bombeabilidad, SIN fijar resistencia (G25/G30/H25/H30) como
+            valor definitivo ni presentar esa nomenclatura como norma
+            chilena -- exclusiva de Estructura de piscina-integral. */}
+        {isIntegralEstructura && (
+          <div className="mt-3 rounded-xl px-4 py-3 bg-concrete">
+            <p className="text-sm font-semibold mb-1">Hormigón para piscina</p>
+            <p className="text-xs text-ink-muted">
+              Para una piscina de hormigón armado, considera cotizar hormigón premezclado adecuado para elementos
+              que contienen agua: ofrece mayor control de dosificación, más homogeneidad y continuidad de
+              colocación frente a prepararlo en obra — no significa que fabricarlo manualmente esté prohibido, es
+              una recomendación para los volúmenes propios de una piscina.
+            </p>
+            <p className="text-xs text-ink-muted mt-2">
+              Consulta por soluciones de baja permeabilidad y, si corresponde al sistema de colocación, hormigón
+              bombeable. La trabajabilidad debe provenir del diseño de mezcla/aditivos adecuados; no se debe
+              lograr agregando agua arbitrariamente en obra.
+            </p>
+            <p className="text-xs text-ink-muted mt-2">
+              La resistencia, consistencia, aditivos e impermeabilización definitiva deben definirse según el
+              diseño estructural y la especificación del proyecto.
+            </p>
+          </div>
+        )}
+
         {/* Fase Pre-Producción — sección 4: tarjeta informativa de refuerzo
             estructural, exclusiva de Estructura de piscina-integral. Solo
             copy -- no crea Variable/Formula ni calcula kg de acero,

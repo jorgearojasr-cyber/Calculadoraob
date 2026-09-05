@@ -12,6 +12,7 @@ import { InteriorTerminationStep, isInteriorTerminationStepGroup, getInteriorAct
 import { PoolExcavationStep, isExcavationStepGroup } from "./pool-excavation-step";
 import { PoolEnvironmentStep, isEnvironmentStepGroup } from "./pool-environment-step";
 import { PoolEquipmentStep, isEquipmentStepGroup } from "./pool-equipment-step";
+import { PoolFillStep, isFillStepGroup } from "./pool-fill-step";
 import { PoolCostsStep, isCostsStepGroup } from "./pool-costs-step";
 import { getCostsActiveKeys } from "./pool-costs-active-keys";
 import { ResultScreen } from "./result-screen";
@@ -486,6 +487,11 @@ export function ModuleWizard({
   // propósito, ver PoolEquipmentStep) que no encaja en QuestionGroupStep.
   const isEquipment = Boolean(currentGroup) && isEquipmentStepGroup(currentGroup[0]?.stepGroup);
 
+  // Fase C7 (2026-09-04) -- Llenado del configurador integral de Piscina:
+  // mismo criterio que isEquipment, geometría/UI propia (sin ilustración,
+  // ver PoolFillStep) que no encaja en QuestionGroupStep.
+  const isFill = Boolean(currentGroup) && isFillStepGroup(currentGroup[0]?.stepGroup);
+
   // Fase C6 (2026-09-02) -- Costos del configurador integral de Piscina:
   // mismo criterio que isEquipment/isEnvironment, geometría/UI propia
   // (ver PoolCostsStep) que no encaja en QuestionGroupStep.
@@ -522,6 +528,7 @@ export function ModuleWizard({
       isExcavation ||
       isEnvironment ||
       isEquipment ||
+      isFill ||
       isCosts ||
       (Boolean(currentGroup) && hasDiagram(currentGroup[0]?.stepGroup)));
 
@@ -660,6 +667,14 @@ export function ModuleWizard({
             />
           ) : isEquipment ? (
             <PoolEquipmentStep
+              key={currentGroup.map((q) => q.id).join("-")}
+              questions={currentGroup}
+              initialValues={stepInitialValues}
+              onAnswer={handleGroupAnswer}
+              onSaveForLater={handleSaveForLater}
+            />
+          ) : isFill ? (
+            <PoolFillStep
               key={currentGroup.map((q) => q.id).join("-")}
               questions={currentGroup}
               initialValues={stepInitialValues}
