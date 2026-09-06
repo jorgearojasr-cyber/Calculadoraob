@@ -101,11 +101,20 @@ function GuideIndex() {
   );
 }
 
-export function GuideSection({ guide }: { guide: ModuleGuideData }) {
+// Fase C7-D (2026-09-06) -- `title` opcional, retrocompatible: sin este
+// prop (los 2 call sites existentes -- guias/[moduleSlug]/page.tsx y el
+// resto de los ~57 módulos vía result-screen.tsx -- no lo pasan), el
+// encabezado sigue siendo EXACTAMENTE "Antes de empezar", mismo texto y
+// mismo <h3>, cero cambio de copy/espaciado/comportamiento. Piscina
+// integral es el único caso que lo pasa (ver result-screen.tsx) -- el
+// condicional por módulo vive en el CONSUMIDOR (opt-in), no acá dentro de
+// GuideSection (sección 4 del pedido: evitar `if (moduleSlug === ...)`
+// dentro de este componente compartido).
+export function GuideSection({ guide, title }: { guide: ModuleGuideData; title?: string }) {
   return (
     <div className="mt-8">
       <p className="font-mono text-xs uppercase tracking-wider mb-2 text-safety">Guía práctica</p>
-      <h3 className="font-display text-[22px] font-semibold tracking-tight mb-4">Antes de empezar</h3>
+      <h3 className="font-display text-[22px] font-semibold tracking-tight mb-4">{title ?? "Antes de empezar"}</h3>
 
       <div className="lg:flex lg:gap-8 lg:items-start">
         <GuideIndex />

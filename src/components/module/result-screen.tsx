@@ -850,7 +850,18 @@ export function ResultScreen({
 
       <NormsDisclaimer norms={norms} />
 
-      {guide && <GuideSection guide={guide} />}
+      {/* Fase C7-D (2026-09-06) -- título específico SOLO para piscina-
+          integral ("Cómo se construye una piscina de hormigón" en vez del
+          genérico "Antes de empezar"); el resto de los ~57 módulos con
+          guía no pasa `title`, así que GuideSection sigue mostrando
+          exactamente "Antes de empezar" (ver su fallback `title ??
+          "Antes de empezar"`) -- cero cambio para ellos. */}
+      {guide && (
+        <GuideSection
+          guide={guide}
+          title={moduleSlug === "piscina-integral" ? "Cómo se construye una piscina de hormigón" : undefined}
+        />
+      )}
 
       <PhotoGallery photos={approvedPhotos ?? []} />
 
