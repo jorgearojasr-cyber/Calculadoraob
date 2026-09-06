@@ -217,7 +217,11 @@ export type ModuleVisualConfig = {
 // es la señal de "sin precio ingresado", nunca un $0 inventado. Ambas
 // keys deben estar también en `excludeFromListKeys` del mismo Module,
 // para no duplicarse en la lista genérica "sin agrupar".
-export type CostosPartidaConfig = { quantityKey: string; subtotalKey: string; label: string };
+// Fase C7-B (2026-09-05, sección 8 del pedido) -- `priceQuestionKey` agregado
+// para poder saltar directo a la pregunta de precio correspondiente vía
+// `onEditField` (ver "Agregar precios"/"Editar precios" en result-screen.tsx)
+// -- MISMO Question.key que ya usa `PARTIDAS` en pool-costs-step.tsx.
+export type CostosPartidaConfig = { quantityKey: string; subtotalKey: string; label: string; priceQuestionKey: string };
 export type CostosConfig = { partidas: CostosPartidaConfig[] };
 
 // Fase C4.2 (2026-09-02) — un grupo visual de la lista genérica de
@@ -952,7 +956,11 @@ export const MODULE_CONFIG: Record<string, ModuleVisualConfig> = {
         // la lista: pasó a isResult:false (fase-c7-piscina-integral-
         // ocultar-radio.ts, solo metadata, expression/condition intactas)
         // -- "diametro-ext" sigue mostrándose normalmente.
-        title: "Estructura",
+        // Fase C7-B (2026-09-05, sección 13 del pedido) -- "Estructura" ->
+        // "Hormigón y estructura": copy visible únicamente, key interna del
+        // grupo ("Estructura" no es un key, es el título de presentación)
+        // no cambia nada del cómputo.
+        title: "Hormigón y estructura",
         keys: ["hormigon-fondo-rect", "hormigon-muros-rect", "hormigon-fondo-circ", "hormigon-muros-circ", "largo-ext", "ancho-ext", "diametro-ext"],
         // Reusa "hormigon-total" (ya excluido de la lista, ver
         // excludeFromListKeys — vive gigante en el hero) como resumen del
@@ -966,7 +974,9 @@ export const MODULE_CONFIG: Record<string, ModuleVisualConfig> = {
         // "área total" nueva (no existe esa Formula y el pedido prohíbe
         // crear una solo para esto — sección 7: "usar únicamente
         // resultados ya existentes").
-        title: "Interior",
+        // Fase C7-B, sección 13 del pedido -- "Interior" -> "Terminación
+        // interior".
+        title: "Terminación interior",
         keys: [
           "area-fondo",
           "area-muros",
@@ -989,7 +999,9 @@ export const MODULE_CONFIG: Record<string, ModuleVisualConfig> = {
         // Fase C7 (sección 9 del pedido) -- reordenado: volumen excavado /
         // tierra suelta / viajes primero (lo que importa), dimensiones del
         // hoyo y capacidad de camión como detalle después.
-        title: "Excavación",
+        // Fase C7-B, sección 13 del pedido -- "Excavación" -> "Excavación
+        // y retiro".
+        title: "Excavación y retiro",
         keys: [
           "excavacion-volumen-excavado",
           "excavacion-volumen-suelto",
@@ -1041,9 +1053,23 @@ export const MODULE_CONFIG: Record<string, ModuleVisualConfig> = {
       // .length > 0 ...)` genérico que ya oculta "Interior" con "Sin
       // calcular") — nunca queda un grupo vacío ni un "Pendiente" fantasma.
       {
+        // Fase C7-B (2026-09-05) -- 3 ramas mutuamente excluyentes según
+        // "¿Cómo llenarás la piscina?": medición exacta (2 keys viejas,
+        // intactas), rango por conexión (4 keys nuevas), camión aljibe (2
+        // keys nuevas). Solo la rama elegida calcula (Formula.condition),
+        // el resto no aparece — mismo criterio ya usado en todo el módulo.
         title: "Llenado",
-        keys: ["llenado-caudal-l-min", "llenado-tiempo-horas"],
-        summaryKeys: ["llenado-tiempo-horas"],
+        keys: [
+          "llenado-caudal-l-min",
+          "llenado-tiempo-horas",
+          "llenado-caudal-rango-min",
+          "llenado-caudal-rango-max",
+          "llenado-tiempo-horas-min",
+          "llenado-tiempo-horas-max",
+          "llenado-capacidad-camion-final",
+          "llenado-viajes-camion",
+        ],
+        summaryKeys: ["llenado-tiempo-horas", "llenado-tiempo-horas-max", "llenado-viajes-camion"],
       },
     ],
     // Fase C4.2 — "hormigon-total" ya se ve gigante en el hero (ver
@@ -1085,16 +1111,16 @@ export const MODULE_CONFIG: Record<string, ModuleVisualConfig> = {
     // `results` si el precio fue respondido (ver DSL `defined`).
     costos: {
       partidas: [
-        { quantityKey: "hormigon-total", subtotalKey: "costos-hormigon-estructura-subtotal", label: "Hormigón de estructura" },
-        { quantityKey: "excavacion-viajes", subtotalKey: "costos-retiro-tierra-subtotal", label: "Retiro de tierra" },
-        { quantityKey: "costos-pintura-cantidad-litros", subtotalKey: "costos-pintura-interior-subtotal", label: "Pintura interior" },
-        { quantityKey: "costos-ceramica-cantidad-m2", subtotalKey: "costos-ceramica-interior-subtotal", label: "Cerámica/mosaico interior" },
-        { quantityKey: "costos-membrana-cantidad-m2", subtotalKey: "costos-membrana-interior-subtotal", label: "Membrana interior" },
-        { quantityKey: "entorno-volumen-base", subtotalKey: "costos-base-entorno-subtotal", label: "Hormigón base/radier del borde" },
-        { quantityKey: "entorno-volumen-radier-terminado", subtotalKey: "costos-radier-terminado-subtotal", label: "Radier/hormigón terminado del borde" },
-        { quantityKey: "entorno-ceramica-m2-compra", subtotalKey: "costos-ceramica-entorno-subtotal", label: "Cerámica del borde" },
-        { quantityKey: "entorno-porcelanato-m2-compra", subtotalKey: "costos-porcelanato-entorno-subtotal", label: "Porcelanato del borde" },
-        { quantityKey: "entorno-pastelones-unidades", subtotalKey: "costos-pastelones-subtotal", label: "Pastelones del borde" },
+        { quantityKey: "hormigon-total", subtotalKey: "costos-hormigon-estructura-subtotal", label: "Hormigón de estructura", priceQuestionKey: "costos-precio-hormigon-m3" },
+        { quantityKey: "excavacion-viajes", subtotalKey: "costos-retiro-tierra-subtotal", label: "Retiro de tierra", priceQuestionKey: "costos-precio-retiro-viaje" },
+        { quantityKey: "costos-pintura-cantidad-litros", subtotalKey: "costos-pintura-interior-subtotal", label: "Pintura interior", priceQuestionKey: "costos-precio-pintura-litro" },
+        { quantityKey: "costos-ceramica-cantidad-m2", subtotalKey: "costos-ceramica-interior-subtotal", label: "Cerámica/mosaico interior", priceQuestionKey: "costos-precio-ceramica-interior-m2" },
+        { quantityKey: "costos-membrana-cantidad-m2", subtotalKey: "costos-membrana-interior-subtotal", label: "Membrana interior", priceQuestionKey: "costos-precio-membrana-m2" },
+        { quantityKey: "entorno-volumen-base", subtotalKey: "costos-base-entorno-subtotal", label: "Hormigón base/radier del borde", priceQuestionKey: "costos-precio-base-entorno-m3" },
+        { quantityKey: "entorno-volumen-radier-terminado", subtotalKey: "costos-radier-terminado-subtotal", label: "Radier/hormigón terminado del borde", priceQuestionKey: "costos-precio-radier-terminado-m3" },
+        { quantityKey: "entorno-ceramica-m2-compra", subtotalKey: "costos-ceramica-entorno-subtotal", label: "Cerámica del borde", priceQuestionKey: "costos-precio-ceramica-entorno-m2" },
+        { quantityKey: "entorno-porcelanato-m2-compra", subtotalKey: "costos-porcelanato-entorno-subtotal", label: "Porcelanato del borde", priceQuestionKey: "costos-precio-porcelanato-entorno-m2" },
+        { quantityKey: "entorno-pastelones-unidades", subtotalKey: "costos-pastelones-subtotal", label: "Pastelones del borde", priceQuestionKey: "costos-precio-pastelon-unidad" },
       ],
     },
     diagrams: {

@@ -4,30 +4,34 @@ import { useState } from "react";
 import { ArrowRight } from "lucide-react";
 import type { WizardQuestion } from "./types";
 import { formatQuantity } from "@/lib/format-number";
+import { formatRange } from "./result-screen-helpers";
 import { PoolConfiguratorLayout } from "./pool-configurator-layout";
 
-// Paso "Llenado" del configurador integral de Piscina (Fase C7, 2026-09-04)
-// -- EXCLUSIVO de "piscina-integral", mismo criterio ya aprobado para
-// PoolEquipmentStep: geometría/UI propia, sin ilustración a propósito (el
-// foco es el método de medición, no un dibujo).
+// Paso "Llenado" del configurador integral de Piscina.
 //
-// Basado en la investigación técnica aprobada: el diámetro de manguera/
-// llave NO determina un caudal fijo (varía más de 2x según presión y largo
-// real) -- la app NUNCA pregunta diámetro. El único dato que pide es el
-// caudal REAL medido por el propio usuario con un balde de 10 L y un
-// cronómetro -- aritmética exacta sobre un valor medido, no una suposición.
+// FASE C7-B (2026-09-05) — reemplaza el flujo original (Sí/No + balde como
+// única entrada) por una experiencia práctica para un usuario NO técnico
+// (Etapa A aprobada): la pregunta principal es "¿Cómo llenarás la
+// piscina?", con la medición exacta con balde como UNA rama más ("Medir mi
+// caudal real"), no la entrada obligatoria. Reusa el MISMO Question.key
+// "llenado-estimar" que ya existía (ver fase-c7-piscina-integral-
+// llenado.ts) — el key interno no cambia, solo su label/opciones; nunca
+// visible al usuario.
 //
-// Totalmente opcional (sección 18-22 del pedido): si el usuario responde
-// "No", ninguna otra pregunta de este paso se muestra, y el grupo LLENADO
-// del ResultScreen queda vacío -- mismo comportamiento ya usado para
-// "Interior" con "Sin calcular" en ambas superficies.
+// Los rangos de caudal por conexión (15–35 / 35–70 / 55–95 L/min) son
+// referencia general de plomería residencial, NO específica de Chile
+// (investigación Etapa A) — deliberadamente solapados entre categorías
+// porque el diámetro nominal no garantiza un caudal fijo. Se muestran
+// SIEMPRE junto al disclaimer obligatorio (sección 3 del pedido), nunca
+// como valor único.
 const FILL_STEP_GROUP = "fill";
 
 export function isFillStepGroup(stepGroup: string | null | undefined): boolean {
   return stepGroup === FILL_STEP_GROUP;
 }
 
-type SiNo = "si" | "no";
+type Modo = "pequena" | "tres-cuartos" | "una-pulgada" | "camion" | "medir";
+type Capacidad = "10000" | "15000" | "20000" | "personalizado";
 
 function findQuestion(questions: WizardQuestion[], key: string): WizardQuestion | undefined {
   return questions.find((q) => q.key === key);
@@ -45,9 +49,28 @@ function toNumOrNull(raw: string): number | null {
   return Number.isFinite(n) ? n : null;
 }
 
-const ESTIMAR_OPTIONS: { key: SiNo; label: string }[] = [
-  { key: "si", label: "Sí" },
-  { key: "no", label: "No" },
+const MODO_OPTIONS: { key: Modo; label: string }[] = [
+  { key: "pequena", label: "Llave doméstica / conexión pequeña" },
+  { key: "tres-cuartos", label: 'Conexión 3/4"' },
+  { key: "una-pulgada", label: 'Conexión 1"' },
+  { key: "camion", label: "Camión aljibe" },
+  { key: "medir", label: "Medir mi caudal real" },
+];
+
+// MISMOS valores EXACTOS que fase-c7-piscina-integral-llenado.ts (Variables
+// "llenado-caudal-min-lookup"/"-max-lookup") -- este preview nunca sustituye
+// al motor, solo lo refleja antes de enviar.
+const RANGO_CAUDAL: Record<"pequena" | "tres-cuartos" | "una-pulgada", { min: number; max: number }> = {
+  pequena: { min: 15, max: 35 },
+  "tres-cuartos": { min: 35, max: 70 },
+  "una-pulgada": { min: 55, max: 95 },
+};
+
+const CAPACIDAD_OPTIONS: { key: Capacidad; label: string }[] = [
+  { key: "10000", label: "10.000 L" },
+  { key: "15000", label: "15.000 L" },
+  { key: "20000", label: "20.000 L" },
+  { key: "personalizado", label: "Personalizado" },
 ];
 
 export function PoolFillStep({
@@ -63,16 +86,28 @@ export function PoolFillStep({
 }) {
   const initStr = (key: string) => (initialValues[key] !== undefined ? String(initialValues[key]) : "");
 
-  const [estimar, setEstimar] = useState<SiNo | undefined>(
-    (initialValues["llenado-estimar"] as SiNo | undefined) ?? undefined
-  );
+  const initialModoRaw = initialValues["llenado-estimar"] as string | undefined;
+  // Compatibilidad con drafts guardados antes de esta fase (valores "si"/
+  // "no" viejos) -- si no coincide con ninguna opción actual, se trata como
+  // sin responder, nunca como un modo inválido silencioso.
+  const initialModo: Modo | undefined = (["pequena", "tres-cuartos", "una-pulgada", "camion", "medir"] as string[]).includes(
+    initialModoRaw ?? ""
+  )
+    ? (initialModoRaw as Modo)
+    : undefined;
+
+  const [modo, setModo] = useState<Modo | undefined>(initialModo);
   const [segundos, setSegundos] = useState(initStr("llenado-segundos-balde"));
+  const [capacidad, setCapacidad] = useState<Capacidad | undefined>(
+    (initialValues["llenado-capacidad-camion"] as Capacidad | undefined) ?? undefined
+  );
+  const [capacidadPersonalizada, setCapacidadPersonalizada] = useState(initStr("llenado-capacidad-camion-personalizada"));
   const [error, setError] = useState<string | null>(null);
 
-  // Volumen de agua YA respondido/calculado desde Medidas/Equipamiento --
-  // mismas keys literales que usa PoolEquipmentStep, mismo cálculo exacto
-  // (nunca se recalcula en paralelo el resultado real, solo se refleja acá
-  // como preview antes de enviar).
+  // Volumen de agua YA respondido/calculado desde Medidas -- mismas keys
+  // literales que usa PoolEquipmentStep, mismo cálculo exacto (nunca se
+  // recalcula en paralelo el resultado real, solo se refleja acá como
+  // preview antes de enviar).
   const forma = initialValues["que-forma-tendra-tu-piscina"];
   const isCircular = forma === "circular";
   const largo = toNum(initialValues["largo-interior-metros"]);
@@ -90,33 +125,69 @@ export function PoolFillStep({
       : null;
   const aguaVolumenLitros = aguaVolumenM3 !== null ? aguaVolumenM3 * 1000 : null;
 
-  // Mismas fórmulas EXACTAS que fase-c7-piscina-integral-llenado.ts (ver ese
-  // archivo para la versión que realmente calcula ResultScreen) -- este
-  // preview nunca sustituye al motor.
+  // Mismas fórmulas EXACTAS que fase-c7-piscina-integral-llenado.ts.
   const segundosN = toNumOrNull(segundos);
   const caudalLMin = segundosN !== null && segundosN > 0 ? 10 / (segundosN / 60) : null;
-  const tiempoHoras =
+  const tiempoHorasMedido =
     caudalLMin !== null && aguaVolumenLitros !== null ? aguaVolumenLitros / (caudalLMin * 60) : null;
 
-  const estimarQ = findQuestion(questions, "llenado-estimar");
+  const rangoConexion = modo === "pequena" || modo === "tres-cuartos" || modo === "una-pulgada" ? RANGO_CAUDAL[modo] : null;
+  const tiempoHorasMin =
+    rangoConexion !== null && aguaVolumenLitros !== null ? aguaVolumenLitros / (rangoConexion.max * 60) : null;
+  const tiempoHorasMax =
+    rangoConexion !== null && aguaVolumenLitros !== null ? aguaVolumenLitros / (rangoConexion.min * 60) : null;
+
+  const capacidadPersonalizadaN = toNumOrNull(capacidadPersonalizada);
+  const capacidadCamionN =
+    capacidad === "personalizado" ? capacidadPersonalizadaN : capacidad !== undefined ? Number(capacidad) : null;
+  const viajesCamion =
+    capacidadCamionN !== null && capacidadCamionN > 0 && aguaVolumenLitros !== null
+      ? Math.ceil(aguaVolumenLitros / capacidadCamionN)
+      : null;
+
+  const modoQ = findQuestion(questions, "llenado-estimar");
   const segundosQ = findQuestion(questions, "llenado-segundos-balde");
+  const capacidadQ = findQuestion(questions, "llenado-capacidad-camion");
+  const capacidadPersonalizadaQ = findQuestion(questions, "llenado-capacidad-camion-personalizada");
 
   const handleSubmit = () => {
-    if (!estimar) {
-      setError("Elige si quieres estimar el tiempo de llenado.");
+    if (!modo) {
+      setError("Elige cómo llenarás la piscina.");
       return;
     }
-    if (estimar === "no") {
+    if (modo === "medir") {
+      if (segundosN === null || segundosN <= 0) {
+        setError("Ingresa cuántos segundos demora en llenar el balde de 10 L (mayor que 0).");
+        return;
+      }
       setError(null);
-      onAnswer({ "llenado-estimar": "no" });
+      onAnswer({ "llenado-estimar": "medir", "llenado-segundos-balde": segundosN });
       return;
     }
-    if (segundosN === null || segundosN <= 0) {
-      setError("Ingresa cuántos segundos demora en llenar el balde de 10 L (mayor que 0).");
+    if (modo === "camion") {
+      if (!capacidad) {
+        setError("Elige la capacidad del camión.");
+        return;
+      }
+      if (capacidad === "personalizado") {
+        if (capacidadPersonalizadaN === null || capacidadPersonalizadaN <= 0) {
+          setError("Ingresa cuántos litros lleva el camión (mayor que 0).");
+          return;
+        }
+        setError(null);
+        onAnswer({
+          "llenado-estimar": "camion",
+          "llenado-capacidad-camion": "personalizado",
+          "llenado-capacidad-camion-personalizada": capacidadPersonalizadaN,
+        });
+        return;
+      }
+      setError(null);
+      onAnswer({ "llenado-estimar": "camion", "llenado-capacidad-camion": capacidad });
       return;
     }
     setError(null);
-    onAnswer({ "llenado-estimar": "si", "llenado-segundos-balde": segundosN });
+    onAnswer({ "llenado-estimar": modo });
   };
 
   return (
@@ -125,17 +196,15 @@ export function PoolFillStep({
 
       <div className="grid gap-5">
         <div>
-          <p className="text-sm font-medium mb-2">
-            {estimarQ?.label ?? "¿Quieres estimar cuánto demorará en llenarse?"}
-          </p>
+          <p className="text-sm font-medium mb-2">{modoQ?.label ?? "¿Cómo llenarás la piscina?"}</p>
           <div className="grid gap-2">
-            {ESTIMAR_OPTIONS.map((opt) => (
+            {MODO_OPTIONS.map((opt) => (
               <button
                 key={opt.key}
                 type="button"
-                onClick={() => setEstimar(opt.key)}
+                onClick={() => setModo(opt.key)}
                 className={`text-left rounded-xl px-4 py-3 border transition-colors ${
-                  estimar === opt.key ? "border-safety bg-safety-tint" : "border-border bg-white hover:border-ink"
+                  modo === opt.key ? "border-safety bg-safety-tint" : "border-border bg-white hover:border-ink"
                 }`}
               >
                 <span className="font-medium text-[14px]">{opt.label}</span>
@@ -144,7 +213,90 @@ export function PoolFillStep({
           </div>
         </div>
 
-        {estimar === "si" && (
+        {rangoConexion !== null && (
+          <div className="rounded-2xl bg-concrete px-5 py-4">
+            <p className="text-sm text-ink-muted">Caudal estimado:</p>
+            <p className="font-display text-2xl font-semibold text-ink mt-1">
+              {formatRange(rangoConexion.min, rangoConexion.max)} L/min
+            </p>
+            {tiempoHorasMin !== null && tiempoHorasMax !== null && (
+              <p className="text-sm text-ink-muted mt-2">
+                Con {aguaVolumenLitros !== null ? formatQuantity(Math.round(aguaVolumenLitros)) : "—"} L de agua, tu
+                piscina demoraría aproximadamente{" "}
+                <span className="font-semibold text-ink">{formatRange(tiempoHorasMin, tiempoHorasMax)} horas</span> en
+                llenarse.
+              </p>
+            )}
+            {/* Fase C7-C (2026-09-05, sección 11 del pedido) -- "¿Por qué
+                es un rango?" queda DELIBERADAMENTE sin un CollapsibleHelp
+                aparte: este mismo párrafo ya explica qué significa (caudal
+                real depende de presión/largo/instalación) y qué puede
+                variarlo, siempre visible sin necesidad de un clic extra —
+                agregar un colapsable adicional aquí sería duplicar, no
+                sumar (ver sección 14 del pedido: "si ya responde
+                claramente QUÉ SIGNIFICA + QUÉ PUEDE VARIAR, no agregar
+                otro bloque"). */}
+            <p className="mt-3 text-xs text-ink-faint">
+              Es una estimación aproximada. El caudal real depende de la presión de tu red, el largo de la manguera y
+              las condiciones de la instalación.
+            </p>
+            <p className="mt-1 text-xs text-ink-faint">Si quieres una estimación más precisa, mide tu caudal real.</p>
+          </div>
+        )}
+
+        {modo === "camion" && (
+          <div>
+            <p className="text-sm font-medium mb-2">{capacidadQ?.label ?? "Capacidad del camión"}</p>
+            <div className="grid gap-2">
+              {CAPACIDAD_OPTIONS.map((opt) => (
+                <button
+                  key={opt.key}
+                  type="button"
+                  onClick={() => setCapacidad(opt.key)}
+                  className={`text-left rounded-xl px-4 py-3 border transition-colors ${
+                    capacidad === opt.key ? "border-safety bg-safety-tint" : "border-border bg-white hover:border-ink"
+                  }`}
+                >
+                  <span className="font-medium text-[14px]">{opt.label}</span>
+                </button>
+              ))}
+            </div>
+            <p className="mt-1 text-xs text-ink-faint">
+              {capacidadQ?.helpText ?? "La capacidad real depende del proveedor que contrates."}
+            </p>
+
+            {capacidad === "personalizado" && (
+              <div className="mt-3">
+                <p className="text-sm font-medium mb-1.5">
+                  {capacidadPersonalizadaQ?.label ?? "¿Cuántos litros lleva el camión?"}
+                </p>
+                <div className="flex items-center gap-2 rounded-xl px-4 py-3 bg-white border border-border focus-within:border-ink">
+                  <input
+                    type="text"
+                    inputMode="decimal"
+                    value={capacidadPersonalizada}
+                    onChange={(e) => setCapacidadPersonalizada(e.target.value)}
+                    placeholder="0"
+                    className="w-full bg-transparent outline-none text-[15px] placeholder:text-ink-faint"
+                  />
+                  <span className="font-mono text-xs text-ink-muted flex-shrink-0">L</span>
+                </div>
+              </div>
+            )}
+
+            {viajesCamion !== null && (
+              <div className="mt-4 rounded-2xl bg-concrete px-5 py-4">
+                <p className="text-sm text-ink-muted">Viajes estimados:</p>
+                <p className="font-display text-2xl font-semibold text-ink mt-1">
+                  {viajesCamion} {viajesCamion === 1 ? "viaje" : "viajes"}
+                </p>
+                <p className="mt-2 text-xs text-ink-faint">La capacidad real depende del proveedor que contrates.</p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {modo === "medir" && (
           <div>
             <p className="text-sm font-medium mb-1.5">
               {segundosQ?.label ?? "¿Cuántos segundos demora tu llave en llenar un balde de 10 litros?"}
@@ -162,7 +314,7 @@ export function PoolFillStep({
             </div>
             <p className="mt-1 text-xs text-ink-faint">
               {segundosQ?.helpText ??
-                "Abre la llave como la usarías para llenar la piscina, mide cuánto demora en llenar un balde de 10 L e ingresa ese tiempo."}
+                "Llena un balde de 10 L y cronometra el tiempo. Así obtendrás una estimación mucho más precisa de tu caudal real."}
             </p>
 
             {caudalLMin !== null && (
@@ -171,11 +323,11 @@ export function PoolFillStep({
                 <p className="font-display text-2xl font-semibold text-ink mt-1">
                   {formatQuantity(caudalLMin)} L/min
                 </p>
-                {tiempoHoras !== null && (
+                {tiempoHorasMedido !== null && (
                   <p className="text-sm text-ink-muted mt-2">
                     Con {aguaVolumenLitros !== null ? formatQuantity(Math.round(aguaVolumenLitros)) : "—"} L de
                     agua, tu piscina demoraría aproximadamente{" "}
-                    <span className="font-semibold text-ink">{formatQuantity(tiempoHoras)} horas</span> en
+                    <span className="font-semibold text-ink">{formatQuantity(tiempoHorasMedido)} horas</span> en
                     llenarse a este caudal.
                   </p>
                 )}

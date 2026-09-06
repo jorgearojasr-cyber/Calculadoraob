@@ -26,7 +26,7 @@ import type { RecipeGroupConfig, DosificacionGroupConfig, RefuerzoConfig, Result
 import { formatQuantity, formatClp } from "@/lib/format-number";
 import { pluralizeUnit } from "@/lib/pluralize";
 import type { WizardAnswers } from "./types";
-import { selectHeroPrimaryInfo, buildGroupSummaryText, groupAnswersSummaryByStep, sortResultsByKeyOrder } from "./result-screen-helpers";
+import { selectHeroPrimaryInfo, buildGroupSummaryText, groupAnswersSummaryByStep, sortResultsByKeyOrder, formatRange } from "./result-screen-helpers";
 
 // Aplica el precio de referencia (sugerencia editable) como unitPrice
 // inicial a cada línea de resultado que aún no tiene uno propio. `previous`
@@ -531,32 +531,67 @@ export function ResultScreen({
           NO dice "Costo total de la piscina" (sección 30: sería engañoso —
           no incluye mano de obra, Equipamiento, ni partidas sin precio). */}
       {costosItems.length > 0 && (
-        <div className="rounded-2xl p-5 mb-3 bg-navy/[0.04] border border-navy/20">
-          <p className="font-mono text-xs uppercase tracking-wider text-ink-faint mb-2">Costo estimado</p>
+        <div
+          className={`rounded-2xl p-5 mb-3 border ${anyCostosPriced ? "bg-navy text-white border-navy" : "bg-navy/[0.04] border-navy/20"}`}
+        >
+          {/* Fase C7-B (2026-09-05, sección 9/11/12 del pedido) -- con al
+              menos un precio, este bloque pasa a competir visualmente con
+              (o superar a) el hero de hormigón: título más largo y fondo
+              navy sólido en vez de tinte sutil, monto en 3xl en vez de 2xl.
+              Sin precios, queda igual que antes (Fase C6) + botón nuevo. */}
+          <p
+            className={`font-mono text-xs uppercase tracking-wider mb-2 ${anyCostosPriced ? "text-white/70" : "text-ink-faint"}`}
+          >
+            {anyCostosPriced ? "Costo estimado del proyecto" : "Costo estimado"}
+          </p>
           {anyCostosPriced ? (
             <>
               <div className="flex items-baseline justify-between gap-4">
                 <span className="font-semibold text-[15px]">Total de partidas cotizadas</span>
-                <span className="font-display text-2xl font-bold whitespace-nowrap">{formatClp(costosTotal)}</span>
+                <span className="font-display text-3xl font-bold whitespace-nowrap">{formatClp(costosTotal)}</span>
               </div>
-              <p className="mt-1 text-xs text-ink-muted">
+              <p className="mt-1 text-xs text-white/70">
                 No incluye mano de obra, equipamiento ni partidas sin precio ingresado.
               </p>
             </>
           ) : (
             <p className="text-sm text-ink-muted">Todavía no ingresaste precios.</p>
           )}
-          <div className="mt-3 pt-3 border-t border-navy/10 grid gap-2">
+          {/* Fase C7-B, sección 6-9 del pedido -- "Agregar precios"/"Editar
+              precios": reusa handleEditField (onEditField) YA existente
+              (mismo mecanismo que cada "Cambiar" de Editar valores/Tu
+              proyecto) para saltar directo al paso Costos del wizard, con
+              las respuestas ya dadas precargadas. NO crea un sistema de
+              precios nuevo, NO duplica almacenamiento — misma Question
+              costos-precio-* de siempre. */}
+          {onEditField && costosConfig && costosConfig.partidas.length > 0 && (
+            <button
+              type="button"
+              onClick={() => onEditField(costosConfig.partidas[0].priceQuestionKey)}
+              className={`mt-3 w-full rounded-full px-5 py-2.5 text-sm font-semibold transition-colors ${
+                anyCostosPriced
+                  ? "bg-white text-navy hover:bg-white/90"
+                  : "bg-navy text-white hover:bg-navy/90"
+              }`}
+            >
+              {anyCostosPriced ? "Editar precios" : "Agregar precios"}
+            </button>
+          )}
+          <div className={`mt-3 pt-3 grid gap-2 ${anyCostosPriced ? "border-t border-white/15" : "border-t border-navy/10"}`}>
             {costosItems.map(({ label, quantity, subtotal }) => (
               <div key={quantity.key} className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-0.5">
-                <span className="text-sm text-ink-muted">
+                <span className={`text-sm ${anyCostosPriced ? "text-white/80" : "text-ink-muted"}`}>
                   {label}{" "}
-                  <span className="text-xs text-ink-faint">
+                  <span className={`text-xs ${anyCostosPriced ? "text-white/50" : "text-ink-faint"}`}>
                     ({formatQuantity(quantity.value)} {pluralizeUnit(quantity.value, quantity.unit)})
                   </span>
                 </span>
                 <span className="text-sm font-medium text-right whitespace-nowrap">
-                  {subtotal !== undefined ? formatClp(subtotal) : <span className="text-ink-faint">Sin precio ingresado</span>}
+                  {subtotal !== undefined ? (
+                    formatClp(subtotal)
+                  ) : (
+                    <span className={anyCostosPriced ? "text-white/50" : "text-ink-faint"}>Sin precio ingresado</span>
+                  )}
                 </span>
               </div>
             ))}
@@ -667,25 +702,86 @@ export function ResultScreen({
         <>
           {groupedSections.map(({ group, items, infoItems }) => {
             const summaryText = buildGroupSummaryText(group.summaryKeys, seededResults);
+            // Fase C7-B (2026-09-05, sección 14/16/17/18 del pedido) --
+            // "Costo cotizado" por partida dentro de cada resumen cerrado:
+            // suma los subtotales de Costos (YA calculados por C6, ver
+            // costosItems más arriba) cuya `quantity.key` viva en este
+            // grupo. Sin duplicar ninguna Formula ni subtotal — es una
+            // agregación de PRESENTACIÓN sobre valores que ya existen.
+            // Incluye `summaryKeys` además de `keys`: "hormigon-total" (el
+            // costosItem real de Hormigón) vive en el hero, no en la lista
+            // visible de "Hormigón y estructura" (excludeFromListKeys) —
+            // mismo motivo por el que ya se reusa como summaryKeys de este
+            // grupo (ver más arriba).
+            const groupCostoKeys = new Set([...group.keys, ...(group.summaryKeys ?? [])]);
+            const groupCostoCotizado = costosItems
+              .filter((item) => groupCostoKeys.has(item.quantity.key))
+              .reduce((sum, item) => sum + (item.subtotal ?? 0), 0);
+            const groupTieneCosto = costosItems.some(
+              (item) => groupCostoKeys.has(item.quantity.key) && item.subtotal !== undefined
+            );
+            // Fase C7-B, sección 4 del pedido — Llenado por rango de
+            // conexión: las 4 keys de caudal/tiempo mín/máx se combinan en
+            // un único párrafo "X–Y" (ver bloque especial más abajo) en vez
+            // de mostrarse como 4 líneas sueltas — se retiran de la lista
+            // genérica solo para este grupo.
+            const LLENADO_RANGO_KEYS = new Set([
+              "llenado-caudal-rango-min",
+              "llenado-caudal-rango-max",
+              "llenado-tiempo-horas-min",
+              "llenado-tiempo-horas-max",
+            ]);
+            const displayItems =
+              group.title === "Llenado" ? items.filter((r) => !LLENADO_RANGO_KEYS.has(r.key)) : items;
             return (
               <details key={group.title} className="group mb-3 rounded-2xl border border-border bg-white overflow-hidden">
                 <summary className="flex items-center justify-between gap-3 px-5 py-4 cursor-pointer list-none">
                   <div className="min-w-0">
                     <p className="font-mono text-xs uppercase tracking-wider text-ink-faint">{group.title}</p>
                     {summaryText && <p className="text-sm font-semibold text-ink mt-0.5">{summaryText}</p>}
+                    {groupTieneCosto && (
+                      <p className="text-xs text-ink-muted mt-0.5">Costo cotizado: {formatClp(groupCostoCotizado)}</p>
+                    )}
                   </div>
                   <ChevronDown className="w-4 h-4 text-ink-faint flex-shrink-0 transition-transform group-open:rotate-180" />
                 </summary>
                 <div className="px-5 pb-5 pt-1 border-t border-border">
-                  {items.length > 0 && (
+                  {displayItems.length > 0 && (
                     <PricedResults
-                      results={items}
+                      results={displayItems}
                       onPricesChange={handlePricesChange}
                       hideFeatured
                       hideTotal
                       suppressNoteForKeys={consolidateNotesKeys}
                     />
                   )}
+                  {group.title === "Llenado" &&
+                    (() => {
+                      const caudalMin = items.find((r) => r.key === "llenado-caudal-rango-min")?.value;
+                      const caudalMax = items.find((r) => r.key === "llenado-caudal-rango-max")?.value;
+                      const tiempoMin = items.find((r) => r.key === "llenado-tiempo-horas-min")?.value;
+                      const tiempoMax = items.find((r) => r.key === "llenado-tiempo-horas-max")?.value;
+                      if (caudalMin === undefined || caudalMax === undefined) return null;
+                      return (
+                        <div className={`rounded-2xl bg-concrete px-5 py-4 ${displayItems.length > 0 ? "mt-3" : ""}`}>
+                          <p className="text-sm text-ink-muted">Caudal estimado:</p>
+                          <p className="font-display text-2xl font-semibold text-ink mt-1">
+                            {formatRange(caudalMin, caudalMax)} L/min
+                          </p>
+                          {tiempoMin !== undefined && tiempoMax !== undefined && (
+                            <p className="text-sm text-ink-muted mt-2">
+                              Tiempo estimado:{" "}
+                              <span className="font-semibold text-ink">{formatRange(tiempoMin, tiempoMax)} horas</span>{" "}
+                              aprox.
+                            </p>
+                          )}
+                          <p className="mt-3 text-xs text-ink-faint">
+                            Es una estimación aproximada. El caudal real depende de la presión de tu red, el largo de
+                            la manguera y las condiciones de la instalación.
+                          </p>
+                        </div>
+                      );
+                    })()}
                   {/* Fase C5 — criterios informativos (Bomba/Skimmers/
                       Retornos): mismo tratamiento visual que ya usa el bloque
                       genérico de infoResults (tarjeta blanca, label izquierda/

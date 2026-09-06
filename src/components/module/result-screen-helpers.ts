@@ -119,6 +119,31 @@ const STEP_GROUP_DISPLAY_ORDER = [
   "Costos",
 ];
 
+// Fase C7-B (2026-09-05) — "hacer el resultado útil para un usuario no
+// técnico" (sección 4 del pedido): formatea un rango [min, max] como texto
+// legible ("35–70" o, si min===max, solo "35" — nunca "35–35"). Redondeo a
+// enteros (sección 4: "no mostrar falsa precisión con demasiados
+// decimales"), separado de `formatQuantity` (que muestra decimales para el
+// resto de la app) porque un rango orientativo no necesita esa precisión.
+export function formatRange(min: number, max: number): string {
+  const a = Math.round(min);
+  const b = Math.round(max);
+  return a === b ? `${a}` : `${a}–${b}`;
+}
+
+// Fase C7-B, secciones 23-24: referencia ORIENTATIVA de skimmers según
+// superficie de agua — tabla de industria internacional aprobada
+// explícitamente para esta fase (NO normativa chilena, ver disclaimer
+// obligatorio que debe acompañarla siempre en el componente que la usa).
+// Devuelve `null` para superficies grandes (>74 m²) — ahí se prefiere NO
+// automatizar ("Definir según diseño hidráulico"), igual que Retornos.
+export function skimmersReferenciaOrientativa(areaM2: number): string | null {
+  if (areaM2 <= 37) return "1";
+  if (areaM2 <= 46) return "1–2";
+  if (areaM2 <= 74) return "2";
+  return null;
+}
+
 export function groupAnswersSummaryByStep<T extends GroupableSummaryItem>(items: T[]): GroupedSummarySection<T>[] {
   const byTitle = new Map<string, T[]>();
   for (const item of items) {

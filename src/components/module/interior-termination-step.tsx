@@ -6,6 +6,7 @@ import type { WizardQuestion } from "./types";
 import { PoolConfiguratorLayout } from "./pool-configurator-layout";
 import { PoolConfiguratorIllustration, type InteriorMaterial } from "./pool-configurator-illustration";
 import { ReferenceHint } from "./reference-hint";
+import { CollapsibleHelp } from "./collapsible-help";
 
 // Fase Pre-Producción — "Ayudas referenciales" (2026-09-04), secciones 5-7
 // y 16: valores de referencia SOLO para una estimación inicial, nunca
@@ -226,6 +227,14 @@ function MaterialDetailFields({
           value={rendimiento}
           onChange={setRendimiento}
         />
+        {/* Fase C7-C (2026-09-05, sección 8 del pedido): el helpText de
+            arriba ya dice "revisa la ficha técnica" -- lo que faltaba era
+            el "qué significa" en sí, sin duplicar esa frase. */}
+        <CollapsibleHelp label="¿Qué es el rendimiento?" ariaLabel="Qué es el rendimiento del producto">
+          <p className="text-xs text-ink-muted">
+            Indica cuántos metros cuadrados puede cubrir aproximadamente 1 litro de pintura por mano.
+          </p>
+        </CollapsibleHelp>
         {/* Fase Pre-Producción, secciones 5-6: un solo botón aplica manos +
             rendimiento juntos -- ambos campos siguen editables después. */}
         <ReferenceHint
@@ -258,6 +267,15 @@ function MaterialDetailFields({
     return (
       <div className="mt-3 pl-1">
         <NumberField label={perdQ?.label ?? "Pérdida por cortes (%)"} unit="%" value={perdidaCeramica} onChange={setPerdidaCeramica} />
+        {/* Fase C7-C, sección 9 del pedido: la ReferenceHint de abajo ya da
+            el valor de referencia (10%) -- acá solo el "qué significa",
+            sin repetir ese número. */}
+        <CollapsibleHelp label="¿Qué es la pérdida por cortes?" ariaLabel="Qué es la pérdida por cortes">
+          <p className="text-xs text-ink-muted">
+            Es una cantidad adicional de material para compensar cortes, roturas y desperdicio durante la
+            instalación. Ejemplo: 10% significa comprar aproximadamente un 10% adicional.
+          </p>
+        </CollapsibleHelp>
         <ReferenceHint
           text="Referencia para una instalación normal: 10%. Puede aumentar si existen muchos cortes, diagonales o patrones especiales."
           actionLabel="Usar 10%"

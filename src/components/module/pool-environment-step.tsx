@@ -8,6 +8,7 @@ import { PoolConfiguratorLayout } from "./pool-configurator-layout";
 import { PoolConfiguratorIllustration } from "./pool-configurator-illustration";
 import type { EnvironmentMaterial } from "./pool-configurator-illustration";
 import { ReferenceHint } from "./reference-hint";
+import { CollapsibleHelp } from "./collapsible-help";
 
 // Fase Pre-Producción — "Ayudas referenciales" (2026-09-04), secciones
 // 12-16: "Entorno" -> "Borde de la piscina" en todo el copy visible de
@@ -440,6 +441,16 @@ export function PoolEnvironmentStep({
                 />
                 <span className="font-mono text-xs text-ink-muted flex-shrink-0">%</span>
               </div>
+              {/* Fase C7-C (2026-09-05, sección 9 del pedido) -- mismo
+                  copy que interior-termination-step.tsx, "qué significa"
+                  sin repetir el valor de referencia que ya da el
+                  ReferenceHint de abajo. */}
+              <CollapsibleHelp label="¿Qué es la pérdida por cortes?" ariaLabel="Qué es la pérdida por cortes">
+                <p className="text-xs text-ink-muted">
+                  Es una cantidad adicional de material para compensar cortes, roturas y desperdicio durante la
+                  instalación. Ejemplo: 10% significa comprar aproximadamente un 10% adicional.
+                </p>
+              </CollapsibleHelp>
               <ReferenceHint
                 text="Referencia para una instalación normal: 10%. Puede aumentar si existen muchos cortes, diagonales o patrones especiales."
                 actionLabel="Usar 10%"

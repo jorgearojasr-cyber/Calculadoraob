@@ -37,14 +37,32 @@ async function main() {
     console.log(`${key}: default actualizado.`);
   }
 
+  // FASE C7-B (2026-09-05) -- copy práctico para usuario no técnico (Etapa
+  // A aprobada, secciones 16/21/25). Mismo criterio técnico de siempre
+  // (nunca HP/modelo/marca, nunca TDH único) -- solo más orientado a "qué
+  // debo buscar/comprar".
   await updateVariableDefault(
     "equipamiento-bomba-criterio",
-    "Selecciona una bomba cuya curva de funcionamiento entregue al menos el caudal objetivo, considerando la altura manométrica y las pérdidas de carga de la instalación. Como referencia educativa, muchas instalaciones residenciales trabajan en un rango aproximado de 8–14 m de altura manométrica total (TDH). El TDH real depende de las tuberías, su longitud y diámetro, los accesorios, el desnivel y el filtro — no se puede calcular sin esos datos."
+    "Busca una bomba cuya curva de funcionamiento entregue al menos el caudal objetivo en las condiciones reales de tu instalación (altura manométrica y pérdidas de carga incluidas). Como referencia educativa, muchas instalaciones residenciales trabajan en un rango aproximado de 8–14 m de altura manométrica total (TDH). Este rango es solo orientativo: el TDH real depende del trazado, diámetro de tuberías, accesorios, desniveles y filtro de tu instalación."
+  );
+
+  // Nota: "Filtro" no tiene Variable/InfoResult propio en ResultScreen (solo
+  // existe como texto fijo en el wizard, pool-equipment-step.tsx) -- nada
+  // que sincronizar acá.
+
+  // Sin número acá a propósito: el número orientativo depende de la
+  // superficie de agua de ESTE proyecto (ver skimmersReferenciaOrientativa,
+  // result-screen-helpers.ts), que ResultScreen agrega en vivo junto a
+  // este criterio base -- este texto queda como el criterio SIEMPRE
+  // visible, con o sin superficie disponible.
+  await updateVariableDefault(
+    "equipamiento-skimmers-criterio",
+    "La cantidad depende de la superficie, geometría, circulación y ubicación de los retornos."
   );
 
   await updateVariableDefault(
-    "equipamiento-skimmers-criterio",
-    "Definir según diseño hidráulico. La cantidad depende de la superficie, geometría, circulación y ubicación de los retornos."
+    "equipamiento-retornos-criterio",
+    "Los retornos devuelven el agua filtrada a la piscina y ayudan a generar una circulación uniforme. La cantidad y ubicación deben definirse según la geometría, el caudal y el diseño hidráulico."
   );
 
   console.log(`OK — copy de Equipamiento sincronizado. Module id=${mod.id}`);

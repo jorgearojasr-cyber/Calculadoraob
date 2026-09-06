@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { selectHeroPrimaryInfo, buildGroupSummaryText, groupAnswersSummaryByStep, sortResultsByKeyOrder } from "./result-screen-helpers";
+import { selectHeroPrimaryInfo, buildGroupSummaryText, groupAnswersSummaryByStep, sortResultsByKeyOrder, formatRange, skimmersReferenciaOrientativa } from "./result-screen-helpers";
 import type { InfoResult, CalculationResult } from "@/lib/formula-engine";
 
 // Fase C5.1 — cubre exactamente los 4 casos pedidos para el fix de
@@ -227,5 +227,38 @@ describe("sortResultsByKeyOrder (Fase C7)", () => {
 
   it("lista vacía -> lista vacía", () => {
     expect(sortResultsByKeyOrder([], ["a", "b"])).toEqual([]);
+  });
+});
+
+// Fase C7-B (2026-09-05) — "hacer el resultado útil para un usuario no técnico".
+describe("formatRange", () => {
+  it("min !== max -> 'min–max' redondeado", () => {
+    expect(formatRange(35, 70)).toBe("35–70");
+    expect(formatRange(25.714285714, 51.428571429)).toBe("26–51");
+  });
+
+  it("min === max -> solo el número, sin guion", () => {
+    expect(formatRange(15, 15)).toBe("15");
+  });
+});
+
+describe("skimmersReferenciaOrientativa (Fase C7-B, tabla aprobada, sección 24 del pedido)", () => {
+  it("0-37 m² -> '1'", () => {
+    expect(skimmersReferenciaOrientativa(30)).toBe("1");
+    expect(skimmersReferenciaOrientativa(37)).toBe("1");
+  });
+
+  it("37-46 m² -> '1–2'", () => {
+    expect(skimmersReferenciaOrientativa(40)).toBe("1–2");
+    expect(skimmersReferenciaOrientativa(46)).toBe("1–2");
+  });
+
+  it("46-74 m² -> '2'", () => {
+    expect(skimmersReferenciaOrientativa(60)).toBe("2");
+    expect(skimmersReferenciaOrientativa(74)).toBe("2");
+  });
+
+  it(">74 m² -> null (no automatizar, 'Definir según diseño hidráulico')", () => {
+    expect(skimmersReferenciaOrientativa(80)).toBe(null);
   });
 });
