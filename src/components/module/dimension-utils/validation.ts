@@ -22,6 +22,24 @@ export function parseAnswers(
       parsed[question.key] = raw;
       continue;
     }
+    // Campo TEXT dentro de un grupo de medidas (ej. "tramos-json", el
+    // desglose de Área personalizada — ver dimension-utils/tramos.ts): es
+    // metadata auxiliar para consumo interno, nunca la respuesta principal
+    // que el usuario está completando en este paso. Se acepta tal cual,
+    // incluso vacío (queda "" cuando el modo activo no es "tramos" — ver
+    // handleAreaChange en question-group-step/index.tsx, que SIEMPRE
+    // incluye esta key, vacía o no, para poder sobrescribir un valor
+    // previo si el usuario cambia de modo después de haber usado "Área
+    // personalizada"). calculateModuleAction (ver actions.ts) trata un
+    // TEXT vacío como "no respondida" (se omite, no lanza error) — un
+    // campo TEXT en este contexto nunca debe bloquear el envío del grupo.
+    // Mismo criterio de fondo que "Consumo eléctrico" (que se salta este
+    // archivo entero) — acá SÍ pasa por este loop compartido, así que
+    // necesita su propio caso explícito.
+    if (question.type === "TEXT") {
+      parsed[question.key] = raw;
+      continue;
+    }
     const num = Number(raw.replace(",", "."));
     if (!raw || !Number.isFinite(num) || num <= 0) {
       return { parsed: null, error: "Completa todos los campos con un número mayor que 0." };

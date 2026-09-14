@@ -25,6 +25,7 @@ import { toNum } from "../dimension-utils/parsing";
 import { capitalize, round2 } from "../dimension-utils/formatting";
 import { parseAnswers } from "../dimension-utils/validation";
 import { parseAreaFromRawDims } from "../dimension-utils/area";
+import type { TramoInput, TramoRecord } from "../dimension-utils/tramos";
 
 // Migración completa a Diagram System V2 (ver conversación 2026-08-02) —
 // lenguaje visual congelado y aprobado; TODOS los módulos con diagrama
@@ -104,6 +105,21 @@ export function QuestionGroupStep({
 
   const stepGroup = questions[0]?.stepGroup;
   const diagram = stepGroup ? DIMENSION_DIAGRAMS[stepGroup] : undefined;
+
+  // "Área personalizada" (Fase 3, tramos, 2026-09-14): cuando el diagrama
+  // tiene `tramosQuestionKey`, ese stepGroup incluye una Question TEXT
+  // extra (el JSON del desglose) que NUNCA se renderiza como campo — viaja
+  // junto al resto del grupo solo para que `onAnswer` la incluya (ver
+  // handleAreaChange más abajo). Todo conteo/indexado que decide el layout
+  // por CANTIDAD de preguntas de medida reales (useAreaToggle, el truco del
+  // cuadrado ficticio, etc.) debe ignorarla — por eso `dimensionQuestions`
+  // en vez de `questions` en esos puntos. Como esta Question siempre se
+  // crea con el `order` más alto del módulo (ver
+  // prisma/db-fixes/fase-tramos-seed.ts), queda al final de `questions` y
+  // nunca corre el índice posicional [0]/[1] que usa el diagrama.
+  const dimensionQuestions = diagram?.tramosQuestionKey
+    ? questions.filter((q) => q.key !== diagram.tramosQuestionKey)
+    : questions;
 
   // Layout compacto para grupos de 3+ campos: los pasos apilados con
   // heading grande + helpText siempre visible llenaban el viewport de
@@ -192,7 +208,7 @@ export function QuestionGroupStep({
   // - Grupo de 1 sola pregunta (módulos que antes solo pedían m² directo,
   //   o Pintura consolidado): el área calculada se guarda tal cual en esa
   //   única pregunta — no hace falta el truco del cuadrado.
-  const useAreaToggle = diagram?.allowAreaToggle && questions.length <= 2;
+  const useAreaToggle = diagram?.allowAreaToggle && dimensionQuestions.length <= 2;
 
   // Tamaño de pieza real, si el módulo lo pregunta antes de este paso (ver
   // tileSizeQuestionKey) — `initialValues` ya trae todas las respuestas
@@ -245,24 +261,44 @@ export function QuestionGroupStep({
 
   const handleAreaChange = (
     area: number | null,
-    dims: { primary: string; secondary: string } | null
+    dims: { primary: string; secondary: string } | null,
+    tramos: TramoRecord[] | null
   ) => {
-    if (questions.length === 1) {
-      setValues({ [questions[0].key]: area !== null ? String(round2(area)) : "" });
+    // Fase 3 (tramos): el JSON del desglose viaja SIEMPRE como un objeto
+    // aparte que se mezcla al final — así las 3 ramas de abajo (1 pregunta,
+    // dims, cuadrado ficticio) no tienen que repetir esta lógica cada una.
+    // Se incluye la key SIEMPRE que el diagrama la tenga configurada
+    // (vacía "" en modos "dims"/"m² directo"), nunca se omite: el
+    // `onAnswer` de arriba (ver module-wizard.tsx → handleGroupAnswer)
+    // mezcla estos valores con los del wizard completo (`{...answers,
+    // ...values}`, un merge superficial, NO un reemplazo) — si se omitiera
+    // acá, un desglose de tramos guardado en un envío anterior de este
+    // mismo paso (usuario cambia de "Área personalizada" a "largo × ancho"
+    // y reenvía) quedaría viejo/huérfano en `answers`, y result-screen.tsx
+    // seguiría mostrando esa tabla desactualizada. Con "" explícito, la
+    // sobrescribe; calculateModuleAction (ver actions.ts) trata un TEXT
+    // vacío como no respondida, así que no bloquea nada.
+    const tramosPatch = diagram?.tramosQuestionKey
+      ? { [diagram.tramosQuestionKey]: tramos !== null ? JSON.stringify(tramos) : "" }
+      : {};
+
+    if (dimensionQuestions.length === 1) {
+      setValues({ [questions[0].key]: area !== null ? String(round2(area)) : "", ...tramosPatch });
       return;
     }
     if (dims) {
       // Modo "largo × ancho": preserva el par real que tecleó el usuario en
       // vez de reconstruir un cuadrado ficticio — bug corregido (antes se
       // perdía la asimetría real incluso viniendo de este modo).
-      setValues({ [questions[0].key]: dims.primary, [questions[1].key]: dims.secondary });
+      setValues({ [questions[0].key]: dims.primary, [questions[1].key]: dims.secondary, ...tramosPatch });
       return;
     }
-    // Modo "m² directo": no hay dims individuales reales que preservar —
-    // reparte el área en un cuadrado equivalente (da el m² correcto para la
-    // fórmula, aunque el par individual mostrado sea ficticio).
+    // Modo "m² directo" o "Área personalizada": no hay dims individuales
+    // reales que preservar — reparte el área en un cuadrado equivalente (da
+    // el m² correcto para la fórmula, aunque el par individual mostrado sea
+    // ficticio).
     const side = area !== null ? String(round2(Math.sqrt(area))) : "";
-    setValues({ [questions[0].key]: side, [questions[1].key]: side });
+    setValues({ [questions[0].key]: side, [questions[1].key]: side, ...tramosPatch });
   };
 
   // Pasos de VOLUMEN (diagrama con profundidad: caja o cilindro) — layout
@@ -307,16 +343,42 @@ export function QuestionGroupStep({
           error={error}
           handleSubmit={handleSubmit}
           onSaveForLater={onSaveForLater}
-          onAreaChange={(area) => handleAreaChange(area, null)}
+          onAreaChange={(area) => handleAreaChange(area, null, null)}
         />
       </div>
     );
   }
 
   if (useAreaToggle) {
+    // Fase 3 (tramos): si ya existe un desglose guardado (ej. "Cambiar"
+    // sobre una respuesta previa dada en modo "Área personalizada"), se
+    // reabre directo en ese modo con los tramos precargados — mismo
+    // criterio que ya aplicaba "m² directo" con `values[questions[0].key]`
+    // para Pintura. Sin esto, editar perdería el desglose y forzaría a
+    // reconstruirlo desde cero en otro modo.
+    const tramosRaw = diagram!.tramosQuestionKey ? values[diagram!.tramosQuestionKey] : undefined;
+    let initialTramos: TramoInput[] | undefined;
+    if (tramosRaw) {
+      try {
+        const parsed = JSON.parse(tramosRaw) as TramoRecord[];
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          initialTramos = parsed.map((t) => ({
+            id: crypto.randomUUID(),
+            tipo: t.tipo,
+            largo: String(t.largo),
+            ancho: String(t.ancho),
+            etiqueta: t.etiqueta ?? "",
+          }));
+        }
+      } catch {
+        // JSON inválido/corrupto: se ignora, AreaInputToggle arranca con su
+        // fila vacía de siempre — nunca rompe el paso por un dato viejo.
+      }
+    }
+
     return (
       <div>
-        {questions.length === 1 && questions[0].helpText && (
+        {dimensionQuestions.length === 1 && questions[0].helpText && (
           <p className="text-sm text-ink-muted mb-3">{questions[0].helpText}</p>
         )}
         <AreaInputToggle
@@ -327,29 +389,31 @@ export function QuestionGroupStep({
           // en modo dims, que son longitudes — nunca la unidad de la
           // pregunta original (que para los grupos de 1 sola pregunta es
           // "m²", la unidad del ÁREA, no de una longitud).
-          unit={questions.length === 2 ? questions[0].unit ?? "m" : "m"}
+          unit={dimensionQuestions.length === 2 ? questions[0].unit ?? "m" : "m"}
           // Para un grupo de 1 sola pregunta, lo único que existe es el área
           // combinada (nunca hubo largo/ancho reales guardados por separado
           // — ver handleAreaChange) — si ya hay una respuesta previa (ej.
           // "Editar respuestas" en Pintura), abre directo en "m² directo"
           // con ese valor precargado, en vez del tab "largo × ancho" vacío
-          // por defecto.
+          // por defecto. Un desglose de tramos previo tiene prioridad sobre
+          // ese fallback (ver initialTramos arriba).
           initialMode={
-            forcedInitialArea !== undefined || (questions.length === 1 && values[questions[0].key])
-              ? "area"
-              : "dims"
+            initialTramos
+              ? "tramos"
+              : forcedInitialArea !== undefined || (dimensionQuestions.length === 1 && values[questions[0].key])
+                ? "area"
+                : "dims"
           }
-          enableDeduction={diagram!.enableDeduction}
-          deductionLabel={diagram!.deductionLabel}
+          initialTramos={initialTramos}
           tileSizeCm={tileSizeCm ?? undefined}
           orientationHint={orientationHintValue}
           roofSlopeFactor={roofSlopeFactor}
-          initialPrimary={questions.length === 2 ? values[questions[0].key] || undefined : undefined}
-          initialSecondary={questions.length === 2 ? values[questions[1].key] || undefined : undefined}
+          initialPrimary={dimensionQuestions.length === 2 ? values[questions[0].key] || undefined : undefined}
+          initialSecondary={dimensionQuestions.length === 2 ? values[questions[1].key] || undefined : undefined}
           initialArea={
             forcedInitialArea !== undefined
               ? String(forcedInitialArea)
-              : questions.length === 1
+              : dimensionQuestions.length === 1
                 ? values[questions[0].key] || undefined
                 : undefined
           }

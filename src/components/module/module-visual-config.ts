@@ -139,6 +139,19 @@ export type DiagramConfig = {
   // orientationQuestionKey/slopeQuestionKey) — nunca se duplica la
   // pregunta ni se crea una Variable nueva.
   sourceDimensionKeys?: { primary: string; secondary?: string; depth: string };
+  // "Área personalizada" (Fase 3, 2026-09-14) — habilita la 3ra pestaña de
+  // AreaInputToggle (sumar/restar tramos rectangulares) SOLO cuando está
+  // presente: key de la Question TEXT (siempre "tramos-json", ver
+  // prisma/db-fixes/fase-tramos-seed.ts) que guarda el JSON del desglose,
+  // en el MISMO stepGroup que las preguntas de área de este diagrama —
+  // esa Question nunca se renderiza como campo (AreaInputToggle la
+  // escribe directo, ver handleAreaChange en question-group-step/index.tsx),
+  // solo viaja junto al resto del grupo para que `onAnswer` la incluya.
+  // Generaliza y reemplaza `enableDeduction`/`deductionLabel`: los módulos
+  // migrados a tramos ya no los usan (quedan solo en la entrada "pintura",
+  // que resuelve vanos con su propio componente standalone y no lee este
+  // campo — ver pintura-area-step.tsx).
+  tramosQuestionKey?: string;
 };
 
 export type CombinedAreaQuestionConfig = { label: string; helpText: string; areaLabel: string };
@@ -232,7 +245,7 @@ export const MODULE_CONFIG: Record<string, ModuleVisualConfig> = {
     diagrams: { "ducha-dims": { shape: "rectangle", primaryLabel: "ancho", secondaryLabel: "profundidad" } },
   },
   "hacer-un-sendero": {
-    diagrams: { "sendero-dims": { shape: "rectangle", primaryLabel: "largo", secondaryLabel: "ancho", allowAreaToggle: true } },
+    diagrams: { "sendero-dims": { shape: "rectangle", primaryLabel: "largo", secondaryLabel: "ancho", allowAreaToggle: true, tramosQuestionKey: "tramos-json" } },
   },
   // Radier — antes "rectangle" (2D, solo largo/ancho); el espesor vivía en
   // un stepGroup separado sin wireo al diagrama. Rediseño de flujo (spec
@@ -339,21 +352,22 @@ export const MODULE_CONFIG: Record<string, ModuleVisualConfig> = {
         secondaryLabel: "ancho",
         allowAreaToggle: true,
         tileSizeQuestionKey: "que-tamano-de-ceramica-vas-a-usar",
+        tramosQuestionKey: "tramos-json",
       },
     },
   },
   "tabiques-y-cielos": {
-    diagrams: { cmrtvl3aw000fmcsezs6inad3: { shape: "rectangle", primaryLabel: "largo", secondaryLabel: "ancho", allowAreaToggle: true } },
+    diagrams: { cmrtvl3aw000fmcsezs6inad3: { shape: "rectangle", primaryLabel: "largo", secondaryLabel: "ancho", allowAreaToggle: true, tramosQuestionKey: "tramos-json" } },
   },
   "pasto-en-panes": {
     diagrams: {
-      cmrtvl24q000amcse8s2dj1ex: { shape: "rectangle", primaryLabel: "largo", secondaryLabel: "ancho", allowAreaToggle: true },
+      cmrtvl24q000amcse8s2dj1ex: { shape: "rectangle", primaryLabel: "largo", secondaryLabel: "ancho", allowAreaToggle: true, tramosQuestionKey: "tramos-json" },
       // Pasto en rollos (personalizado) — medida del rollo, no área a cubrir.
       "rollo-personalizado": { shape: "rectangle", primaryLabel: "ancho", secondaryLabel: "largo" },
     },
   },
   impermeabilizacion: {
-    diagrams: { cmrtvkzox0000mcse4sc28ke7: { shape: "rectangle", primaryLabel: "largo", secondaryLabel: "ancho", allowAreaToggle: true } },
+    diagrams: { cmrtvkzox0000mcse4sc28ke7: { shape: "rectangle", primaryLabel: "largo", secondaryLabel: "ancho", allowAreaToggle: true, tramosQuestionKey: "tramos-json" } },
   },
   // Fundación NO tiene entrada acá a propósito (Fase 4, 2026-08-02): antes
   // "base" y "cuello" eran 2 entradas "rectangle" (2D) en 2 pasos
@@ -385,7 +399,7 @@ export const MODULE_CONFIG: Record<string, ModuleVisualConfig> = {
     },
   },
   "revestimiento-de-muro": {
-    diagrams: { cmrtx37y50002s4se6alp133w: { shape: "rectangle", primaryLabel: "alto", secondaryLabel: "largo", allowAreaToggle: true } },
+    diagrams: { cmrtx37y50002s4se6alp133w: { shape: "rectangle", primaryLabel: "alto", secondaryLabel: "largo", allowAreaToggle: true, tramosQuestionKey: "tramos-json" } },
   },
   // Cadena y Viga — antes "rectangle" (2D, solo la sección ancho×alto);
   // "largo" vivía en un paso separado sin wireo al diagrama. Fase 4 Grupo 1
@@ -518,6 +532,7 @@ export const MODULE_CONFIG: Record<string, ModuleVisualConfig> = {
         secondaryLabel: "ancho",
         allowAreaToggle: true,
         tileSizeQuestionKey: "que-tamano-de-porcelanato-vas-a-usar",
+        tramosQuestionKey: "tramos-json",
       },
     },
   },
@@ -559,7 +574,7 @@ export const MODULE_CONFIG: Record<string, ModuleVisualConfig> = {
     },
   },
   "aislacion-termica-bajo-cubierta": {
-    diagrams: { cmruwyzxk0001gcseu3hskggo: { shape: "rectangle", primaryLabel: "largo", secondaryLabel: "ancho", allowAreaToggle: true } },
+    diagrams: { cmruwyzxk0001gcseu3hskggo: { shape: "rectangle", primaryLabel: "largo", secondaryLabel: "ancho", allowAreaToggle: true, tramosQuestionKey: "tramos-json" } },
   },
   "techo-inclinado-bajo-teja-zinc": {
     diagrams: {
@@ -569,6 +584,13 @@ export const MODULE_CONFIG: Record<string, ModuleVisualConfig> = {
         secondaryLabel: "ancho",
         allowAreaToggle: true,
         slopeQuestionKey: "que-tan-inclinado-es-el-techo",
+        // Nota (Fase 3, tramos): el desglose "superficie proyectada / real
+        // del techo" (roofSlopeFactor) solo se muestra hoy en modo "largo ×
+        // ancho" — en modo "Área personalizada" el total sigue siendo la
+        // misma superficie proyectada real (idéntico cálculo, misma
+        // Question NUMBER), solo no repite esa nota informativa extra bajo
+        // el toggle. No afecta el resultado, solo esa aclaración visual.
+        tramosQuestionKey: "tramos-json",
       },
     },
   },
@@ -688,16 +710,16 @@ export const MODULE_CONFIG: Record<string, ModuleVisualConfig> = {
   // hasAreaToggle() y su uso en ModuleWizard para rutear estos casos por
   // QuestionGroupStep aunque el "grupo" tenga un solo elemento.
   "instalar-pastelones": {
-    diagrams: { "pastelones-area-directa": { shape: "rectangle", primaryLabel: "largo", secondaryLabel: "ancho", allowAreaToggle: true } },
+    diagrams: { "pastelones-area-directa": { shape: "rectangle", primaryLabel: "largo", secondaryLabel: "ancho", allowAreaToggle: true, tramosQuestionKey: "tramos-json" } },
   },
   "siembra-por-semilla-cesped": {
-    diagrams: { "siembra-area-directa": { shape: "rectangle", primaryLabel: "largo", secondaryLabel: "ancho", allowAreaToggle: true } },
+    diagrams: { "siembra-area-directa": { shape: "rectangle", primaryLabel: "largo", secondaryLabel: "ancho", allowAreaToggle: true, tramosQuestionKey: "tramos-json" } },
   },
   "preparar-y-estucar-un-muro": {
-    diagrams: { "estuco-area-directa": { shape: "rectangle", primaryLabel: "largo", secondaryLabel: "alto", allowAreaToggle: true } },
+    diagrams: { "estuco-area-directa": { shape: "rectangle", primaryLabel: "largo", secondaryLabel: "alto", allowAreaToggle: true, tramosQuestionKey: "tramos-json" } },
   },
   "terminar-junturas-de-yeso-carton": {
-    diagrams: { "yeso-planchas-area-directa": { shape: "rectangle", primaryLabel: "largo", secondaryLabel: "alto", allowAreaToggle: true } },
+    diagrams: { "yeso-planchas-area-directa": { shape: "rectangle", primaryLabel: "largo", secondaryLabel: "alto", allowAreaToggle: true, tramosQuestionKey: "tramos-json" } },
   },
 
   // Pintura: reemplaza modo-calculo + cantidad-puertas/ventanas + vanos 1-3
@@ -724,8 +746,11 @@ export const MODULE_CONFIG: Record<string, ModuleVisualConfig> = {
         primaryLabel: "largo",
         secondaryLabel: "alto",
         allowAreaToggle: true,
-        enableDeduction: true,
-        deductionLabel: "Puertas y ventanas a descontar",
+        // Fase 3 (tramos, 2026-09-14): reemplaza enableDeduction/
+        // deductionLabel — el descuento de vanos (puertas/ventanas) ahora
+        // se resuelve como tramos "resta" dentro de "Área personalizada",
+        // con etiqueta libre y persistencia (antes se perdía al recargar).
+        tramosQuestionKey: "tramos-json",
       },
     },
   },
@@ -738,8 +763,9 @@ export const MODULE_CONFIG: Record<string, ModuleVisualConfig> = {
         primaryLabel: "largo",
         secondaryLabel: "alto",
         allowAreaToggle: true,
-        enableDeduction: true,
-        deductionLabel: "Puertas y ventanas a descontar",
+        // Fase 3 (tramos, 2026-09-14): mismo reemplazo que Muro de bloques
+        // — ver ese comentario.
+        tramosQuestionKey: "tramos-json",
       },
     },
   },

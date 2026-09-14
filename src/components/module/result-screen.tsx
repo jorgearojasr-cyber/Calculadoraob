@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowRight, Check, Copy, FolderPlus, Pencil, RotateCcw, Sparkles } from "lucide-react";
 import { buildCalculationPrompt, buildRestartLabel } from "@/lib/prompt-generator";
+import { formatQuantity } from "@/lib/format-number";
 import type { CalculationResult, InfoResult } from "@/lib/formula-engine";
 import type { CalculateModuleResult, NormSummary } from "@/app/(app)/categorias/[slug]/[moduleSlug]/actions";
 import { createSavedProjectAction } from "@/app/(app)/proyectos/actions";
@@ -295,6 +296,26 @@ export function ResultScreen({
         })()
       : null;
 
+  // "Área personalizada" (Fase 3, tramos, 2026-09-14): mismo patrón que
+  // consumo eléctrico — la Variable "tramos-json" (si existe en este
+  // módulo) trae el desglose de tramos como JSON, no pasa por el motor de
+  // fórmulas, se parsea acá directo para mostrar una tabla. En cualquier
+  // módulo que no use Área personalizada (incluida Pintura, que resuelve
+  // vanos con su propio componente) esta variable no existe y
+  // tramosBreakdown queda null, sin afectar nada.
+  const tramosBreakdownRaw = variables["tramos-json"];
+  const tramosBreakdown: { tipo: "suma" | "resta"; largo: number; ancho: number; area: number; etiqueta: string }[] | null =
+    typeof tramosBreakdownRaw === "string"
+      ? (() => {
+          try {
+            const parsed = JSON.parse(tramosBreakdownRaw);
+            return Array.isArray(parsed) && parsed.length > 0 ? parsed : null;
+          } catch {
+            return null;
+          }
+        })()
+      : null;
+
   const handleCopy = async () => {
     await navigator.clipboard.writeText(prompt);
     setCopied(true);
@@ -437,6 +458,28 @@ export function ResultScreen({
                   <span className="font-mono text-ink-muted shrink-0">{item.kwhMes.toFixed(1)} kWh/mes</span>
                 </div>
               ))}
+          </div>
+        </div>
+      )}
+
+      {tramosBreakdown && (
+        <div className="rounded-2xl p-5 mb-3 bg-white border border-border">
+          <p className="text-xs font-mono uppercase tracking-wider text-ink-muted mb-3">
+            Desglose de la superficie (Área personalizada)
+          </p>
+          <div className="grid gap-2">
+            {tramosBreakdown.map((tramo, i) => (
+              <div key={i} className="flex items-center justify-between gap-3 text-sm">
+                <span className="min-w-0 truncate">
+                  <span className={tramo.tipo === "resta" ? "text-safety" : "text-navy"}>
+                    {tramo.tipo === "resta" ? "−" : "+"}
+                  </span>{" "}
+                  {tramo.etiqueta || (tramo.tipo === "resta" ? "Tramo que resta" : "Tramo que suma")}
+                  <span className="text-ink-faint"> · {formatQuantity(tramo.largo)} × {formatQuantity(tramo.ancho)} m</span>
+                </span>
+                <span className="font-mono text-ink-muted shrink-0">{formatQuantity(tramo.area)} m²</span>
+              </div>
+            ))}
           </div>
         </div>
       )}
