@@ -9,11 +9,26 @@ import { SignOutButton } from "@/components/auth/sign-out-button";
 import type { NavUser } from "./user-menu";
 import { isWizardRoute } from "@/lib/is-wizard-route";
 
-// Mismos 3 ítems que no caben en las 4 pestañas fijas del BottomNav
+// Mismos ítems que no caben en las 4 pestañas fijas del BottomNav
 // (Inicio/Proyectos/Mis proyectos/Perfil ya cubren lo demás) + los
-// botones de sesión, espejo del lado derecho del TopNav de desktop.
+// botones de sesión, espejo del lado derecho del TopNav de desktop —
+// mismo orden que NAV_ITEMS ahí (sin "Inicio", que ya cubre la pestaña
+// fija del BottomNav).
+//
+// "Calculadoras" e "Inspecciones" (auditoría 2026-09-14, corrección
+// pedida por Jorge): antes solo vivían en el TopNav de desktop —
+// "Inspecciones" ni siquiera estaba acá, solo dentro del submenú
+// "Perfil" del BottomNav Y solo para usuarios con sesión iniciada, así
+// que un visitante mobile anónimo no tenía NINGUNA forma de llegar sin
+// escribir la URL a mano. Decisión de producto: visible para cualquiera,
+// sin login, en ambos anchos — igual que ya se veía en desktop. Sigue
+// existiendo además dentro de "Perfil" (ver BottomNav) como acceso
+// adicional para quien ya inició sesión — no se quitó de ahí, esto solo
+// agrega el acceso principal.
 const DRAWER_LINKS = [
+  { href: "/#empezar", label: "Calculadoras" },
   { href: "/guias", label: "Guías y consejos" },
+  { href: "/inspecciones", label: "Inspecciones" },
   { href: "/galeria", label: "Biblioteca" },
   { href: "/acerca-de", label: "Acerca de nosotros" },
 ];
