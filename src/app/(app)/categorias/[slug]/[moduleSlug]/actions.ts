@@ -56,9 +56,16 @@ export async function calculateModuleAction(
 
     if (question.type === "TEXT") {
       const text = String(raw).trim();
-      if (!text) {
-        throw new Error(`Respuesta inválida para "${question.label}".`);
-      }
+      // Fase 3 (tramos, 2026-09-14): un TEXT vacío se trata igual que "no
+      // respondida" (se omite, no se lanza error) — mismo efecto que
+      // `raw === undefined` arriba. Hoy TODA Question TEXT de la app es un
+      // blob interno (JSON), nunca un campo de texto libre que el usuario
+      // llena a mano (QuestionStep no tiene rama TEXT) — por eso vacío
+      // nunca es un error real de "faltó completar el campo", es solo el
+      // caso de un modo/paso que no generó ese blob esta vez (ej.
+      // "tramos-json" cuando el usuario no usó "Área personalizada" — ver
+      // dimension-utils/tramos.ts).
+      if (!text) continue;
       cleanAnswers[question.key] = text;
       continue;
     }
