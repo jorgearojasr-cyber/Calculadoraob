@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import type { ReactNode } from "react";
-import { ArrowRight, ArrowUp, Building2, Car, Check, ExternalLink, Home, Sparkles, TreePine, Warehouse } from "lucide-react";
+import { ArrowRight, ArrowUp, Building2, Car, ExternalLink, Home, Sparkles, TreePine, Warehouse } from "lucide-react";
 import type { WizardAnswers, WizardQuestion } from "./types";
 import { checkRangeWarning, parseTypicalRange } from "@/lib/range-hint";
 import { GasConfirmationGate } from "./gas-confirmation-gate";
@@ -10,6 +10,7 @@ import { CollapsibleHelp } from "./collapsible-help";
 import { ImageOptionCard } from "./image-option-card";
 import { NotSureHelper } from "./not-sure-helper";
 import { PreselectedConfirmation } from "./preselected-confirmation";
+import { SelectableCard } from "@/components/ui/selectable-card";
 
 // Consumo eléctrico: link clickeable a la tarifa oficial de la CNE, debajo
 // del campo de precio del kWh — el valor exacto depende de la distribuidora
@@ -138,23 +139,24 @@ export function QuestionStep({
     return (
       <div>
         {isGasLevel4 && <GasConfirmationGate />}
-        <h2 className="font-display text-[19px] font-semibold tracking-tight mb-2">
+        <h2 className="font-display text-[19px] font-extrabold text-ds-navy-900 tracking-tight mb-2">
           {question.label}
         </h2>
-        {question.helpText && <p className="text-sm text-ink-muted mb-6">{question.helpText}</p>}
-        <label className="mt-6 flex items-start gap-3 rounded-xl px-5 py-4 border border-border bg-white cursor-pointer">
+        {question.helpText && <p className="font-body text-sm text-ds-text-secondary mb-6">{question.helpText}</p>}
+        <label className="mt-6 flex items-start gap-3 rounded-ds-card px-5 py-4 border-[1.5px] border-ds-border bg-white cursor-pointer">
           <input
             type="checkbox"
             checked={checked}
             onChange={(e) => onAnswer(e.target.checked ? option.key : "")}
-            className="mt-1 w-4 h-4 flex-shrink-0"
+            className="mt-1 w-4 h-4 flex-shrink-0 accent-ds-orange-600"
           />
-          <span className="text-[15px] leading-snug">{option.label}</span>
+          <span className="font-body text-[15px] leading-snug text-ds-navy-900">{option.label}</span>
         </label>
         <button
           onClick={() => onAnswer(option.key)}
           disabled={!checked}
-          className="mt-6 rounded-full px-6 py-3 text-sm font-semibold text-white flex items-center gap-2 bg-action disabled:opacity-40 disabled:cursor-not-allowed"
+          className="mt-6 rounded-xl px-6 font-body text-[15px] font-bold text-white flex items-center gap-2 bg-ds-orange-600 hover:bg-ds-orange-700 active:scale-[0.98] transition-all disabled:bg-ds-muted disabled:text-ds-text-tertiary disabled:cursor-not-allowed"
+          style={{ height: 48 }}
         >
           Ver resultado
           <ArrowRight className="w-4 h-4" />
@@ -180,13 +182,13 @@ export function QuestionStep({
 
     return (
       <div>
-        <h2 className="font-display text-[19px] font-semibold tracking-tight mb-2">
+        <h2 className="font-display text-[19px] font-extrabold text-ds-navy-900 tracking-tight mb-2">
           {question.label}
         </h2>
         {question.helpText && (
           <div className="mb-6">
             <CollapsibleHelp label="Cómo elegir" ariaLabel="Más detalle para elegir esta opción">
-              <p className="text-sm text-ink-muted">{question.helpText}</p>
+              <p className="font-body text-sm text-ds-text-secondary">{question.helpText}</p>
             </CollapsibleHelp>
           </div>
         )}
@@ -211,28 +213,14 @@ export function QuestionStep({
           </div>
         ) : (
           <div className="grid gap-3 mt-6">
-            {question.options.map((option) => {
-              const selected = initialValue === option.key;
-              return (
-                <button
-                  key={option.key}
-                  onClick={() => onAnswer(option.key)}
-                  aria-pressed={selected}
-                  className={`flex items-center justify-between text-left rounded-xl px-5 py-4 border transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-action ${
-                    selected
-                      ? "border-safety bg-safety-tint"
-                      : "border-border bg-white hover:border-ink"
-                  }`}
-                >
-                  <span className="font-medium text-[15px]">{option.label}</span>
-                  {selected ? (
-                    <Check className="w-4 h-4 text-safety" />
-                  ) : (
-                    <ArrowRight className="w-4 h-4 text-ink-faint" />
-                  )}
-                </button>
-              );
-            })}
+            {question.options.map((option) => (
+              <SelectableCard
+                key={option.key}
+                label={option.label}
+                selected={initialValue === option.key}
+                onSelect={() => onAnswer(option.key)}
+              />
+            ))}
           </div>
         )}
         {hasImageOptions && notSureHelper && preselectedOption && (
@@ -276,21 +264,25 @@ export function QuestionStep({
 
   return (
     <div>
-      <h2 className="font-display text-[19px] font-semibold tracking-tight mb-2">
+      <h2 className="font-display text-[19px] font-extrabold text-ds-navy-900 tracking-tight mb-2">
         {question.label}
       </h2>
-      {question.helpText && <p className="text-sm text-ink-muted mb-6">{question.helpText}</p>}
+      {question.helpText && <p className="font-body text-sm text-ds-text-secondary mb-6">{question.helpText}</p>}
       {recommendation && (
-        <div className="mt-3 flex items-start gap-2 rounded-xl px-4 py-3 bg-safety-tint border border-safety/30">
-          <Sparkles className="w-4 h-4 text-safety flex-shrink-0 mt-0.5" />
-          <p className="text-sm text-ink-muted">
-            Te recomendamos <span className="font-semibold text-ink">{recommendation.value} {question.unit}</span>{" "}
-            para <span className="font-semibold text-ink">{recommendation.dependencyLabel}</span> — puedes
+        <div className="mt-3 flex items-start gap-2 rounded-xl px-4 py-3 bg-ds-orange-100/50 border border-ds-orange-600/30">
+          <Sparkles className="w-[18px] h-[18px] text-ds-orange-600 flex-shrink-0 mt-0.5" />
+          <p className="font-body text-[13px] text-ds-text-secondary">
+            Te recomendamos <span className="font-bold text-ds-navy-900">{recommendation.value} {question.unit}</span>{" "}
+            para <span className="font-bold text-ds-navy-900">{recommendation.dependencyLabel}</span> — puedes
             ajustarlo si tienes otra especificación.
           </p>
         </div>
       )}
-      <div className="mt-6 flex items-center gap-3 rounded-2xl px-5 py-4 bg-white border-[1.5px] border-ink focus-within:ring-2 focus-within:ring-action/70 focus-within:ring-offset-1">
+      {/* Design Spec v1.0, Parte 3, punto 9-10: radio ds-input (10px),
+          borde ds-border, focus orange-600 + halo orange-100, unidad
+          visible junto al input sin confundirse con placeholder. Parsing/
+          validación/onChange intactos. */}
+      <div className="mt-6 flex items-center gap-3 rounded-ds-input px-5 py-4 bg-white border-[1.5px] border-ds-border focus-within:border-ds-orange-600 focus-within:ring-[3px] focus-within:ring-ds-orange-100 transition-all">
         <input
           type="text"
           inputMode={isNumber ? "decimal" : "text"}
@@ -301,27 +293,30 @@ export function QuestionStep({
           onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
           onFocus={(e) => isNumber && e.target.select()}
           placeholder={isNumber ? "0" : ""}
-          className="w-full bg-transparent outline-none text-2xl font-display placeholder:text-ink-faint"
+          className="w-full bg-transparent outline-none text-2xl font-display text-ds-navy-900 placeholder:text-ds-text-tertiary"
         />
-        {question.unit && <span className="font-mono text-sm text-ink-muted">{question.unit}</span>}
+        {question.unit && <span className="font-body text-sm font-semibold text-ds-text-secondary">{question.unit}</span>}
       </div>
       {question.key === CNE_PRICE_QUESTION_KEY && (
         <a
           href={CNE_TARIFF_URL}
           target="_blank"
           rel="noopener noreferrer"
-          className="mt-2 inline-flex items-center gap-1 text-sm font-medium text-safety hover:underline"
+          className="mt-2 inline-flex items-center gap-1 font-body text-sm font-medium text-ds-orange-600 hover:underline"
         >
           Consulta el proceso tarifario vigente en la CNE
           <ExternalLink className="w-3.5 h-3.5" />
         </a>
       )}
-      {error && <p className="mt-2 text-sm text-safety">{error}</p>}
-      {!error && rangeWarning && <p className="mt-2 text-sm text-amber-600">{rangeWarning}</p>}
+      {error && <p className="mt-2 font-body text-sm text-danger">{error}</p>}
+      {!error && rangeWarning && <p className="mt-2 font-body text-sm text-amber-600">{rangeWarning}</p>}
       <div className="mt-6 flex items-center gap-4">
+        {/* Design Spec v1.0, punto 13: PrimaryButton — 48px alto, radio
+            12px, 15/700, orange-600 → orange-700 hover, active scale .98. */}
         <button
           onClick={handleSubmit}
-          className="rounded-full px-6 py-3 text-sm font-semibold text-white flex items-center gap-2 bg-action"
+          className="rounded-xl px-6 font-body text-[15px] font-bold text-white flex items-center gap-2 bg-ds-orange-600 hover:bg-ds-orange-700 active:scale-[0.98] transition-all"
+          style={{ height: 48 }}
         >
           Siguiente
           <ArrowRight className="w-4 h-4" />
@@ -329,7 +324,7 @@ export function QuestionStep({
         {onSkip && (
           <button
             onClick={onSkip}
-            className="text-sm font-medium text-ink-muted hover:text-ink underline underline-offset-4"
+            className="font-body text-sm font-semibold text-ds-text-secondary hover:text-ds-navy-900 underline underline-offset-4"
           >
             Omitir
           </button>

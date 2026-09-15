@@ -336,7 +336,7 @@ export function QuestionGroupStep({
   if (diagram?.standaloneAreaStep && questions.length === 1) {
     return (
       <div>
-        {questions[0].helpText && <p className="text-sm text-ink-muted mb-3">{questions[0].helpText}</p>}
+        {questions[0].helpText && <p className="font-body text-sm text-ds-text-secondary mb-3">{questions[0].helpText}</p>}
         <PinturaAreaStep
           diagram={diagram}
           initialArea={values[questions[0].key] || undefined}
@@ -379,7 +379,7 @@ export function QuestionGroupStep({
     return (
       <div>
         {dimensionQuestions.length === 1 && questions[0].helpText && (
-          <p className="text-sm text-ink-muted mb-3">{questions[0].helpText}</p>
+          <p className="font-body text-sm text-ds-text-secondary mb-3">{questions[0].helpText}</p>
         )}
         <AreaInputToggle
           primaryLabel={diagram!.primaryLabel}
@@ -420,18 +420,23 @@ export function QuestionGroupStep({
           onAreaChange={handleAreaChange}
         />
 
-        {error && <p className="mt-4 text-sm text-safety">{error}</p>}
+        {error && <p className="mt-4 font-body text-sm text-danger">{error}</p>}
 
         <SubmitActions onSubmit={handleSubmit} onSaveForLater={onSaveForLater} />
       </div>
     );
   }
 
+  // Design Spec v1.0 — Parte 3B, punto 3 del pedido: "Wide technical step"
+  // — excepción documentada. Este paso combina diagrama + inputs + resumen
+  // en vivo, así que conserva su ancho técnico (2 columnas desde md), NO
+  // se fuerza a 600px. Se le aplica el mismo sistema visual (tokens ds-*,
+  // radios, tipografía) alrededor de ese layout, sin tocar el layout en sí.
   return (
     <div
       className={
         diagram
-          ? "bg-white rounded-2xl border border-border shadow-sm p-5 md:p-8 grid md:grid-cols-[1fr_1.15fr] md:gap-10 md:items-center"
+          ? "bg-white rounded-ds-card-lg border border-ds-border shadow-ds-card-rest p-5 md:p-8 grid md:grid-cols-[1fr_1.15fr] md:gap-10 md:items-center"
           : undefined
       }
     >
@@ -463,7 +468,7 @@ export function QuestionGroupStep({
             />
           )}
           {orientationHintValue && (
-            <p className="text-xs text-ink-faint mt-2">
+            <p className="font-body text-xs text-ds-text-tertiary mt-2">
               Representación esquemática. La orientación es ilustrativa.
             </p>
           )}
@@ -473,7 +478,7 @@ export function QuestionGroupStep({
             if (!L || !A) return null;
             const areaProjected = L * A;
             return (
-              <p className="text-xs text-ink-muted mt-2 text-center">
+              <p className="font-body text-xs text-ds-text-secondary mt-2 text-center">
                 Superficie proyectada: {areaProjected.toFixed(2)} m² · Superficie real del techo:{" "}
                 {(areaProjected * roofSlopeFactor).toFixed(2)} m²
               </p>
@@ -484,15 +489,15 @@ export function QuestionGroupStep({
       <div className={diagram ? "order-1" : undefined}>
       {combined && (
         <div className="mb-5">
-          <h2 className="font-display text-xl md:text-2xl font-semibold tracking-tight">{combined.label}</h2>
-          <p className="text-sm text-ink-muted mt-2 mb-4">{combined.helpText}</p>
+          <h2 className="font-display text-xl md:text-2xl font-extrabold text-ds-navy-900 tracking-tight">{combined.label}</h2>
+          <p className="font-body text-sm text-ds-text-secondary mt-2 mb-4">{combined.helpText}</p>
           <div className="grid gap-3 md:grid-cols-2">
             {pairedQuestions.map((question, i) => (
               <div key={question.id}>
-                <label htmlFor={`field-${question.id}`} className="block text-sm font-medium text-ink-muted mb-1.5">
+                <label htmlFor={`field-${question.id}`} className="block font-body text-sm font-semibold text-ds-text-secondary mb-1.5">
                   {capitalize(i === 0 ? diagram?.primaryLabel ?? question.label : diagram?.secondaryLabel ?? question.label)}
                 </label>
-                <div className="flex items-center gap-3 rounded-2xl bg-white border-[1.5px] border-ink px-5 py-4 focus-within:ring-2 focus-within:ring-action/70 focus-within:ring-offset-1">
+                <div className="flex items-center gap-3 rounded-ds-input bg-white border-[1.5px] border-ds-border px-5 py-4 focus-within:border-ds-orange-600 focus-within:ring-[3px] focus-within:ring-ds-orange-100 transition-all">
                   <input
                     id={`field-${question.id}`}
                     type="text"
@@ -507,19 +512,19 @@ export function QuestionGroupStep({
                     }}
                     onBlur={() => setActiveKey((prev) => (prev === question.key ? null : prev))}
                     placeholder="0"
-                    className="w-full bg-transparent outline-none font-display placeholder:text-ink-faint text-2xl"
+                    className="w-full bg-transparent outline-none font-display text-ds-navy-900 placeholder:text-ds-text-tertiary text-2xl"
                   />
-                  {question.unit && <span className="font-mono text-sm text-ink-muted">{question.unit}</span>}
+                  {question.unit && <span className="font-body text-sm font-semibold text-ds-text-secondary">{question.unit}</span>}
                 </div>
                 {rangeWarnings[question.key] && (
-                  <p className="mt-2 text-sm text-amber-600">{rangeWarnings[question.key]}</p>
+                  <p className="mt-2 font-body text-sm text-amber-600">{rangeWarnings[question.key]}</p>
                 )}
               </div>
             ))}
           </div>
-          <div className="mt-4 rounded-2xl bg-concrete px-5 py-4 text-center">
-            <p className="text-sm text-ink-muted">{combined.areaLabel}</p>
-            <p className="font-display text-2xl font-semibold text-ink">
+          <div className="mt-4 rounded-ds-card bg-ds-muted px-5 py-4 text-center">
+            <p className="font-body text-sm text-ds-text-secondary">{combined.areaLabel}</p>
+            <p className="font-display text-2xl font-extrabold text-ds-navy-900">
               {areaValue !== null ? `${formatQuantity(areaValue)} m²` : "—"}
             </p>
           </div>
@@ -543,9 +548,9 @@ export function QuestionGroupStep({
             <div key={question.id}>
               <div className="flex items-center gap-1.5 mb-2">
                 {compact ? (
-                  <span className="font-semibold text-[15px]">{question.label}</span>
+                  <span className="font-body font-bold text-[15px] text-ds-navy-900">{question.label}</span>
                 ) : (
-                  <h2 className="font-display text-xl md:text-2xl font-semibold tracking-tight">
+                  <h2 className="font-display text-xl md:text-2xl font-extrabold text-ds-navy-900 tracking-tight">
                     {question.label}
                   </h2>
                 )}
@@ -555,17 +560,17 @@ export function QuestionGroupStep({
                     onClick={() => setOpenHelp((prev) => ({ ...prev, [question.key]: !prev[question.key] }))}
                     aria-label={`Más información sobre ${question.label}`}
                     aria-expanded={!!openHelp[question.key]}
-                    className="shrink-0 text-ink-faint hover:text-ink"
+                    className="shrink-0 text-ds-text-tertiary hover:text-ds-navy-900"
                   >
                     <Info className="w-4 h-4" />
                   </button>
                 )}
               </div>
               {question.helpText && (!collapsedHelp || openHelp[question.key]) && (
-                <p className="text-sm text-ink-muted mb-2">{question.helpText}</p>
+                <p className="font-body text-sm text-ds-text-secondary mb-2">{question.helpText}</p>
               )}
               <div
-                className={`flex items-center gap-3 rounded-2xl bg-white border-[1.5px] border-ink focus-within:ring-2 focus-within:ring-action/70 focus-within:ring-offset-1 ${
+                className={`flex items-center gap-3 rounded-ds-input bg-white border-[1.5px] border-ds-border focus-within:border-ds-orange-600 focus-within:ring-[3px] focus-within:ring-ds-orange-100 transition-all ${
                   compact ? "px-4 py-3" : "px-5 py-4"
                 }`}
               >
@@ -583,14 +588,14 @@ export function QuestionGroupStep({
                   }}
                   onBlur={() => setActiveKey((prev) => (prev === question.key ? null : prev))}
                   placeholder="0"
-                  className={`w-full bg-transparent outline-none font-display placeholder:text-ink-faint ${
+                  className={`w-full bg-transparent outline-none font-display text-ds-navy-900 placeholder:text-ds-text-tertiary ${
                     compact ? "text-xl" : "text-2xl"
                   }`}
                 />
-                {question.unit && <span className="font-mono text-sm text-ink-muted">{question.unit}</span>}
+                {question.unit && <span className="font-body text-sm font-semibold text-ds-text-secondary">{question.unit}</span>}
               </div>
               {rangeWarnings[question.key] && (
-                <p className="mt-2 text-sm text-amber-600">{rangeWarnings[question.key]}</p>
+                <p className="mt-2 font-body text-sm text-amber-600">{rangeWarnings[question.key]}</p>
               )}
             </div>
           );
@@ -598,7 +603,7 @@ export function QuestionGroupStep({
       </div>
       )}
 
-      {error && <p className="mt-4 text-sm text-safety">{error}</p>}
+      {error && <p className="mt-4 font-body text-sm text-danger">{error}</p>}
 
       <SubmitActions onSubmit={handleSubmit} onSaveForLater={diagram ? onSaveForLater : undefined} />
       </div>

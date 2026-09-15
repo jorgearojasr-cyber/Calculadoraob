@@ -1,9 +1,10 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { ArrowRight, Check } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import type { WizardQuestion } from "./types";
 import { checkRangeWarning, parseTypicalRange } from "@/lib/range-hint";
+import { SelectableCard } from "@/components/ui/selectable-card";
 
 // Combina una pregunta SELECT con una pregunta NUMBER que solo se revela
 // (dentro del mismo paso) si se elige la segunda opción del SELECT — ej.
@@ -62,40 +63,29 @@ export function ConditionalRevealStep({
 
   return (
     <div>
-      <h2 className="font-display text-[19px] font-semibold tracking-tight mb-2">
+      <h2 className="font-display text-[19px] font-extrabold text-ds-navy-900 tracking-tight mb-2">
         {selectQuestion.label}
       </h2>
-      {selectQuestion.helpText && <p className="text-sm text-ink-muted mb-6">{selectQuestion.helpText}</p>}
+      {selectQuestion.helpText && <p className="font-body text-sm text-ds-text-secondary mb-6">{selectQuestion.helpText}</p>}
 
       <div className="grid gap-3 mt-6">
-        {selectQuestion.options.map((option) => {
-          const isSelected = selected === option.key;
-          return (
-            <button
-              key={option.key}
-              onClick={() => handleSelect(option.key)}
-              className={`flex items-center justify-between text-left rounded-xl px-5 py-4 border transition-colors ${
-                isSelected ? "border-safety bg-safety-tint" : "border-border bg-white hover:border-ink"
-              }`}
-            >
-              <span className="font-medium text-[15px]">{option.label}</span>
-              {isSelected ? (
-                <Check className="w-4 h-4 text-safety" />
-              ) : (
-                <ArrowRight className="w-4 h-4 text-ink-faint" />
-              )}
-            </button>
-          );
-        })}
+        {selectQuestion.options.map((option) => (
+          <SelectableCard
+            key={option.key}
+            label={option.label}
+            selected={selected === option.key}
+            onSelect={() => handleSelect(option.key)}
+          />
+        ))}
       </div>
 
       {isRevealed && (
         <div className="mt-6">
-          <h3 className="font-display text-xl font-semibold tracking-tight mb-2">{numberQuestion.label}</h3>
+          <h3 className="font-display text-xl font-extrabold text-ds-navy-900 tracking-tight mb-2">{numberQuestion.label}</h3>
           {numberQuestion.helpText && (
-            <p className="text-sm text-ink-muted mb-3">{numberQuestion.helpText}</p>
+            <p className="font-body text-sm text-ds-text-secondary mb-3">{numberQuestion.helpText}</p>
           )}
-          <div className="flex items-center gap-3 rounded-2xl px-5 py-4 bg-white border-[1.5px] border-ink">
+          <div className="flex items-center gap-3 rounded-ds-input px-5 py-4 bg-white border-[1.5px] border-ds-border focus-within:border-ds-orange-600 focus-within:ring-[3px] focus-within:ring-ds-orange-100 transition-all">
             <input
               type="text"
               inputMode="decimal"
@@ -105,15 +95,16 @@ export function ConditionalRevealStep({
               onKeyDown={(e) => e.key === "Enter" && handleSubmitNumber()}
               onFocus={(e) => e.target.select()}
               placeholder="0"
-              className="w-full bg-transparent outline-none text-2xl font-display placeholder:text-ink-faint"
+              className="w-full bg-transparent outline-none text-2xl font-display text-ds-navy-900 placeholder:text-ds-text-tertiary"
             />
-            {numberQuestion.unit && <span className="font-mono text-sm text-ink-muted">{numberQuestion.unit}</span>}
+            {numberQuestion.unit && <span className="font-body text-sm font-semibold text-ds-text-secondary">{numberQuestion.unit}</span>}
           </div>
-          {error && <p className="mt-2 text-sm text-safety">{error}</p>}
-          {!error && rangeWarning && <p className="mt-2 text-sm text-amber-600">{rangeWarning}</p>}
+          {error && <p className="mt-2 font-body text-sm text-danger">{error}</p>}
+          {!error && rangeWarning && <p className="mt-2 font-body text-sm text-amber-600">{rangeWarning}</p>}
           <button
             onClick={handleSubmitNumber}
-            className="mt-6 rounded-full px-6 py-3 text-sm font-semibold text-white flex items-center gap-2 bg-action"
+            className="mt-6 rounded-xl px-6 font-body text-[15px] font-bold text-white flex items-center gap-2 bg-ds-orange-600 hover:bg-ds-orange-700 active:scale-[0.98] transition-all"
+            style={{ height: 48 }}
           >
             Siguiente
             <ArrowRight className="w-4 h-4" />

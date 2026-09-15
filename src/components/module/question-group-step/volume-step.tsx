@@ -21,9 +21,9 @@ import { useVolumePreview, type VolumeField } from "./hooks/useVolumePreview";
 function Tip({ text, className = "" }: { text: string | null | undefined; className?: string }) {
   if (!text) return null;
   return (
-    <div className={`flex items-start gap-2.5 rounded-xl px-4 py-3 bg-concrete ${className}`}>
-      <Lightbulb className="w-4 h-4 text-ink-muted flex-shrink-0 mt-0.5" />
-      <p className="text-sm text-ink-muted">{text}</p>
+    <div className={`flex items-start gap-2.5 rounded-xl px-4 py-3 bg-ds-orange-100/40 ${className}`}>
+      <Lightbulb className="w-[18px] h-[18px] text-ds-orange-600 flex-shrink-0 mt-0.5" />
+      <p className="font-body text-[13px] text-ds-text-secondary">{text}</p>
     </div>
   );
 }
@@ -273,14 +273,16 @@ export function VolumeStep({
   // nada específico de Radier en este componente.
   const tips = Array.from(new Set(fields.map((f) => f.question.helpText).filter((t): t is string => Boolean(t))));
 
+  // "Wide technical step" (Design Spec v1.0, Parte 3B, punto 3): diagrama +
+  // campos + resumen en vivo conservan su layout técnico de 2 columnas.
   return (
-    <div className="bg-white rounded-2xl border border-border shadow-sm p-5 md:p-8 grid md:grid-cols-[1fr_1.15fr] md:gap-10 md:items-start">
+    <div className="bg-white rounded-ds-card-lg border border-ds-border shadow-ds-card-rest p-5 md:p-8 grid md:grid-cols-[1fr_1.15fr] md:gap-10 md:items-start">
       <div className="order-1">
         {diagram.groupLabel && (
-          <h2 className="font-display text-xl md:text-2xl font-semibold tracking-tight mb-2">{diagram.groupLabel}</h2>
+          <h2 className="font-display text-xl md:text-2xl font-extrabold text-ds-navy-900 tracking-tight mb-2">{diagram.groupLabel}</h2>
         )}
         {diagram.groupHelpText && (
-          <p className={`text-sm text-ink-muted ${diagram.groupHelpTextDetail ? "mb-2" : "mb-5"}`}>{diagram.groupHelpText}</p>
+          <p className={`font-body text-sm text-ds-text-secondary ${diagram.groupHelpTextDetail ? "mb-2" : "mb-5"}`}>{diagram.groupHelpText}</p>
         )}
         {/* Fase B.1 (2026-08-31, Excavación): contenido técnico adicional
             (holgura, moldaje, sistema constructivo) que alargaba demasiado
@@ -294,7 +296,7 @@ export function VolumeStep({
         {diagram.groupHelpTextDetail && (
           <div className="mb-5">
             <CollapsibleHelp label="¿Cómo medir?" ariaLabel="Más información sobre cómo medir">
-              <p className="text-sm text-ink-muted">{diagram.groupHelpTextDetail}</p>
+              <p className="font-body text-sm text-ds-text-secondary">{diagram.groupHelpTextDetail}</p>
             </CollapsibleHelp>
           </div>
         )}
@@ -347,16 +349,16 @@ export function VolumeStep({
             (Excavación, Pilar, Piscina Paso 1, Fundación, Jardinera,
             Radier) la siguen mostrando exactamente igual que antes. */}
         {showResultBox && (
-          <div className={`mt-4 rounded-2xl bg-concrete px-5 py-4 ${area !== null ? "grid grid-cols-2 gap-4" : ""}`}>
+          <div className={`mt-4 rounded-ds-card bg-ds-muted px-5 py-4 ${area !== null ? "grid grid-cols-2 gap-4" : ""}`}>
             {area !== null && (
               <div>
-                <p className="text-sm text-ink-muted">{diagram.areaResultLabel ?? "Superficie"}</p>
-                <p className="font-display text-2xl font-semibold text-ink">{formatQuantity(area)} m²</p>
+                <p className="font-body text-sm text-ds-text-secondary">{diagram.areaResultLabel ?? "Superficie"}</p>
+                <p className="font-display text-2xl font-extrabold text-ds-navy-900">{formatQuantity(area)} m²</p>
               </div>
             )}
             <div>
-              <p className="text-sm text-ink-muted">{diagram.volumeResultLabel ?? "Volumen"}</p>
-              <p className="font-display text-2xl font-semibold text-ink">
+              <p className="font-body text-sm text-ds-text-secondary">{diagram.volumeResultLabel ?? "Volumen"}</p>
+              <p className="font-display text-2xl font-extrabold text-ds-navy-900">
                 {volume !== null ? `${formatQuantity(volume)} m³` : "—"}
               </p>
             </div>
@@ -368,7 +370,7 @@ export function VolumeStep({
                 siguen mostrando exactamente igual que antes. No se toca el
                 cálculo de `formulaText` en useVolumePreview, solo su
                 render acá. */}
-            {formulaText && !isSlab && <p className="col-span-2 mt-1 text-xs text-ink-muted">{formulaText}</p>}
+            {formulaText && !isSlab && <p className="col-span-2 mt-1 font-body text-xs text-ds-text-secondary">{formulaText}</p>}
           </div>
         )}
 
@@ -380,7 +382,7 @@ export function VolumeStep({
           </div>
         )}
 
-        {error && <p className="mt-4 text-sm text-safety">{error}</p>}
+        {error && <p className="mt-4 font-body text-sm text-danger">{error}</p>}
 
         <SubmitActions onSubmit={handleSubmit} onSaveForLater={onSaveForLater} />
       </div>
@@ -401,8 +403,8 @@ export function VolumeStep({
             mostrando exactamente igual que antes. */}
         {!showIllustrationFirst && (
           <div className="hidden md:block mb-4">
-            <p className="font-semibold text-sm">Así se ve con tus medidas</p>
-            <p className="text-sm text-ink-muted mt-1">
+            <p className="font-body font-bold text-sm text-ds-navy-900">Así se ve con tus medidas</p>
+            <p className="font-body text-sm text-ds-text-secondary mt-1">
               Mismo diagrama y mismos valores: el {isCircular ? "diámetro" : "ancho"} extra va al dibujo, no a agrandar
               el texto.
             </p>

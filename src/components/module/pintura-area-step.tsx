@@ -74,7 +74,7 @@ export function PinturaAreaStep({
 
   const deductionBlock = (
     <div className="mt-5">
-      <p className="text-sm font-medium mb-2">{deductionLabel} (opcional)</p>
+      <p className="font-body text-sm font-semibold text-ds-text-secondary mb-2">{deductionLabel} (opcional)</p>
       <div className="grid gap-2">
         {deductions.map((row, i) => (
           <div key={i} className="flex items-center gap-2">
@@ -86,9 +86,9 @@ export function PinturaAreaStep({
               onFocus={(e) => e.target.select()}
               placeholder="Ancho"
               aria-label={`Ancho de la puerta o ventana ${i + 1}`}
-              className="w-20 min-w-0 flex-1 rounded-lg px-3 py-1.5 text-sm bg-white border border-border outline-none focus:border-ink"
+              className="w-20 min-w-0 flex-1 rounded-ds-input px-3 py-1.5 font-body text-sm bg-white border border-ds-border outline-none focus:border-ds-orange-600 focus:ring-[3px] focus:ring-ds-orange-100 transition-all"
             />
-            <span className="text-ink-faint text-sm flex-shrink-0">×</span>
+            <span className="text-ds-text-tertiary text-sm flex-shrink-0">×</span>
             <input
               type="text"
               inputMode="decimal"
@@ -97,14 +97,14 @@ export function PinturaAreaStep({
               onFocus={(e) => e.target.select()}
               placeholder="Alto"
               aria-label={`Alto de la puerta o ventana ${i + 1}`}
-              className="w-20 min-w-0 flex-1 rounded-lg px-3 py-1.5 text-sm bg-white border border-border outline-none focus:border-ink"
+              className="w-20 min-w-0 flex-1 rounded-ds-input px-3 py-1.5 font-body text-sm bg-white border border-ds-border outline-none focus:border-ds-orange-600 focus:ring-[3px] focus:ring-ds-orange-100 transition-all"
             />
-            <span className="font-mono text-xs text-ink-muted flex-shrink-0">m</span>
+            <span className="font-body text-xs font-semibold text-ds-text-secondary flex-shrink-0">m</span>
             <button
               type="button"
               onClick={() => setDeductions((prev) => prev.filter((_, idx) => idx !== i))}
               aria-label={`Quitar puerta o ventana ${i + 1}`}
-              className="text-ink-muted hover:text-safety flex-shrink-0"
+              className="text-ds-text-secondary hover:text-danger flex-shrink-0"
             >
               <X className="w-4 h-4" />
             </button>
@@ -114,7 +114,7 @@ export function PinturaAreaStep({
       <button
         type="button"
         onClick={() => setDeductions((prev) => [...prev, { ancho: "", alto: "" }])}
-        className="mt-2 text-xs font-medium text-navy inline-flex items-center gap-1"
+        className="mt-2 font-body text-xs font-bold text-ds-navy-900 inline-flex items-center gap-1"
       >
         <Plus className="w-3.5 h-3.5" />
         Agregar puerta o ventana
@@ -130,38 +130,38 @@ export function PinturaAreaStep({
   // "0 m² de vanos" que no aporta información.
   const resultCard =
     deductionTotal > 0 ? (
-      <div className="mt-4 grid grid-cols-[1fr_auto_1fr_auto_1fr] items-center gap-2 rounded-2xl bg-concrete px-3 py-4 text-center">
+      <div className="mt-4 grid grid-cols-[1fr_auto_1fr_auto_1fr] items-center gap-2 rounded-ds-card bg-ds-muted px-3 py-4 text-center">
         <div>
-          <p className="text-xs text-ink-muted">Superficie bruta</p>
-          <p className="font-display text-lg font-semibold text-ink">{grossArea !== null ? formatQuantity(grossArea) : "—"} m²</p>
+          <p className="font-body text-xs text-ds-text-secondary">Superficie bruta</p>
+          <p className="font-display text-lg font-extrabold text-ds-navy-900">{grossArea !== null ? formatQuantity(grossArea) : "—"} m²</p>
         </div>
-        <span className="text-ink-faint text-base">−</span>
+        <span className="text-ds-text-tertiary text-base">−</span>
         <div>
-          <p className="text-xs text-ink-muted">Vanos</p>
-          <p className="font-display text-lg font-semibold text-ink">{formatQuantity(deductionTotal)} m²</p>
+          <p className="font-body text-xs text-ds-text-secondary">Vanos</p>
+          <p className="font-display text-lg font-extrabold text-ds-navy-900">{formatQuantity(deductionTotal)} m²</p>
         </div>
-        <span className="text-ink-faint text-base">=</span>
-        <div className="rounded-xl bg-[#FFE4D6] px-2 py-2">
-          <p className="text-xs font-medium text-[#E04500]">Superficie neta</p>
-          <p className="font-display text-lg font-semibold text-[#E04500]">{netArea !== null ? formatQuantity(netArea) : "—"} m²</p>
+        <span className="text-ds-text-tertiary text-base">=</span>
+        <div className="rounded-xl bg-ds-orange-100 px-2 py-2">
+          <p className="font-body text-xs font-semibold text-ds-orange-700">Superficie neta</p>
+          <p className="font-display text-lg font-extrabold text-ds-orange-700">{netArea !== null ? formatQuantity(netArea) : "—"} m²</p>
         </div>
       </div>
     ) : (
-      <div className="mt-4 rounded-2xl bg-concrete px-5 py-4 text-center">
-        <p className="text-sm text-ink-muted">Superficie</p>
-        <p className="font-display text-2xl font-semibold text-ink">{grossArea !== null ? `${formatQuantity(grossArea)} m²` : "—"}</p>
+      <div className="mt-4 rounded-ds-card bg-ds-muted px-5 py-4 text-center">
+        <p className="font-body text-sm text-ds-text-secondary">Superficie</p>
+        <p className="font-display text-2xl font-extrabold text-ds-navy-900">{grossArea !== null ? `${formatQuantity(grossArea)} m²` : "—"}</p>
       </div>
     );
 
   return (
     <div>
-      <div className="mb-4 inline-flex rounded-full border border-border bg-white p-1">
+      <div className="mb-4 inline-flex rounded-full border border-ds-border bg-white p-1">
         <button
           type="button"
           onClick={() => setMode("dims")}
           aria-pressed={mode === "dims"}
-          className={`rounded-full px-4 py-1.5 text-sm font-medium transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-action ${
-            mode === "dims" ? "bg-ink text-white" : "text-ink-muted hover:text-ink"
+          className={`rounded-full px-4 py-1.5 font-body text-sm font-semibold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ds-orange-600 ${
+            mode === "dims" ? "bg-ds-navy-900 text-white" : "text-ds-text-secondary hover:text-ds-navy-900"
           }`}
         >
           {primaryLabel} × {secondaryLabel}
@@ -170,8 +170,8 @@ export function PinturaAreaStep({
           type="button"
           onClick={() => setMode("area")}
           aria-pressed={mode === "area"}
-          className={`rounded-full px-4 py-1.5 text-sm font-medium transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-action ${
-            mode === "area" ? "bg-ink text-white" : "text-ink-muted hover:text-ink"
+          className={`rounded-full px-4 py-1.5 font-body text-sm font-semibold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ds-orange-600 ${
+            mode === "area" ? "bg-ds-navy-900 text-white" : "text-ds-text-secondary hover:text-ds-navy-900"
           }`}
         >
           m² directo
@@ -179,7 +179,8 @@ export function PinturaAreaStep({
       </div>
 
       {mode === "dims" ? (
-        <div className="bg-white rounded-2xl border border-border shadow-sm p-5 md:p-8 grid md:grid-cols-[1fr_1.15fr] md:gap-10 md:items-center">
+        // "Wide technical step" (Design Spec v1.0, Parte 3B, punto 3).
+        <div className="bg-white rounded-ds-card-lg border border-ds-border shadow-ds-card-rest p-5 md:p-8 grid md:grid-cols-[1fr_1.15fr] md:gap-10 md:items-center">
           {/* Ilustración en mobile: ANTES de los inputs (diseño aprobado)
               — instancia separada, oculta en desktop (md:hidden), donde la
               columna de abajo (md:order-2) ya la muestra en su lugar de
@@ -192,8 +193,8 @@ export function PinturaAreaStep({
           <div className="md:order-1">
             <div className="grid gap-3 md:grid-cols-2">
               <label className="grid gap-1.5">
-                <span className="text-sm font-medium capitalize">{primaryLabel}</span>
-                <div className="flex items-center gap-3 rounded-2xl bg-white border-[1.5px] border-ink px-4 py-3 focus-within:ring-2 focus-within:ring-action/70 focus-within:ring-offset-1">
+                <span className="font-body text-sm font-semibold text-ds-text-secondary capitalize">{primaryLabel}</span>
+                <div className="flex items-center gap-3 rounded-ds-input bg-white border-[1.5px] border-ds-border px-4 py-3 focus-within:border-ds-orange-600 focus-within:ring-[3px] focus-within:ring-ds-orange-100 transition-all">
                   <input
                     type="text"
                     inputMode="decimal"
@@ -201,14 +202,14 @@ export function PinturaAreaStep({
                     onChange={(e) => setPrimary(e.target.value)}
                     onFocus={(e) => e.target.select()}
                     placeholder="0"
-                    className="w-full bg-transparent outline-none font-display text-xl placeholder:text-ink-faint"
+                    className="w-full bg-transparent outline-none font-display text-xl text-ds-navy-900 placeholder:text-ds-text-tertiary"
                   />
-                  <span className="font-mono text-sm text-ink-muted">m</span>
+                  <span className="font-body text-sm font-semibold text-ds-text-secondary">m</span>
                 </div>
               </label>
               <label className="grid gap-1.5">
-                <span className="text-sm font-medium capitalize">{secondaryLabel}</span>
-                <div className="flex items-center gap-3 rounded-2xl bg-white border-[1.5px] border-ink px-4 py-3 focus-within:ring-2 focus-within:ring-action/70 focus-within:ring-offset-1">
+                <span className="font-body text-sm font-semibold text-ds-text-secondary capitalize">{secondaryLabel}</span>
+                <div className="flex items-center gap-3 rounded-ds-input bg-white border-[1.5px] border-ds-border px-4 py-3 focus-within:border-ds-orange-600 focus-within:ring-[3px] focus-within:ring-ds-orange-100 transition-all">
                   <input
                     type="text"
                     inputMode="decimal"
@@ -216,9 +217,9 @@ export function PinturaAreaStep({
                     onChange={(e) => setSecondary(e.target.value)}
                     onFocus={(e) => e.target.select()}
                     placeholder="0"
-                    className="w-full bg-transparent outline-none font-display text-xl placeholder:text-ink-faint"
+                    className="w-full bg-transparent outline-none font-display text-xl text-ds-navy-900 placeholder:text-ds-text-tertiary"
                   />
-                  <span className="font-mono text-sm text-ink-muted">m</span>
+                  <span className="font-body text-sm font-semibold text-ds-text-secondary">m</span>
                 </div>
               </label>
             </div>
@@ -233,10 +234,10 @@ export function PinturaAreaStep({
           </div>
         </div>
       ) : (
-        <div className="bg-white rounded-2xl border border-border shadow-sm p-5 md:p-8">
+        <div className="bg-white rounded-ds-card-lg border border-ds-border shadow-ds-card-rest p-5 md:p-8">
           <label className="grid gap-1.5">
-            <span className="text-sm font-medium">Superficie</span>
-            <div className="flex items-center gap-3 rounded-2xl bg-white border-[1.5px] border-ink px-5 py-4 focus-within:ring-2 focus-within:ring-action/70 focus-within:ring-offset-1">
+            <span className="font-body text-sm font-semibold text-ds-text-secondary">Superficie</span>
+            <div className="flex items-center gap-3 rounded-ds-input bg-white border-[1.5px] border-ds-border px-5 py-4 focus-within:border-ds-orange-600 focus-within:ring-[3px] focus-within:ring-ds-orange-100 transition-all">
               <input
                 type="text"
                 inputMode="decimal"
@@ -245,9 +246,9 @@ export function PinturaAreaStep({
                 onChange={(e) => setArea(e.target.value)}
                 onFocus={(e) => e.target.select()}
                 placeholder="0"
-                className="w-full bg-transparent outline-none font-display text-2xl placeholder:text-ink-faint"
+                className="w-full bg-transparent outline-none font-display text-2xl text-ds-navy-900 placeholder:text-ds-text-tertiary"
               />
-              <span className="font-mono text-sm text-ink-muted">m²</span>
+              <span className="font-body text-sm font-semibold text-ds-text-secondary">m²</span>
             </div>
           </label>
 
@@ -256,7 +257,7 @@ export function PinturaAreaStep({
         </div>
       )}
 
-      {error && <p className="mt-4 text-sm text-safety">{error}</p>}
+      {error && <p className="mt-4 font-body text-sm text-danger">{error}</p>}
 
       <SubmitActions onSubmit={handleSubmit} onSaveForLater={onSaveForLater} />
     </div>

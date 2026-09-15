@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { LogoMark } from "@/components/brand/logo-mark";
+import { WizardStepper } from "./wizard-stepper";
 
 // Encabezado compartido del wizard de módulos — antes esto era un <p> con
 // el nombre del módulo y, por separado, una barra de progreso continua
@@ -44,7 +45,7 @@ export function WizardHeader({
           (back.href ? (
             <Link
               href={back.href}
-              className="inline-flex items-center gap-1.5 text-sm font-medium text-ink-muted hover:text-ink flex-shrink-0"
+              className="inline-flex items-center gap-1.5 font-body text-sm font-medium text-ds-text-secondary hover:text-ds-navy-900 flex-shrink-0"
             >
               <ArrowLeft className="w-4 h-4" />
               {back.label}
@@ -53,7 +54,7 @@ export function WizardHeader({
             <button
               type="button"
               onClick={back.onClick}
-              className="inline-flex items-center gap-1.5 text-sm font-medium text-ink-muted hover:text-ink flex-shrink-0"
+              className="inline-flex items-center gap-1.5 font-body text-sm font-medium text-ds-text-secondary hover:text-ds-navy-900 flex-shrink-0"
             >
               <ArrowLeft className="w-4 h-4" />
               {back.label}
@@ -67,29 +68,24 @@ export function WizardHeader({
               que apareció al probar Fase 3 con otros módulos. El nombre
               solo, en mayúsculas, evita el problema sin inventar un dato
               nuevo por módulo. */}
-          <p className="font-mono text-xs uppercase tracking-wider text-safety truncate">
+          <p className="font-body text-xs font-bold uppercase tracking-wider text-ds-orange-600 truncate">
             {moduleName}
             {resultMode ? " · Resultado" : ""}
           </p>
-          <LogoMark className="w-6 h-[15px] text-safety flex-shrink-0" />
+          <LogoMark className="w-6 h-[15px] text-ds-navy-900 flex-shrink-0" />
         </div>
       </div>
       {step && (
         <>
-          <p className="mt-3 font-mono text-xs text-ink-faint">
+          {/* Design Spec v1.0, Parte 3 (punto 6 del pedido): dots +
+              conector reemplazan la barra segmentada continua — ver
+              wizard-stepper.tsx. "Paso X de Y" se mantiene como
+              complemento textual, permitido explícitamente por el pedido. */}
+          <p className="mt-3 font-body text-xs text-ds-text-tertiary">
             Paso {step.index + 1} de {step.total}
           </p>
-          {/* Segmentada (un tramo por paso) en vez de una barra continua —
-              deja ver de un vistazo cuántos pasos faltan, no solo el %. */}
-          <div className="mt-2 flex gap-1.5">
-            {Array.from({ length: step.total }).map((_, i) => (
-              <div
-                key={i}
-                className={`h-1.5 flex-1 rounded-full transition-colors ${
-                  i <= step.index ? "bg-safety" : "bg-border"
-                }`}
-              />
-            ))}
+          <div className="mt-2">
+            <WizardStepper current={step.index} total={step.total} />
           </div>
         </>
       )}

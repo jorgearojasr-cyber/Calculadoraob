@@ -47,9 +47,9 @@ export function ImageOptionCard({
       type="button"
       onClick={onSelect}
       aria-pressed={selected}
-      className={`text-left rounded-2xl border-2 p-3 transition-colors flex gap-4 items-stretch focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-action ${
+      className={`text-left rounded-ds-card-lg border-[1.5px] p-3 transition-all active:scale-[0.98] flex gap-4 items-stretch focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ds-orange-600 ${
         forceCover ? "flex-col" : "flex-row sm:flex-col"
-      } ${selected ? "border-safety bg-safety-tint" : "border-border bg-white hover:border-ink"}`}
+      } ${selected ? "border-ds-orange-600 bg-ds-orange-100/40" : "border-ds-border bg-white hover:shadow-ds-card-elevated"}`}
     >
       <div
         className={`aspect-video rounded-xl overflow-hidden flex-shrink-0 bg-[#E7EBF2] ${
@@ -70,16 +70,16 @@ export function ImageOptionCard({
         <div className="flex-1 min-w-0 flex flex-col justify-center gap-1">
           <div className="flex items-center gap-2">
             {icon}
-            <span className="font-display font-semibold text-[15px] leading-snug">{option.label}</span>
+            <span className="font-display font-bold text-[15px] text-ds-navy-900 leading-snug">{option.label}</span>
           </div>
           {option.description && (
-            <p className="text-sm text-ink-muted leading-snug">{option.description}</p>
+            <p className="font-body text-sm text-ds-text-secondary leading-snug">{option.description}</p>
           )}
         </div>
         <div className="flex-shrink-0">
           <div
             className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${
-              selected ? "border-safety bg-safety" : "border-border bg-white"
+              selected ? "border-ds-orange-600 bg-ds-orange-600" : "border-ds-border bg-white"
             }`}
           >
             {selected && <Check className="w-4 h-4 text-white" strokeWidth={3} />}

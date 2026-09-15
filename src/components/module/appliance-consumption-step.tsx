@@ -129,10 +129,10 @@ export function ApplianceConsumptionStep({
 
   return (
     <div>
-      <h2 className="font-display text-[19px] font-semibold tracking-tight mb-2">
+      <h2 className="font-display text-[19px] font-extrabold text-ds-navy-900 tracking-tight mb-2">
         ¿Qué artefactos usas y cuánto?
       </h2>
-      <p className="text-sm text-ink-muted mb-6">
+      <p className="font-body text-sm text-ds-text-secondary mb-6">
         Los Watts y las horas de uso son valores de referencia — edítalos con el dato real de tu equipo
         (etiqueta o manual) si lo tienes a mano.
       </p>
@@ -151,8 +151,8 @@ export function ApplianceConsumptionStep({
           return (
             <div
               key={appliance.id}
-              className={`rounded-xl border transition-colors ${
-                checked ? "border-safety bg-safety-tint" : "border-border bg-white"
+              className={`rounded-ds-card border-[1.5px] transition-all ${
+                checked ? "border-ds-orange-600 bg-ds-orange-100/40" : "border-ds-border bg-white"
               }`}
             >
               <label className="flex items-center justify-between gap-3 px-4 py-3 cursor-pointer">
@@ -161,63 +161,63 @@ export function ApplianceConsumptionStep({
                     type="checkbox"
                     checked={checked}
                     onChange={(e) => update(appliance.id, { checked: e.target.checked })}
-                    className="w-4 h-4 flex-shrink-0"
+                    className="w-4 h-4 flex-shrink-0 accent-ds-orange-600"
                   />
-                  <span className="text-[15px]">{appliance.label}</span>
+                  <span className="font-body text-[15px] text-ds-navy-900">{appliance.label}</span>
                 </span>
-                <span className="font-mono text-xs text-ink-muted shrink-0">~{appliance.watts}W</span>
+                <span className="font-body text-xs font-semibold text-ds-text-secondary shrink-0">~{appliance.watts}W</span>
               </label>
 
               {checked && (
                 <div className="px-4 pb-4 grid gap-3 sm:grid-cols-3">
                   {appliance.hasQuantity && (
                     <div>
-                      <span className="block text-xs font-medium text-ink-muted mb-1">
+                      <span className="block font-body text-xs font-semibold text-ds-text-secondary mb-1">
                         {appliance.quantityLabel}
                       </span>
-                      <div className="flex items-center gap-2 rounded-xl bg-white border border-ink px-3 py-2">
+                      <div className="flex items-center gap-2 rounded-ds-input bg-white border border-ds-border px-3 py-2 focus-within:border-ds-orange-600 focus-within:ring-[3px] focus-within:ring-ds-orange-100 transition-all">
                         <input
                           type="text"
                           inputMode="numeric"
                           value={state.quantity}
                           onChange={(e) => update(appliance.id, { quantity: e.target.value })}
                           onFocus={(e) => e.target.select()}
-                          className="w-full bg-transparent outline-none font-display text-base"
+                          className="w-full bg-transparent outline-none font-display text-base text-ds-navy-900"
                         />
                       </div>
                     </div>
                   )}
                   <div>
-                    <span className="block text-xs font-medium text-ink-muted mb-1">
+                    <span className="block font-body text-xs font-semibold text-ds-text-secondary mb-1">
                       Watts {appliance.hasQuantity ? "(por unidad)" : ""}
                     </span>
-                    <div className="flex items-center gap-2 rounded-xl bg-white border border-ink px-3 py-2">
+                    <div className="flex items-center gap-2 rounded-ds-input bg-white border border-ds-border px-3 py-2 focus-within:border-ds-orange-600 focus-within:ring-[3px] focus-within:ring-ds-orange-100 transition-all">
                       <input
                         type="text"
                         inputMode="decimal"
                         value={state.watts}
                         onChange={(e) => update(appliance.id, { watts: e.target.value })}
                         onFocus={(e) => e.target.select()}
-                        className="w-full bg-transparent outline-none font-display text-base"
+                        className="w-full bg-transparent outline-none font-display text-base text-ds-navy-900"
                       />
-                      <span className="font-mono text-xs text-ink-muted">W</span>
+                      <span className="font-body text-xs font-semibold text-ds-text-secondary">W</span>
                     </div>
                   </div>
                   <div>
-                    <span className="block text-xs font-medium text-ink-muted mb-1">Horas al día</span>
-                    <div className="flex items-center gap-2 rounded-xl bg-white border border-ink px-3 py-2">
+                    <span className="block font-body text-xs font-semibold text-ds-text-secondary mb-1">Horas al día</span>
+                    <div className="flex items-center gap-2 rounded-ds-input bg-white border border-ds-border px-3 py-2 focus-within:border-ds-orange-600 focus-within:ring-[3px] focus-within:ring-ds-orange-100 transition-all">
                       <input
                         type="text"
                         inputMode="decimal"
                         value={state.hours}
                         onChange={(e) => update(appliance.id, { hours: e.target.value })}
                         onFocus={(e) => e.target.select()}
-                        className="w-full bg-transparent outline-none font-display text-base"
+                        className="w-full bg-transparent outline-none font-display text-base text-ds-navy-900"
                       />
-                      <span className="font-mono text-xs text-ink-muted">h/día</span>
+                      <span className="font-body text-xs font-semibold text-ds-text-secondary">h/día</span>
                     </div>
                   </div>
-                  <p className="sm:col-span-3 text-xs text-ink-faint font-mono">
+                  <p className="sm:col-span-3 font-body text-xs text-ds-text-tertiary">
                     ≈ {itemKwh.toFixed(1)} kWh/mes
                   </p>
                 </div>
@@ -227,16 +227,17 @@ export function ApplianceConsumptionStep({
         })}
       </div>
 
-      <div className="mt-6 rounded-2xl px-5 py-4 bg-concrete border border-border flex items-center justify-between">
-        <span className="text-sm text-ink-muted">Consumo total</span>
-        <span className="font-display text-xl font-semibold">{totalKwh} kWh/mes</span>
+      <div className="mt-6 rounded-ds-card px-5 py-4 bg-ds-muted border border-ds-border flex items-center justify-between">
+        <span className="font-body text-sm text-ds-text-secondary">Consumo total</span>
+        <span className="font-display text-xl font-extrabold text-ds-navy-900">{totalKwh} kWh/mes</span>
       </div>
 
-      {error && <p className="mt-2 text-sm text-safety">{error}</p>}
+      {error && <p className="mt-2 font-body text-sm text-danger">{error}</p>}
 
       <button
         onClick={handleSubmit}
-        className="mt-6 rounded-full px-6 py-3 text-sm font-semibold text-white flex items-center gap-2 bg-action"
+        className="mt-6 rounded-xl px-6 font-body text-[15px] font-bold text-white flex items-center gap-2 bg-ds-orange-600 hover:bg-ds-orange-700 active:scale-[0.98] transition-all"
+        style={{ height: 48 }}
       >
         Siguiente
         <ArrowRight className="w-4 h-4" />

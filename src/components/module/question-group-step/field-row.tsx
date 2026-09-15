@@ -53,14 +53,14 @@ export function FieldRow({
   return (
     <div>
       <div className="flex items-center gap-3 mb-2">
-        <span className="w-8 h-8 rounded-full bg-concrete flex items-center justify-center flex-shrink-0 text-ink-muted">
+        <span className="w-8 h-8 rounded-full bg-ds-muted flex items-center justify-center flex-shrink-0 text-ds-text-secondary">
           {icon === "horizontal" ? <ArrowLeftRight className="w-4 h-4" /> : <ArrowUpDown className="w-4 h-4" />}
         </span>
         <div>
-          <label htmlFor={selectOptions ? undefined : fieldId} className="block font-semibold text-[15px] leading-tight">
+          <label htmlFor={selectOptions ? undefined : fieldId} className="block font-body font-bold text-[15px] text-ds-navy-900 leading-tight">
             {label}
           </label>
-          {subLabel && <p className="text-xs text-ink-muted leading-tight">{subLabel}</p>}
+          {subLabel && <p className="font-body text-xs text-ds-text-secondary leading-tight">{subLabel}</p>}
         </div>
       </div>
       {selectOptions ? (
@@ -74,8 +74,10 @@ export function FieldRow({
                 onFocus?.();
                 onChange(option.key);
               }}
-              className={`rounded-xl px-4 py-3 text-[15px] font-medium border-[1.5px] transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-action ${
-                value === option.key ? "border-safety bg-safety-tint text-ink" : "border-border bg-white text-ink-muted hover:border-ink"
+              className={`rounded-xl px-4 py-3 font-body text-[15px] font-semibold border-[1.5px] transition-all active:scale-[0.98] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ds-orange-600 ${
+                value === option.key
+                  ? "border-ds-orange-600 bg-ds-orange-100/40 text-ds-navy-900"
+                  : "border-ds-border bg-white text-ds-text-secondary hover:shadow-ds-card-elevated"
               }`}
             >
               {option.label}
@@ -83,7 +85,9 @@ export function FieldRow({
           ))}
         </div>
       ) : (
-        <div className="flex items-center gap-3 rounded-2xl bg-white border-[1.5px] border-ink px-4 py-3 focus-within:ring-2 focus-within:ring-action/70 focus-within:ring-offset-1">
+        // Design Spec v1.0, Parte 3, punto 9-10: radio ds-input, borde
+        // ds-border, focus orange-600 + halo orange-100, unidad visible.
+        <div className="flex items-center gap-3 rounded-ds-input bg-white border-[1.5px] border-ds-border px-4 py-3 focus-within:border-ds-orange-600 focus-within:ring-[3px] focus-within:ring-ds-orange-100 transition-all">
           <input
             id={fieldId}
             type="text"
@@ -98,12 +102,12 @@ export function FieldRow({
             }}
             onBlur={onBlur}
             placeholder="0"
-            className="w-full bg-transparent outline-none font-display text-xl placeholder:text-ink-faint"
+            className="w-full bg-transparent outline-none font-display text-xl text-ds-navy-900 placeholder:text-ds-text-tertiary"
           />
-          {unit && <span className="font-mono text-sm text-ink-muted">{unit}</span>}
+          {unit && <span className="font-body text-sm font-semibold text-ds-text-secondary">{unit}</span>}
         </div>
       )}
-      {rangeWarning && <p className="mt-2 text-sm text-amber-600">{rangeWarning}</p>}
+      {rangeWarning && <p className="mt-2 font-body text-sm text-amber-600">{rangeWarning}</p>}
     </div>
   );
 }

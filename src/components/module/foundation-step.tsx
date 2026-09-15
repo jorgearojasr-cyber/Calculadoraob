@@ -96,11 +96,13 @@ export function FoundationStep({
     onAnswer(result.parsed as Record<string, number>);
   };
 
+  // "Wide technical step" (Design Spec v1.0, Parte 3B, punto 3): geometría
+  // de 2 secciones + diagrama conservan su layout técnico de 2 columnas.
   return (
-    <div className="bg-white rounded-2xl border border-border shadow-sm p-5 md:p-8 grid md:grid-cols-[1fr_1.15fr] md:gap-10 md:items-start">
+    <div className="bg-white rounded-ds-card-lg border border-ds-border shadow-ds-card-rest p-5 md:p-8 grid md:grid-cols-[1fr_1.15fr] md:gap-10 md:items-start">
       <div className="order-1">
-        <h2 className="font-display text-xl md:text-2xl font-semibold tracking-tight mb-2">¿Qué medidas tiene la fundación?</h2>
-        <p className="text-sm text-ink-muted mb-5">
+        <h2 className="font-display text-xl md:text-2xl font-extrabold text-ds-navy-900 tracking-tight mb-2">¿Qué medidas tiene la fundación?</h2>
+        <p className="font-body text-sm text-ds-text-secondary mb-5">
           La fundación tiene 2 secciones: la base (más ancha, en el fondo) y el cuello (más angosto, hasta el nivel del terreno).
         </p>
 
@@ -116,7 +118,7 @@ export function FoundationStep({
             onFocus={() => setActiveKey(largoQ.key)}
             onBlur={() => setActiveKey((prev) => (prev === largoQ.key ? null : prev))}
           />
-          <p className="text-xs font-mono uppercase tracking-wider text-ink-faint -mb-1">Base</p>
+          <p className="font-body text-xs font-bold uppercase tracking-wider text-ds-text-tertiary -mb-1">Base</p>
           <div className="grid gap-3 md:grid-cols-2">
             <FieldRow
               icon="horizontal"
@@ -141,7 +143,7 @@ export function FoundationStep({
               onBlur={() => setActiveKey((prev) => (prev === altoBaseQ.key ? null : prev))}
             />
           </div>
-          <p className="text-xs font-mono uppercase tracking-wider text-ink-faint -mb-1">Cuello</p>
+          <p className="font-body text-xs font-bold uppercase tracking-wider text-ds-text-tertiary -mb-1">Cuello</p>
           <div className="grid gap-3 md:grid-cols-2">
             <FieldRow
               icon="horizontal"
@@ -168,27 +170,27 @@ export function FoundationStep({
           </div>
         </div>
 
-        <div className="mt-4 rounded-2xl bg-concrete px-5 py-4">
-          <p className="text-sm text-ink-muted">Volumen de hormigón</p>
-          <p className="font-display text-2xl font-semibold text-ink">{volume !== null ? `${formatQuantity(volume)} m³` : "—"}</p>
+        <div className="mt-4 rounded-ds-card bg-ds-muted px-5 py-4">
+          <p className="font-body text-sm text-ds-text-secondary">Volumen de hormigón</p>
+          <p className="font-display text-2xl font-extrabold text-ds-navy-900">{volume !== null ? `${formatQuantity(volume)} m³` : "—"}</p>
         </div>
 
         {tip && (
-          <div className="mt-4 flex items-start gap-2.5 rounded-xl px-4 py-3 bg-concrete md:hidden">
-            <Lightbulb className="w-4 h-4 text-ink-muted flex-shrink-0 mt-0.5" />
-            <p className="text-sm text-ink-muted">{tip}</p>
+          <div className="mt-4 flex items-start gap-2.5 rounded-xl px-4 py-3 bg-ds-orange-100/40 md:hidden">
+            <Lightbulb className="w-[18px] h-[18px] text-ds-orange-600 flex-shrink-0 mt-0.5" />
+            <p className="font-body text-[13px] text-ds-text-secondary">{tip}</p>
           </div>
         )}
 
-        {error && <p className="mt-4 text-sm text-safety">{error}</p>}
+        {error && <p className="mt-4 font-body text-sm text-danger">{error}</p>}
 
         <SubmitActions onSubmit={handleSubmit} onSaveForLater={onSaveForLater} />
       </div>
 
       <div className="order-2 mb-6 md:mb-0 rounded-2xl bg-[#F3F7FB] p-5 md:p-6">
         <div className="hidden md:block mb-4">
-          <p className="font-semibold text-sm">Así se ve con tus medidas</p>
-          <p className="text-sm text-ink-muted mt-1">Base y cuello son 2 secciones reales — el diagrama muestra ambas.</p>
+          <p className="font-body font-bold text-sm text-ds-navy-900">Así se ve con tus medidas</p>
+          <p className="font-body text-sm text-ds-text-secondary mt-1">Base y cuello son 2 secciones reales — el diagrama muestra ambas.</p>
         </div>
         <DiagramV2
           kind="steppedBox"
@@ -223,9 +225,9 @@ export function FoundationStep({
           }
         />
         {tip && (
-          <div className="hidden md:flex mt-4 items-start gap-2.5 rounded-xl px-4 py-3 bg-concrete">
-            <Lightbulb className="w-4 h-4 text-ink-muted flex-shrink-0 mt-0.5" />
-            <p className="text-sm text-ink-muted">{tip}</p>
+          <div className="hidden md:flex mt-4 items-start gap-2.5 rounded-xl px-4 py-3 bg-ds-orange-100/40">
+            <Lightbulb className="w-[18px] h-[18px] text-ds-orange-600 flex-shrink-0 mt-0.5" />
+            <p className="font-body text-[13px] text-ds-text-secondary">{tip}</p>
           </div>
         )}
       </div>

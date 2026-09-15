@@ -453,8 +453,15 @@ export function ModuleWizard({
         : { label: "Inicio", href: "/" }
       : { label: "Atrás", onClick: handleBack };
 
+  // Design Spec v1.0, Parte 3, punto 3 del pedido: en pasos de una sola
+  // columna (sin diagrama/resumen en vivo), el ancho baja de max-w-2xl
+  // (672px) a 600px — dentro del rango 560-640px pedido para ≥1024px, en
+  // vez de una grilla ancha. Los pasos "wide" (con diagrama o el panel
+  // "Tu proyecto" al lado, ver isWideStep más arriba) NO se tocan acá —
+  // esa es la composición aprobada de resultados/diagramas, fuera de
+  // alcance de esta fase (punto 19 del pedido).
   return (
-    <div className={`mx-auto px-6 pt-8 pb-20 ${isWideStep ? "max-w-4xl" : "max-w-2xl"}`}>
+    <div className={`mx-auto px-4 sm:px-6 pt-8 pb-20 ${isWideStep ? "max-w-4xl" : "max-w-[600px]"}`}>
       <WizardHeader
         moduleName={moduleName}
         step={!calculation ? { index: stepIndex, total: steps.length } : undefined}

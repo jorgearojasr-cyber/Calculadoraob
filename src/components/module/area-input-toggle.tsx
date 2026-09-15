@@ -116,13 +116,15 @@ export function AreaInputToggle({
 
   return (
     <div>
-      <div className="mb-4 inline-flex flex-wrap gap-1 rounded-full border border-border bg-white p-1">
+      {/* Design Spec v1.0 — Parte 3B, punto 9: toggle migrado a ds-navy-900/
+          blanco en el estado seleccionado (idle: ds-text-secondary). */}
+      <div className="mb-4 inline-flex flex-wrap gap-1 rounded-full border border-ds-border bg-white p-1">
         <button
           type="button"
           onClick={() => setMode("dims")}
           aria-pressed={mode === "dims"}
-          className={`rounded-full px-4 py-1.5 text-sm font-medium transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-action ${
-            mode === "dims" ? "bg-ink text-white" : "text-ink-muted hover:text-ink"
+          className={`rounded-full px-4 py-1.5 font-body text-sm font-semibold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ds-orange-600 ${
+            mode === "dims" ? "bg-ds-navy-900 text-white" : "text-ds-text-secondary hover:text-ds-navy-900"
           }`}
         >
           {primaryLabel} × {secondaryLabel}
@@ -131,8 +133,8 @@ export function AreaInputToggle({
           type="button"
           onClick={() => setMode("area")}
           aria-pressed={mode === "area"}
-          className={`rounded-full px-4 py-1.5 text-sm font-medium transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-action ${
-            mode === "area" ? "bg-ink text-white" : "text-ink-muted hover:text-ink"
+          className={`rounded-full px-4 py-1.5 font-body text-sm font-semibold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ds-orange-600 ${
+            mode === "area" ? "bg-ds-navy-900 text-white" : "text-ds-text-secondary hover:text-ds-navy-900"
           }`}
         >
           m² directo
@@ -141,8 +143,8 @@ export function AreaInputToggle({
           type="button"
           onClick={() => setMode("tramos")}
           aria-pressed={mode === "tramos"}
-          className={`rounded-full px-4 py-1.5 text-sm font-medium transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-action ${
-            mode === "tramos" ? "bg-ink text-white" : "text-ink-muted hover:text-ink"
+          className={`rounded-full px-4 py-1.5 font-body text-sm font-semibold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ds-orange-600 ${
+            mode === "tramos" ? "bg-ds-navy-900 text-white" : "text-ds-text-secondary hover:text-ds-navy-900"
           }`}
         >
           Área personalizada
@@ -150,7 +152,9 @@ export function AreaInputToggle({
       </div>
 
       {mode === "dims" && (
-        <div className="bg-white rounded-2xl border border-border shadow-sm p-5 md:p-8 grid md:grid-cols-[1fr_1.15fr] md:gap-10 md:items-center">
+        // "Wide technical step" (Design Spec v1.0, Parte 3B, punto 3): diagrama
+        // + inputs conservan su layout técnico de 2 columnas.
+        <div className="bg-white rounded-ds-card-lg border border-ds-border shadow-ds-card-rest p-5 md:p-8 grid md:grid-cols-[1fr_1.15fr] md:gap-10 md:items-center">
           <div className="order-2 mb-6 md:mb-0">
             <DiagramV2
               kind="rect2d"
@@ -167,12 +171,12 @@ export function AreaInputToggle({
                 usuario la eligió), pero las líneas NO representan piezas
                 reales — no hay tamaño de pieza conocido en estos módulos. */}
             {!tileSizeCm && orientationHint && (
-              <p className="mt-2 text-center text-xs text-ink-faint">
+              <p className="mt-2 text-center font-body text-xs text-ds-text-tertiary">
                 Representación esquemática de la orientación — no representa el tamaño real de las piezas.
               </p>
             )}
             {roofSlopeFactor && computedArea !== null && (
-              <p className="mt-2 text-center text-xs text-ink-muted">
+              <p className="mt-2 text-center font-body text-xs text-ds-text-secondary">
                 Superficie proyectada: {formatQuantity(computedArea)} m² · Superficie real del techo:{" "}
                 {formatQuantity(computedArea * roofSlopeFactor)} m²
               </p>
@@ -181,8 +185,8 @@ export function AreaInputToggle({
           <div className="order-1">
             <div className="grid gap-3 md:grid-cols-2">
               <label className="grid gap-1.5">
-                <span className="text-sm font-medium capitalize">{primaryLabel}</span>
-                <div className="flex items-center gap-3 rounded-2xl bg-white border-[1.5px] border-ink px-4 py-3 focus-within:ring-2 focus-within:ring-action/70 focus-within:ring-offset-1">
+                <span className="font-body text-sm font-semibold text-ds-text-secondary capitalize">{primaryLabel}</span>
+                <div className="flex items-center gap-3 rounded-ds-input bg-white border-[1.5px] border-ds-border px-4 py-3 focus-within:border-ds-orange-600 focus-within:ring-[3px] focus-within:ring-ds-orange-100 transition-all">
                   <input
                     type="text"
                     inputMode="decimal"
@@ -194,14 +198,14 @@ export function AreaInputToggle({
                     }}
                     onBlur={() => setActiveInput((prev) => (prev === "largo" ? null : prev))}
                     placeholder="0"
-                    className="w-full bg-transparent outline-none font-display text-xl placeholder:text-ink-faint"
+                    className="w-full bg-transparent outline-none font-display text-xl text-ds-navy-900 placeholder:text-ds-text-tertiary"
                   />
-                  <span className="font-mono text-sm text-ink-muted">{unit}</span>
+                  <span className="font-body text-sm font-semibold text-ds-text-secondary">{unit}</span>
                 </div>
               </label>
               <label className="grid gap-1.5">
-                <span className="text-sm font-medium capitalize">{secondaryLabel}</span>
-                <div className="flex items-center gap-3 rounded-2xl bg-white border-[1.5px] border-ink px-4 py-3 focus-within:ring-2 focus-within:ring-action/70 focus-within:ring-offset-1">
+                <span className="font-body text-sm font-semibold text-ds-text-secondary capitalize">{secondaryLabel}</span>
+                <div className="flex items-center gap-3 rounded-ds-input bg-white border-[1.5px] border-ds-border px-4 py-3 focus-within:border-ds-orange-600 focus-within:ring-[3px] focus-within:ring-ds-orange-100 transition-all">
                   <input
                     type="text"
                     inputMode="decimal"
@@ -213,9 +217,9 @@ export function AreaInputToggle({
                     }}
                     onBlur={() => setActiveInput((prev) => (prev === "ancho" ? null : prev))}
                     placeholder="0"
-                    className="w-full bg-transparent outline-none font-display text-xl placeholder:text-ink-faint"
+                    className="w-full bg-transparent outline-none font-display text-xl text-ds-navy-900 placeholder:text-ds-text-tertiary"
                   />
-                  <span className="font-mono text-sm text-ink-muted">{unit}</span>
+                  <span className="font-body text-sm font-semibold text-ds-text-secondary">{unit}</span>
                 </div>
               </label>
             </div>
@@ -223,9 +227,9 @@ export function AreaInputToggle({
             {/* Caja de superficie siempre visible, igual al patrón de los
                 módulos migrados a pregunta combinada (ver COMBINED_AREA_QUESTION
                 en question-group-step.tsx). */}
-            <div className="mt-4 rounded-2xl bg-concrete px-5 py-4 text-center">
-              <p className="text-sm text-ink-muted">Superficie</p>
-              <p className="font-display text-2xl font-semibold text-ink">
+            <div className="mt-4 rounded-ds-card bg-ds-muted px-5 py-4 text-center">
+              <p className="font-body text-sm text-ds-text-secondary">Superficie</p>
+              <p className="font-display text-2xl font-extrabold text-ds-navy-900">
                 {computedArea !== null ? `${formatQuantity(computedArea)} m²` : "—"}
               </p>
             </div>
@@ -235,8 +239,8 @@ export function AreaInputToggle({
 
       {mode === "area" && (
         <label className="grid gap-1.5">
-          <span className="text-sm font-medium">Superficie</span>
-          <div className="flex items-center gap-3 rounded-2xl bg-white border-[1.5px] border-ink px-5 py-4 focus-within:ring-2 focus-within:ring-action/70 focus-within:ring-offset-1">
+          <span className="font-body text-sm font-semibold text-ds-text-secondary">Superficie</span>
+          <div className="flex items-center gap-3 rounded-ds-input bg-white border-[1.5px] border-ds-border px-5 py-4 focus-within:border-ds-orange-600 focus-within:ring-[3px] focus-within:ring-ds-orange-100 transition-all">
             <input
               type="text"
               inputMode="decimal"
@@ -245,9 +249,9 @@ export function AreaInputToggle({
               onChange={(e) => setArea(e.target.value)}
               onFocus={(e) => e.target.select()}
               placeholder="0"
-              className="w-full bg-transparent outline-none font-display text-2xl placeholder:text-ink-faint"
+              className="w-full bg-transparent outline-none font-display text-2xl text-ds-navy-900 placeholder:text-ds-text-tertiary"
             />
-            <span className="font-mono text-sm text-ink-muted">m²</span>
+            <span className="font-body text-sm font-semibold text-ds-text-secondary">m²</span>
           </div>
         </label>
       )}
@@ -259,7 +263,7 @@ export function AreaInputToggle({
             <TramosInput tramos={tramos} onChange={setTramos} />
           </div>
           {tramosError && (
-            <p className="mt-3 text-sm text-safety">{tramosError}</p>
+            <p className="mt-3 font-body text-sm text-danger">{tramosError}</p>
           )}
         </div>
       )}
