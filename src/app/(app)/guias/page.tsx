@@ -5,8 +5,16 @@ import { prisma } from "@/lib/prisma";
 // Índice de las guías prácticas ya redactadas (ModuleGuide) — navegable sin
 // pasar por el asistente de cálculo. Solo lista módulos que realmente
 // tienen guía, no todo el catálogo.
+//
+// Saneamiento (2026-09-14, auditoría de producto): antes no filtraba
+// `published` — un módulo con `published:false` (ej. "piscina-integral",
+// todavía en revisión) igual mostraba su guía completa (herramientas, paso
+// a paso, seguridad, FAQ) a cualquier visitante sin login, aunque la
+// calculadora en sí siguiera oculta. `where: { module: { published: true } }`
+// cierra esa fuga sin tocar el modelo ModuleGuide ni su contenido.
 export default async function GuiasPage() {
   const guides = await prisma.moduleGuide.findMany({
+    where: { module: { published: true } },
     include: { module: { include: { category: true } } },
     orderBy: { module: { name: "asc" } },
   });

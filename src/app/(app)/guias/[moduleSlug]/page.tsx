@@ -10,7 +10,12 @@ export default async function GuiaDetailPage({ params }: { params: { moduleSlug:
     include: { guide: true, category: true },
   });
 
-  if (!mod || !mod.guide) notFound();
+  // Saneamiento (2026-09-14): mismo gate que el índice (/guias) — un
+  // módulo con `published:false` no debe exponer su guía completa por URL
+  // directa aunque no aparezca en el listado. `mod.published` se agrega a
+  // la condición existente, sin cambiar el resto del comportamiento (un
+  // slug inexistente o sin guía sigue devolviendo 404 igual que antes).
+  if (!mod || !mod.guide || !mod.published) notFound();
 
   const guide: ModuleGuideData = {
     summary: mod.guide.summary,
