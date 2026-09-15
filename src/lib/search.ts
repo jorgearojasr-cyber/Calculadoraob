@@ -2,18 +2,76 @@ import { prisma } from "@/lib/prisma";
 import { TASK_IMAGES } from "@/lib/popular-tasks";
 
 export type SearchResult = {
-  type: "module" | "category" | "task";
+  type: "module" | "category" | "task" | "feature";
   id: string;
   name: string;
   description: string;
   href: string;
   categoryName: string;
   // Solo poblado para "module"/"task" (tarjetas de proyecto/calculadora,
-  // ver ProjectCard) — "category" no representa un cálculo, no tiene
-  // imagen ni cantidad de pasos.
+  // ver ProjectCard) — "category"/"feature" no representan un cálculo, no
+  // tienen imagen ni cantidad de pasos.
   imageUrl: string | null;
   stepCount: number | null;
 };
+
+// Saneamiento de navegación (2026-09-14, auditoría de producto) — features
+// standalone que NO son Module/Category/ProjectGroup/ProjectTask (Inspecciones,
+// Regularización, Guías, Biblioteca) eran invisibles para el buscador: cada
+// una vive en su propia tabla (InspectionCase, RegularizationCase, ModuleGuide,
+// ProjectShowcase), sin fila equivalente en ninguna de las 4 fuentes que
+// searchContent ya consultaba. Se listan acá a mano (no hay "N filas" que
+// traer de la BD, son 4 secciones fijas del producto) con palabras clave en
+// lenguaje natural simple (pedido explícito: "inspección" y "recibir casa"
+// deben encontrar Inspecciones igual que "inspeccionar"). Reutilizan el
+// mismo scoreMatch (frase + tokens) que ya usan Module/Category — ningún
+// mecanismo de búsqueda nuevo.
+type FeatureEntry = {
+  id: string;
+  name: string;
+  description: string;
+  href: string;
+  categoryName: string;
+  keywords: string;
+};
+
+const FEATURES: FeatureEntry[] = [
+  {
+    id: "feature-inspecciones",
+    name: "Inspecciones",
+    description:
+      "Revisa tu obra o la casa que vas a recibir con una checklist guiada, antes de la recepción o entrega.",
+    href: "/inspecciones",
+    categoryName: "Revisa tu obra",
+    keywords:
+      "inspeccion inspecciones inspeccionar revisar revision obra recibir casa recepcion vivienda revisar ampliacion checklist",
+  },
+  {
+    id: "feature-regularizacion",
+    name: "Regularización",
+    description: "Regulariza tu vivienda o ampliación construida sin permiso, según la Ley N.º 20.898 (Ley del Mono).",
+    href: "/regularizacion",
+    categoryName: "Regulariza",
+    keywords:
+      "regularizar regularizacion ley del mono ampliar sin permiso permiso de edificacion vivienda dgoc municipalidad",
+  },
+  {
+    id: "feature-guias",
+    name: "Guías y consejos",
+    description: "Consejos prácticos, errores comunes y experiencia de obra para proyectos que ya tienen guía completa.",
+    href: "/guias",
+    categoryName: "Aprende",
+    keywords: "guia guias aprender consejos como construir tips recomendaciones",
+  },
+  {
+    id: "feature-galeria",
+    name: "Biblioteca",
+    description: "Proyectos terminados por otros usuarios, como ejemplo e inspiración para el tuyo.",
+    href: "/galeria",
+    categoryName: "Aprende",
+    keywords: "biblioteca proyectos ejemplos fotos terminados inspiracion",
+  },
+];
 
 // Minúsculas + sin tildes/diacríticos, para tolerar variaciones de acentos
 // (ej. "pintura" encuentra "Pintura" aunque el usuario no tipee la tilde,
@@ -126,7 +184,21 @@ export async function searchContent(rawQuery: string): Promise<SearchResult[]> {
       },
     }),
     prisma.category.findMany({
-      select: { id: true, slug: true, name: true, description: true },
+      // Saneamiento (2026-09-14): antes traía TODAS las categorías, sin
+      // importar si tenían algún módulo publicado — una categoría vacía
+      // (ej. "Quinchos", 0 módulos; o "Fierros", con módulos pero los 4 sin
+      // publicar) aparecía como resultado de búsqueda igual que cualquier
+      // otra, y llevaba a /categorias/[slug] mostrando "Todavía no hay
+      // calculadoras publicadas". Mismo criterio y misma causa raíz que el
+      // fix de exploration-section.tsx (Home) — se corrige acá también
+      // porque es una fuente de datos independiente, no la misma consulta.
+      select: {
+        id: true,
+        slug: true,
+        name: true,
+        description: true,
+        modules: { where: { published: true }, select: { id: true }, take: 1 },
+      },
     }),
     prisma.projectGroup.findMany({
       where: { tasks: { some: {} } },
@@ -229,6 +301,10 @@ export async function searchContent(rawQuery: string): Promise<SearchResult[]> {
   }
 
   for (const category of categories) {
+    // Sin módulos publicados: no se ofrece como resultado (ver comentario
+    // en la query de arriba) — la categoría sigue existiendo en BD, solo
+    // no se anuncia como destino navegable mientras esté vacía.
+    if (category.modules.length === 0) continue;
     const score = scoreMatch(query, category.name, category.description);
     if (score === null) continue;
     const matchingGroupSlug = groupSlugByName.get(normalize(category.name));
@@ -241,6 +317,24 @@ export async function searchContent(rawQuery: string): Promise<SearchResult[]> {
         description: category.description,
         href: matchingGroupSlug ? `/grupos/${matchingGroupSlug}` : `/categorias/${category.slug}`,
         categoryName: category.name,
+        imageUrl: null,
+        stepCount: null,
+      },
+    });
+  }
+
+  for (const feature of FEATURES) {
+    const score = scoreMatch(query, feature.name, feature.description, feature.keywords);
+    if (score === null) continue;
+    scored.push({
+      score,
+      result: {
+        type: "feature",
+        id: feature.id,
+        name: feature.name,
+        description: feature.description,
+        href: feature.href,
+        categoryName: feature.categoryName,
         imageUrl: null,
         stepCount: null,
       },

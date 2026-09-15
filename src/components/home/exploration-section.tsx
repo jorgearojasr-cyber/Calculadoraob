@@ -20,14 +20,32 @@ export async function ExplorationSection() {
       orderBy: { order: "asc" },
       include: { tasks: { orderBy: { order: "asc" } } },
     }),
-    prisma.category.findMany({ orderBy: { order: "asc" } }),
+    prisma.category.findMany({
+      orderBy: { order: "asc" },
+      // Saneamiento (2026-09-14, auditoría de producto): antes traía TODAS
+      // las categorías sin importar si tenían algún módulo publicado — una
+      // categoría vacía (ej. "Quinchos", 0 módulos; o "Fierros", con
+      // módulos pero los 4 sin publicar) aparecía en "Por material" como
+      // una tarjeta normal, y llevaba a un callejón sin salida ("Todavía
+      // no hay calculadoras publicadas en esta categoría"). No se borra
+      // ninguna categoría de la BD — solo se deja de anunciar como
+      // navegable mientras esté vacía (ver filtro justo debajo).
+      include: { modules: { where: { published: true }, select: { id: true }, take: 1 } },
+    }),
   ]);
 
-  if (groups.length === 0 && categories.length === 0) return null;
+  // Filtro aplicado acá (no en la query, que ya trajo el `include` solo
+  // para decidir esto) — el resultado sigue siendo estructuralmente un
+  // `Category[]` para ExplorationToggle/CategoryGrid (el campo `modules`
+  // de más no rompe esa asignación, TypeScript no hace excess-property
+  // checking sobre una variable filtrada, solo sobre un literal).
+  const categoriesWithContent = categories.filter((category) => category.modules.length > 0);
+
+  if (groups.length === 0 && categoriesWithContent.length === 0) return null;
 
   return (
     <Suspense fallback={null}>
-      <ExplorationToggle groups={groups} categories={categories} />
+      <ExplorationToggle groups={groups} categories={categoriesWithContent} />
     </Suspense>
   );
 }

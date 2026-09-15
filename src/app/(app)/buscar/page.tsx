@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { ArrowLeft, LayoutGrid, SearchX } from "lucide-react";
+import { ArrowLeft, Compass, LayoutGrid, SearchX } from "lucide-react";
 import { searchContent } from "@/lib/search";
 import { ProjectCard } from "@/components/project-card";
 
@@ -60,6 +60,23 @@ export default async function BuscarPage({
                   <div className="flex items-center gap-1.5 text-xs font-medium mb-1.5 text-safety">
                     <LayoutGrid className="w-3.5 h-3.5" />
                     Categoría
+                  </div>
+                  <h3 className="font-semibold text-[15px] mb-1">{result.name}</h3>
+                  <p className="text-xs text-ink-muted">{result.description}</p>
+                </Link>
+              ) : result.type === "feature" ? (
+                // Saneamiento (2026-09-14): Inspecciones/Regularización/Guías/
+                // Biblioteca — mismo tratamiento visual que "category" (no
+                // representan un cálculo, sin imagen ni pasos), con su propia
+                // etiqueta para no confundirlas con una categoría de materiales.
+                <Link
+                  key={`${result.type}-${result.id}`}
+                  href={result.href}
+                  className="group relative text-left rounded-2xl p-5 transition-all hover:-translate-y-0.5 bg-white border border-border hover:border-safety/40"
+                >
+                  <div className="flex items-center gap-1.5 text-xs font-medium mb-1.5 text-safety">
+                    <Compass className="w-3.5 h-3.5" />
+                    {result.categoryName}
                   </div>
                   <h3 className="font-semibold text-[15px] mb-1">{result.name}</h3>
                   <p className="text-xs text-ink-muted">{result.description}</p>
