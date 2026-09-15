@@ -79,8 +79,8 @@ describe("product-features — registro real", () => {
     }
   });
 
-  it("getHomeFeatures no revienta sin consumidor todavía (hoy ninguna feature tiene showInHome:true)", () => {
-    expect(getHomeFeatures()).toEqual([]);
+  it("getHomeFeatures devuelve guias/inspecciones/regularizacion ordenadas, consumidas por la grilla del Home (Home ObraBien V2)", () => {
+    expect(getHomeFeatures().map((f) => f.id)).toEqual(["guias", "inspecciones", "regularizacion"]);
   });
 });
 

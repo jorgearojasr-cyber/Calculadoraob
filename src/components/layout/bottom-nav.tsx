@@ -3,60 +3,47 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Compass, FolderKanban, ShoppingCart, Images, User, LogIn, ClipboardCheck } from "lucide-react";
+import { Home, Wrench, FolderKanban, ShoppingCart, Images, User, LogIn, ClipboardCheck } from "lucide-react";
 import { SignOutButton } from "@/components/auth/sign-out-button";
 import { AssistantWidget, type AssistantGroup } from "@/components/assistant/assistant-widget";
 
 type NavUser = { name: string | null; email: string | null } | null;
 
 // DOCUMENTACIÓN — Cimientos de arquitectura (2026-09-14, punto 6 del
-// pedido): esta fase NO aplica todavía la nueva BottomNav visual del mockup
-// (Inicio / Herramientas / [+] / Profesionales / Perfil) — se deja
-// documentado acá qué hay hoy y qué debería migrar en la futura fase
-// visual, sin tocar la estructura ni el comportamiento actual.
+// pedido) + Home ObraBien V2 (2026-09-14, punto 14 del pedido).
 //
-// Estructura actual (5 slots, ninguno viene del registro central):
+// Estructura (5 slots, ninguno viene del registro central):
 //   1. "Inicio" (/) — navegación estructural, no una feature.
-//   2. "Proyectos" (/#empezar) — pese al label, es el mismo ancla al
-//      selector "por proyecto/material" del Home que "Calculadoras" en
-//      TopNav/drawer — no es "Mis proyectos" (eso es el slot 4). Nombre
-//      confuso heredado, fuera de alcance de esta fase (sería un cambio
-//      visual/de copy, no de arquitectura).
+//   2. "Herramientas" (/#empezar) — MISMO ancla y comportamiento que el
+//      slot 2 tenía antes bajo el label "Proyectos" (investigado antes de
+//      tocarlo, punto 14 del pedido: es el ancla al selector "por
+//      proyecto/material" del Home, idéntico a "Calculadoras" en
+//      TopNav/drawer). Se renombra únicamente el label — el label
+//      "Proyectos" era confuso porque el slot 4 ya se llama "Mis
+//      proyectos" y lleva a algo distinto (SavedProject); no se cambia el
+//      href ni se rompe ningún comportamiento existente.
 //   3. FAB central — AssistantWidget ("Preguntar ahora"), no es un link.
-//   4. "Mis proyectos" (/proyectos) — SavedProject, requiere sesión
-//      (protegido por middleware.ts, no por esta UI).
+//      Comportamiento intacto (fuera de alcance del punto 14 — no se
+//      reubica ni se convierte en "Nuevo proyecto" en esta fase).
+//   4. "Proyectos" (/proyectos) — SavedProject, requiere sesión
+//      (protegido por middleware.ts, no por esta UI). Antes decía "Mis
+//      proyectos"; se acorta a "Proyectos" para acercarse a la
+//      composición objetivo del mockup (Inicio/Herramientas/+/Proyectos/
+//      Perfil, punto 14 del pedido) sin cambiar destino ni protección.
 //   5. "Perfil" — abre un popover propio (no una ruta) con: Lista de
 //      compras, Galería de proyectos, Inspecciones (solo si `user` existe)
-//      o "Ingresar" (si no hay sesión).
+//      o "Ingresar" (si no hay sesión). Sin cambios en esta fase.
 //
-// Mapeo hacia la futura BottomNav (Inicio / Herramientas / Nuevo proyecto /
-// Profesionales / Perfil), a evaluar en la fase visual:
-//   - "Inicio" se mantiene igual.
-//   - "Herramientas" reemplazaría al slot 2 actual ("Proyectos") — probable
-//     candidato para mostrar ahí Calculadoras + las features del registro
-//     (getMenuFeatures(), ya usado por TopNav/drawer) en vez de un solo
-//     ancla al Home.
-//   - El FAB central probablemente se conserva o se reubica como "Nuevo
-//     proyecto" — a decidir en esa fase, no acá.
-//   - "Profesionales" es un slot NUEVO sin funcionalidad real todavía (área
-//     `profesionales` en product-features.ts, `status:"planned"` — ver
-//     PLANNED_FEATURES) — NO se agrega ningún link ni placeholder público
-//     en esta fase, tal como pide el punto 6 del pedido.
-//   - "Perfil" — el popover actual (Lista de compras/Galería/Inspecciones/
-//     sesión) tendría que revisarse: Inspecciones y Galería ya son
-//     features del registro central (mostradas también en TopNav/drawer),
-//     así que este popover hoy duplica esos 2 links como "acceso
-//     adicional para logueados" — decisión ya tomada explícitamente en el
-//     fix de navegación mobile anterior (no se quita de acá, es
-//     intencional). Lista de compras NO se migró al registro en esta fase
-//     (ver product-feature-registry.md, sección "qué se evaluó y no se
-//     migró") — sigue siendo exclusiva de este popover.
+// "Profesionales" NO se agrega como slot nuevo — sigue sin funcionalidad
+// real (área `profesionales` en product-features.ts, `status:"planned"`,
+// ver PLANNED_FEATURES); el punto 14 pide explícitamente no crear accesos
+// inexistentes. La reorganización de "Proyectos" cuando Profesionales
+// exista de verdad queda para una fase futura, tal como anticipaba la
+// documentación anterior.
 //
-// No se crearon tipos/helpers nuevos para BottomNav en esta fase — el
-// pedido los pide "solo si son realmente necesarios", y no hay ningún
-// dato repetido en otro lado que migrar todavía (a diferencia de
-// TopNav/MobileTopBar, que sí compartían Guías/Inspecciones/Biblioteca
-// entre sí antes de esta fase).
+// Lista de compras sigue sin migrar al registro central (ver
+// product-feature-registry.md, "qué se evaluó y no se migró") — exclusiva
+// del popover de Perfil, sin cambios acá.
 export function BottomNav({ user, assistantGroups }: { user: NavUser; assistantGroups: AssistantGroup[] }) {
   const pathname = usePathname();
   const [profileOpen, setProfileOpen] = useState(false);
@@ -126,8 +113,8 @@ export function BottomNav({ user, assistantGroups }: { user: NavUser; assistantG
           Inicio
         </Link>
         <Link href="/#empezar" className={itemClass(false)}>
-          <Compass className="w-5 h-5" />
-          Proyectos
+          <Wrench className="w-5 h-5" />
+          Herramientas
         </Link>
 
         <div className="flex-1 flex items-center justify-center">
@@ -136,7 +123,7 @@ export function BottomNav({ user, assistantGroups }: { user: NavUser; assistantG
 
         <Link href="/proyectos" className={itemClass(pathname.startsWith("/proyectos"))}>
           <FolderKanban className="w-5 h-5" />
-          Mis proyectos
+          Proyectos
         </Link>
         <button onClick={() => setProfileOpen((v) => !v)} className={itemClass(profileOpen)}>
           <User className="w-5 h-5" />

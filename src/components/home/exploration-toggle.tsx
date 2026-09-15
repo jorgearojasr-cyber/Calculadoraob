@@ -6,7 +6,6 @@ import type { Category, ProjectGroup, ProjectTask } from "@/generated/prisma/cli
 import { GroupCard } from "./group-card";
 import { GroupChip } from "./group-chip";
 import { CategoryGrid } from "./category-grid";
-import { RegularizationFeaturedCard } from "./regularization-featured-card";
 
 type Group = ProjectGroup & { tasks: ProjectTask[] };
 
@@ -19,6 +18,15 @@ type Group = ProjectGroup & { tasks: ProjectTask[] };
 // "Proyectos más buscados" se mudó al carrusel dentro del Hero
 // (rediseño de Home 2026-08-05, ver PopularTasksCarousel) — ya no vive
 // acá, así que este componente dejó de recibir/mostrar popularTasks.
+//
+// Home ObraBien V2 (2026-09-14, cierre QA): ya no renderiza
+// <RegularizationFeaturedCard /> al final — Regularización pasó a tener su
+// propia tarjeta principal en la grilla "¿Qué quieres hacer?" (ver
+// quick-actions-grid.tsx), y mantener ambas duplicaba la misma entrada en
+// el Home. El componente RegularizationFeaturedCard NO se borró del
+// repositorio (regularization-featured-card.tsx sigue intacto, sin
+// consumidores hoy) por si una fase futura lo necesita en otro lugar; solo
+// se quitó este único call site. No se tocó /regularizacion ni su auth.
 export function ExplorationToggle({
   groups,
   categories,
@@ -91,10 +99,6 @@ export function ExplorationToggle({
           <CategoryGrid categories={categories} />
         </div>
       )}
-
-      <div className="mt-3 sm:mt-[14px]">
-        <RegularizationFeaturedCard />
-      </div>
     </section>
   );
 }

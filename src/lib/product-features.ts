@@ -199,7 +199,10 @@ export const PRODUCT_FEATURES: FeatureEntry[] = [
     requiresAuth: false,
     showInSearch: true,
     showInMenu: true,
-    showInHome: false,
+    // Home ObraBien V2 (2026-09-14): Guías pasa a tener tarjeta propia en la
+    // grilla "¿Qué quieres hacer?" (tarjeta "Aprender") — ver
+    // getHomeFeatures() en quick-actions-grid.tsx.
+    showInHome: true,
     order: 10,
   },
   {
@@ -216,7 +219,9 @@ export const PRODUCT_FEATURES: FeatureEntry[] = [
     requiresAuth: true,
     showInSearch: true,
     showInMenu: true,
-    showInHome: false,
+    // Home ObraBien V2 (2026-09-14): tarjeta "Revisar tu obra" en la grilla
+    // principal del Home — ver quick-actions-grid.tsx.
+    showInHome: true,
     order: 20,
   },
   {
@@ -236,7 +241,12 @@ export const PRODUCT_FEATURES: FeatureEntry[] = [
     // destacada en Home) — se preserva ese comportamiento exacto acá, no
     // se agrega al menú como efecto colateral de migrar al registry.
     showInMenu: false,
-    showInHome: false,
+    // Home ObraBien V2 (2026-09-14, punto 4 del pedido): Regularización
+    // pasa a tener tarjeta propia en la grilla principal del Home
+    // ("Regularizar") — se activa showInHome (la solución coherente que
+    // pedía el punto 4), SIN forzar showInMenu:true (se mantiene la
+    // decisión de producto previa de no ponerla en TopNav/drawer).
+    showInHome: true,
     order: 30,
   },
   {
