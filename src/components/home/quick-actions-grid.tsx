@@ -1,6 +1,6 @@
-import Link from "next/link";
 import { Calculator, Map as MapIcon, ClipboardCheck, ShieldCheck, BookOpen, FolderKanban, type LucideIcon } from "lucide-react";
 import { getHomeFeatures } from "@/lib/product-features";
+import { ActionCard } from "@/components/ui/action-card";
 
 type QuickAction = {
   id: string;
@@ -29,6 +29,14 @@ type QuickAction = {
 // central) — Regularización activó showInHome:true en esta fase (sin
 // tocar showInMenu, que sigue en false) precisamente para poder aparecer
 // acá sin duplicar su definición.
+//
+// Design Spec v1.0 (2026-09-15, punto 11 del pedido) — copy actualizado al
+// texto exacto del Spec para Revisar/Regularizar/Mis proyectos. Planificar
+// mantiene la descripción ya validada en la fase anterior ("Pasos y etapas
+// de tu proyecto") en vez del copy sugerido en el Spec ("Presupuesto y
+// tiempos") — el propio punto 11 permite explícitamente esa excepción: "o
+// el copy exacto aprobado/real si la implementación actual ya usa la
+// variante validada".
 const STRUCTURAL_ACTIONS: Record<"calcular" | "planificar" | "mis-proyectos", QuickAction> = {
   calcular: {
     id: "calcular",
@@ -47,7 +55,7 @@ const STRUCTURAL_ACTIONS: Record<"calcular" | "planificar" | "mis-proyectos", Qu
   "mis-proyectos": {
     id: "mis-proyectos",
     label: "Mis proyectos",
-    description: "Todo en un solo lugar",
+    description: "Todo en un lugar",
     // Ruta ya protegida por middleware.ts (matcher /proyectos) — sin
     // sesión, redirige a /login como hoy. No se agrega ninguna
     // verificación nueva acá.
@@ -61,8 +69,8 @@ const STRUCTURAL_ACTIONS: Record<"calcular" | "planificar" | "mis-proyectos", Qu
 // el buscador (una oración completa), no para una tarjeta de 2-3
 // palabras como pide el punto 6 del pedido ("microdescripción").
 const HOME_FEATURE_CARD_COPY: Record<string, { label: string; description: string; icon: LucideIcon }> = {
-  inspecciones: { label: "Revisar tu obra", description: "Inspecciones y checklist", icon: ClipboardCheck },
-  regularizacion: { label: "Regularizar", description: "Ley del Mono y trámites", icon: ShieldCheck },
+  inspecciones: { label: "Revisar tu obra", description: "Inspecciones", icon: ClipboardCheck },
+  regularizacion: { label: "Regularizar", description: "Ley del Mono", icon: ShieldCheck },
   guias: { label: "Aprender", description: "Guías y consejos", icon: BookOpen },
 };
 
@@ -78,8 +86,8 @@ export function QuickActionsGrid() {
 
   const byId = new Map(featureActions.map((a) => [a.id, a]));
 
-  // Orden fijo pedido por el punto 4 (no es el `order` del registro, que
-  // gobierna el menú — el orden visual de la grilla del Home es una
+  // Orden fijo pedido por el punto 4/11 (no es el `order` del registro,
+  // que gobierna el menú — el orden visual de la grilla del Home es una
   // decisión de producto propia de esta fase).
   const actions: QuickAction[] = [
     STRUCTURAL_ACTIONS.calcular,
@@ -91,26 +99,20 @@ export function QuickActionsGrid() {
   ].filter((a): a is QuickAction => Boolean(a));
 
   return (
-    <section className="max-w-3xl mx-auto px-4 sm:px-10 pb-6 sm:pb-10">
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4">
-        {actions.map((action) => {
-          const Icon = action.icon;
-          return (
-            <Link
-              key={action.id}
-              href={action.href}
-              className="flex flex-col gap-2.5 rounded-2xl p-4 sm:p-5 bg-white border border-[#E4E8EF] hover:border-[#002152]/30 transition-colors min-h-[132px]"
-            >
-              <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-navy/[0.07]">
-                <Icon className="w-5 h-5 text-navy" />
-              </div>
-              <div>
-                <h3 className="font-semibold text-[15px] text-[#10203A] leading-tight">{action.label}</h3>
-                <p className="text-xs text-[#5B6577] mt-0.5">{action.description}</p>
-              </div>
-            </Link>
-          );
-        })}
+    <section className="max-w-3xl lg:max-w-6xl mx-auto px-4 sm:px-10 pb-6 sm:pb-10">
+      <p className="font-body font-bold text-[12px] uppercase mb-2.5 sm:mb-3 text-ds-text-tertiary" style={{ letterSpacing: "0.08em" }}>
+        Todo en un solo lugar
+      </p>
+      {/* Design Spec v1.0, punto 11: 1×6 en desktop — se habilita en `lg`
+          porque el contenedor de esta sección pasa a max-w-6xl desde ese
+          breakpoint (ver más abajo), dando a cada ActionCard ~180px de
+          ancho, suficiente para mantener el min-height/padding del Spec
+          sin perder legibilidad. Entre `sm` y `lg` (contenedor angosto
+          todavía) se mantiene 3 columnas × 2 filas. */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+        {actions.map((action) => (
+          <ActionCard key={action.id} href={action.href} label={action.label} description={action.description} icon={action.icon} />
+        ))}
       </div>
     </section>
   );

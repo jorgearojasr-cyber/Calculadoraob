@@ -52,11 +52,17 @@ export function AssistantWidget({
 
   return (
     <>
+      {/* Design Spec v1.0 (2026-09-15, punto 8 del pedido): FAB 52px,
+          elevado -28px sobre la barra, sombra naranja ~40% (ds-fab). El
+          aro (`border-concrete`) sigue en el tono claro del fondo de la
+          barra (ahora bg-white, ver bottom-nav.tsx) — se mantiene el
+          mismo mecanismo (aro + -mt) para variant="fab", fab-desktop no
+          lleva el offset. */}
       <button
         onClick={() => setOpen(true)}
         aria-label="Preguntar ahora"
-        className={`w-12 h-12 rounded-full bg-action text-white flex items-center justify-center shadow-lg border-4 border-concrete ${
-          variant === "fab" ? "-mt-6" : ""
+        className={`w-[52px] h-[52px] rounded-full bg-ds-orange-600 text-white flex items-center justify-center shadow-ds-fab border-4 border-white ${
+          variant === "fab" ? "-mt-[28px]" : ""
         }`}
       >
         <Plus className="w-6 h-6" />

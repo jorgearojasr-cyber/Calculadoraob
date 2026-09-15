@@ -33,8 +33,11 @@ export async function AppShell({ children }: { children: React.ReactNode }) {
       <MobileTopBar user={user} />
       <BottomNav user={user} assistantGroups={assistantGroups} />
       {/* Sin sidebar que anclar, el widget de ayuda flota fijo en desktop —
-          mismo componente que el FAB mobile, solo reposicionado. */}
-      <div className="hidden md:block fixed bottom-6 right-6 z-30">
+          mismo componente que el FAB mobile, solo reposicionado. Design
+          Spec v1.0 (2026-09-15, punto 16): quiebre a `lg` (no `md`) para no
+          duplicar el FAB junto al de BottomNav en tablet (768-1024), que
+          ahora sigue mostrando la navegación mobile. */}
+      <div className="hidden lg:block fixed bottom-6 right-6 z-30">
         <AssistantWidget groups={assistantGroups} variant="fab-desktop" />
       </div>
       <MainContent>{children}</MainContent>

@@ -26,7 +26,7 @@ export function GroupChip({
   return (
     <Link
       href={`/grupos/${slug}`}
-      className="inline-flex items-center gap-1.5 flex-shrink-0 rounded-full pl-3 pr-3.5 py-2 text-sm font-medium bg-white border border-border text-ink-muted hover:border-safety/40 hover:text-ink transition-colors"
+      className="inline-flex items-center gap-1.5 flex-shrink-0 rounded-full pl-3 pr-3.5 py-2 font-body text-[13px] font-semibold bg-white border border-ds-border text-ds-text-secondary hover:border-ds-orange-600/40 hover:text-ds-navy-900 transition-colors"
     >
       <Icon className="w-4 h-4" />
       {name}

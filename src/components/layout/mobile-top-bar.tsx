@@ -46,13 +46,19 @@ export function MobileTopBar({ user }: { user: NavUser }) {
 
   return (
     <>
-      <header className="md:hidden fixed inset-x-0 top-0 h-14 z-30 flex items-center justify-between bg-white border-b border-border px-4">
+      {/* Design Spec v1.0, punto 7: altura 56px, padding lateral 16px,
+          íconos 20px, borde inferior 1px, SIN sombra (se retira la sombra
+          agregada en el polish visual anterior). Punto 16: quiebre a `lg`
+          (1024px) en vez de `md` (768px) — ver nota extensa en
+          top-nav.tsx sobre por qué es un cambio acotado a estos 3
+          componentes de navegación, no al breakpoint `md` global. */}
+      <header className="lg:hidden fixed inset-x-0 top-0 h-14 z-30 flex items-center justify-between bg-white border-b border-ds-border px-4">
         <Logo />
         {!isSimplified && (
           <button
             onClick={() => setOpen(true)}
             aria-label="Abrir menú"
-            className="p-2 -mr-2 text-ink"
+            className="p-2 -mr-2 text-ds-navy-900 rounded-lg hover:bg-ds-muted transition-colors"
           >
             <Menu className="w-5 h-5" />
           </button>
@@ -63,7 +69,7 @@ export function MobileTopBar({ user }: { user: NavUser }) {
         <button
           aria-label="Cerrar menú"
           onClick={() => setOpen(false)}
-          className="md:hidden fixed inset-0 z-40 bg-ink/40"
+          className="lg:hidden fixed inset-0 z-40 bg-ink/40"
         />
       )}
 
@@ -72,7 +78,7 @@ export function MobileTopBar({ user }: { user: NavUser }) {
           role="dialog"
           aria-modal="true"
           aria-label="Menú"
-          className="md:hidden fixed inset-y-0 right-0 z-50 w-72 max-w-[85vw] bg-white shadow-lg p-5 overflow-y-auto"
+          className="lg:hidden fixed inset-y-0 right-0 z-50 w-72 max-w-[85vw] bg-white shadow-ds-modal p-5 overflow-y-auto"
         >
           <div className="flex items-center justify-between mb-6">
             <Logo />

@@ -29,18 +29,18 @@ export function Hero() {
         }}
       />
 
-      <div className="relative max-w-3xl mx-auto px-4 sm:px-10 pt-8 sm:pt-14 pb-6 sm:pb-10 flex flex-col items-center text-center gap-3 sm:gap-4">
+      <div className="relative max-w-3xl lg:max-w-6xl mx-auto px-4 sm:px-10 pt-6 sm:pt-11 pb-5 sm:pb-8 flex flex-col items-center text-center gap-2 sm:gap-2.5">
         <h1
-          className="text-[#10203A] font-extrabold text-[30px] sm:text-[44px]"
+          className="font-display text-ds-navy-900 font-extrabold text-[28px] sm:text-[42px]"
           style={{ lineHeight: 1.06, letterSpacing: "-0.026em" }}
         >
           Construye mejor.
         </h1>
-        <p className="text-[15px] sm:text-[18px] leading-[1.5] text-[#4A5568] max-w-[440px]">
+        <p className="text-[14px] sm:text-[17px] leading-[1.45] text-[#4A5568] max-w-[420px]">
           Te acompañamos paso a paso en tu proyecto.
         </p>
 
-        <div className="w-full max-w-[560px] mt-1 sm:mt-2">
+        <div className="w-full max-w-[560px] mt-2 sm:mt-3">
           <SearchBar placeholder="¿Qué necesitas hacer?" size="mobile" />
         </div>
       </div>

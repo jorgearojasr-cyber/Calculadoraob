@@ -25,26 +25,42 @@ export async function PlanFeaturedSection() {
   // Postgres. Se agrega `id` como desempate — cuid, único y generado en
   // orden de creación, así que ordena igual que createdAt sin empates
   // posibles. Ningún campo nuevo: ambos ya existen en ProjectPlan.
-  const plan = await prisma.projectPlan.findFirst({ orderBy: [{ createdAt: "asc" }, { id: "asc" }] });
+  const plan = await prisma.projectPlan.findFirst({
+    orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+    include: { phases: { select: { id: true } } },
+  });
   if (!plan) return null;
+  const phaseCount = plan.phases.length;
 
   return (
-    <section className="max-w-3xl mx-auto px-4 sm:px-10 py-6 sm:py-8">
-      <p className="font-mono text-[11px] uppercase mb-2 text-[#5B6577]" style={{ letterSpacing: "0.08em" }}>
+    <section className="max-w-3xl lg:max-w-6xl mx-auto px-4 sm:px-10 py-5 sm:py-7">
+      <p className="font-body text-[12px] font-bold uppercase mb-2.5 text-ds-text-tertiary" style={{ letterSpacing: "0.08em" }}>
         Planifica tu proyecto
       </p>
       <Link
         href={`/plan/${plan.slug}`}
-        className="group flex items-center gap-4 sm:gap-6 rounded-2xl p-5 sm:p-6 bg-white border border-[#E4E8EF] hover:border-[#002152]/30 transition-colors"
+        className="group flex items-center gap-4 sm:gap-6 rounded-[20px] p-5 sm:p-7 border transition-all hover:shadow-[0_12px_28px_rgba(16,32,58,.10)]"
+        style={{ backgroundColor: "#EEF3FA", borderColor: "#D8E3F1" }}
       >
-        <div className="w-12 h-12 sm:w-14 sm:h-14 flex-shrink-0 rounded-2xl flex items-center justify-center bg-navy/[0.07]">
-          <MapIcon className="w-6 h-6 text-navy" />
+        <div className="w-14 h-14 sm:w-16 sm:h-16 flex-shrink-0 rounded-2xl flex items-center justify-center bg-white shadow-sm">
+          <MapIcon className="w-7 h-7 text-safety" strokeWidth={2} />
         </div>
         <div className="flex-1 min-w-0">
-          <h2 className="font-semibold text-[16px] sm:text-[18px] text-[#10203A]">{plan.title}</h2>
-          <p className="text-sm text-[#5B6577] mt-0.5 truncate">{plan.description}</p>
+          {phaseCount > 0 && (
+            <span
+              className="inline-block font-body text-[10px] font-bold uppercase text-white px-[9px] py-[3px] rounded-[5px] mb-1.5"
+              style={{ letterSpacing: "0.1em", backgroundColor: "#002152" }}
+            >
+              Guía por etapas · {phaseCount} {phaseCount === 1 ? "fase" : "fases"}
+            </span>
+          )}
+          <h2 className="font-display font-extrabold text-[17px] sm:text-[19px] text-ds-navy-900">{plan.title}</h2>
+          <p className="text-sm text-[#5B6577] mt-0.5 line-clamp-2 sm:truncate">{plan.description}</p>
         </div>
-        <ArrowRight className="w-4 h-4 flex-shrink-0 text-safety opacity-0 group-hover:opacity-100 transition-opacity hidden sm:block" />
+        <span className="hidden sm:inline-flex flex-shrink-0 items-center gap-1.5 text-sm font-bold text-safety">
+          Ver plan
+          <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
+        </span>
       </Link>
     </section>
   );

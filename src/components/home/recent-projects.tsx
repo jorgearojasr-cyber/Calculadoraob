@@ -28,7 +28,7 @@ export async function RecentProjects() {
   if (projects.length === 0) return null;
 
   return (
-    <section className="max-w-3xl mx-auto px-4 sm:px-10 py-6 sm:py-8">
+    <section className="max-w-3xl lg:max-w-6xl mx-auto px-4 sm:px-10 py-6 sm:py-8">
       <div className="flex items-end justify-between mb-4 sm:mb-5">
         <h2 className="font-display text-xl sm:text-2xl font-bold text-[#10203A]" style={{ letterSpacing: "-0.02em" }}>
           Continúa tu proyecto

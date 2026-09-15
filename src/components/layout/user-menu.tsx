@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { FolderKanban, ShoppingCart, ShieldCheck } from "lucide-react";
+import { FolderKanban, ShoppingCart, ShieldCheck, Images, Info } from "lucide-react";
 import { SignOutButton } from "@/components/auth/sign-out-button";
 
 export type NavUser = { name: string | null; email: string | null; image: string | null } | null;
@@ -50,6 +50,28 @@ export function UserMenu({ user, isAdmin }: { user: NonNullable<NavUser>; isAdmi
             >
               <ShoppingCart className="w-4 h-4 text-ink-muted" />
               Listas de compras
+            </Link>
+            {/* Design Spec v1.0 (2026-09-15, punto 9 del pedido): Biblioteca y
+                Acerca de nosotros dejan de competir en el primer nivel del
+                header desktop (bajó a 5 links máx.) — se mueven acá, la
+                "solución secundaria existente apropiada" para un usuario con
+                sesión, sin construir un menú nuevo. Ver también SiteFooter,
+                que cubre el caso sin sesión en el Home. */}
+            <Link
+              href="/galeria"
+              onClick={() => setOpen(false)}
+              className="flex items-center gap-2.5 text-sm font-medium px-3 py-2 rounded-lg hover:bg-concrete transition-colors"
+            >
+              <Images className="w-4 h-4 text-ink-muted" />
+              Biblioteca
+            </Link>
+            <Link
+              href="/acerca-de"
+              onClick={() => setOpen(false)}
+              className="flex items-center gap-2.5 text-sm font-medium px-3 py-2 rounded-lg hover:bg-concrete transition-colors"
+            >
+              <Info className="w-4 h-4 text-ink-muted" />
+              Acerca de nosotros
             </Link>
             {isAdmin && (
               <Link

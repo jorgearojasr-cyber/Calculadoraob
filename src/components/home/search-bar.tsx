@@ -6,16 +6,25 @@ import { ArrowRight, Calculator, Layers, LayoutGrid, Search } from "lucide-react
 import { searchSuggestionsAction } from "./search-actions";
 import type { SearchResult } from "@/lib/search";
 
-// Restyle fiel a la especificación de UI de Home (2026-08-05) — dos
-// variantes exactas (mobile/desktop) en vez de una sola clase
-// responsive, porque padding/radio/sombra/tamaño de ícono cambian todos
-// juntos entre ambas, no solo el tamaño de texto.
+// Design Spec v1.0 (OBRABIEN.CL, fase "Implementación Design Spec v1.0",
+// 2026-09-15, punto 13 del pedido) — restyle del buscador del Home:
+// altura 46px, radio 14px (ds-card), ícono 18px, placeholder 14px
+// text-tertiary, focus border orange-600 1.5px + halo 3px orange-100. El
+// Spec da una sola especificación (no distingue mobile/desktop como el
+// restyle anterior de 2026-08-05) — "mobile" y "desktop" ahora comparten
+// las mismas medidas del Spec; se mantienen como nombres de prop por
+// compatibilidad con los consumidores existentes (Hero sigue pasando
+// size="mobile"). Se agrega la variante "compact" (nueva, punto 9 del
+// pedido: "buscador visible" en el header desktop) — pill más angosta sin
+// botón "Buscar" visible (solo ícono + input + Enter), mismo componente y
+// MISMA lógica de búsqueda real (searchSuggestionsAction/goToResult/
+// submitSearch), sin duplicar ningún sistema de búsqueda nuevo.
 export function SearchBar({
   placeholder = "¿Qué proyecto quieres hacer?",
   size = "desktop",
 }: {
   placeholder?: string;
-  size?: "mobile" | "desktop";
+  size?: "mobile" | "desktop" | "compact";
 }) {
   const router = useRouter();
   const containerRef = useRef<HTMLDivElement>(null);
@@ -94,25 +103,19 @@ export function SearchBar({
     }
   }
 
-  const isMobile = size === "mobile";
+  const isCompact = size === "compact";
 
   return (
-    <div className="relative" ref={containerRef}>
+    <div className={isCompact ? "relative w-[220px]" : "relative"} ref={containerRef}>
       <div
         className={
-          isMobile
-            ? "flex items-center gap-[9px] rounded-[18px] pl-[18px] pr-[10px] py-[10px] bg-white border-[1.5px] border-[#D5DCE7]"
-            : "flex items-center gap-3 rounded-[24px] pl-7 pr-[17px] py-[17px] bg-white border-[1.5px] border-[#D5DCE7]"
+          isCompact
+            ? "flex items-center gap-2 rounded-full h-[38px] px-3.5 bg-ds-muted border border-ds-border focus-within:border-ds-orange-600 focus-within:ring-[3px] focus-within:ring-ds-orange-100 transition-all"
+            : "flex items-center gap-2.5 rounded-ds-card h-[46px] pl-4 pr-2 bg-white border-[1.5px] border-ds-border focus-within:border-ds-orange-600 focus-within:ring-[3px] focus-within:ring-ds-orange-100 transition-all"
         }
-        style={{
-          boxShadow: isMobile ? "0 14px 30px rgba(0,33,82,.14)" : "0 20px 46px rgba(0,33,82,.16)",
-        }}
+        style={!isCompact ? { boxShadow: "0 14px 30px rgba(0,33,82,.10)" } : undefined}
       >
-        <Search
-          className="flex-shrink-0 text-[#5B6577]"
-          style={{ width: isMobile ? 19 : 22, height: isMobile ? 19 : 22 }}
-          strokeWidth={2}
-        />
+        <Search className="flex-shrink-0 text-ds-text-tertiary w-[18px] h-[18px]" strokeWidth={1.8} />
         <input
           value={query}
           onChange={(e) => handleChange(e.target.value)}
@@ -121,26 +124,22 @@ export function SearchBar({
             if (results.length > 0) setIsOpen(true);
           }}
           placeholder={placeholder}
-          className="w-full bg-transparent outline-none whitespace-nowrap text-[#10203A] placeholder:text-[#8A93A2]"
-          style={{ fontSize: isMobile ? 16 : 21 }}
+          className="w-full bg-transparent outline-none whitespace-nowrap font-body text-[14px] text-ds-navy-900 placeholder:text-ds-text-tertiary"
           autoComplete="off"
         />
-        <button
-          onClick={submitSearch}
-          className={
-            isMobile
-              ? "flex-shrink-0 rounded-[12px] px-[22px] py-[14px] text-[16px] font-bold text-white flex items-center gap-2 bg-action"
-              : "flex-shrink-0 rounded-2xl px-[38px] py-[18px] text-[18px] font-bold text-white flex items-center gap-[9px] bg-action"
-          }
-          style={{ boxShadow: "0 10px 24px rgba(255,78,0,.32)" }}
-        >
-          Buscar
-          <ArrowRight className="w-4 h-4" />
-        </button>
+        {!isCompact && (
+          <button
+            onClick={submitSearch}
+            className="flex-shrink-0 rounded-[10px] px-4 h-[34px] text-[14px] font-bold text-white flex items-center gap-1.5 bg-ds-orange-600 hover:bg-ds-orange-700 active:scale-[0.97] transition-all"
+          >
+            Buscar
+            <ArrowRight className="w-4 h-4" />
+          </button>
+        )}
       </div>
 
       {isOpen && results.length > 0 && (
-        <div className="absolute z-20 mt-2 w-full rounded-2xl shadow-lg bg-white border border-border overflow-hidden">
+        <div className="absolute z-20 mt-2 w-full rounded-ds-card shadow-ds-modal bg-white border border-ds-border overflow-hidden">
           {results.map((result, index) => {
             const Icon = result.type === "module" ? Layers : result.type === "task" ? Calculator : LayoutGrid;
             return (
@@ -150,13 +149,13 @@ export function SearchBar({
                 onClick={() => goToResult(result)}
                 onMouseEnter={() => setHighlightedIndex(index)}
                 className={`w-full flex items-start gap-3 px-4 py-3 text-left transition-colors ${
-                  index === highlightedIndex ? "bg-concrete" : "bg-white"
+                  index === highlightedIndex ? "bg-ds-muted" : "bg-white"
                 }`}
               >
-                <Icon className="w-4 h-4 mt-0.5 flex-shrink-0 text-safety" />
+                <Icon className="w-4 h-4 mt-0.5 flex-shrink-0 text-ds-navy-900" />
                 <span className="min-w-0">
-                  <span className="block text-sm font-medium truncate">{result.name}</span>
-                  <span className="block text-xs text-ink-muted truncate">
+                  <span className="block text-sm font-semibold truncate text-ds-navy-900">{result.name}</span>
+                  <span className="block text-xs text-ds-text-secondary truncate">
                     {result.type === "category" ? "Categoría" : result.categoryName}
                     {result.description ? ` · ${result.description}` : ""}
                   </span>

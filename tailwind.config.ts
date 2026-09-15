@@ -64,11 +64,53 @@ const config: Config = {
         graphite: "#4A5568", // Baño
         ochre: "#8A6238", // Techumbre
         poolblue: "#0891B2", // Piscinas
+
+        // Design Spec v1.0 (OBRABIEN.CL, fase "Implementación Design Spec
+        // v1.0", 2026-09-15) — tokens exactos de la sección B del PDF
+        // aprobado, prefijados `ds-` a propósito: el sistema de marca de
+        // arriba (`safety`/`action`/`border`/etc.) se sigue usando en TODO
+        // el resto del sitio (wizard, admin, resultados — fuera de alcance
+        // de esta fase, que es solo Home + navegación). Sobreescribir esas
+        // claves habría cambiado bordes/colores en páginas no tocadas acá.
+        // `ds-*` es la MISMA solución de tokens (este archivo), solo con
+        // nombres que no chocan, para que Home/navegación migren al Design
+        // Spec sin arrastrar el resto del sitio todavía.
+        "ds-navy-900": "oklch(22% .045 255)",
+        "ds-navy-700": "oklch(30% .05 255)",
+        "ds-navy-100": "oklch(94% .015 255)",
+        "ds-orange-600": "oklch(64% .19 42)",
+        "ds-orange-700": "oklch(58% .19 40)",
+        "ds-orange-100": "oklch(93% .04 45)",
+        "ds-bg": "oklch(98% .004 255)",
+        "ds-muted": "oklch(96% .006 255)",
+        "ds-border": "oklch(90% .008 255)",
+        "ds-text-secondary": "oklch(48% .02 255)",
+        "ds-text-tertiary": "oklch(65% .015 255)",
+        "ds-success-600": "oklch(62% .13 150)",
+      },
+      // Radios del Design Spec — `rounded-full` de Tailwind ya cubre
+      // pill/FAB (999px), no hace falta declararlo acá.
+      borderRadius: {
+        "ds-input": "10px",
+        "ds-card": "14px",
+        "ds-card-lg": "20px",
+      },
+      boxShadow: {
+        "ds-card-rest": "0 1px 2px oklch(22% .045 255 / 0.06)",
+        "ds-card-elevated": "0 8px 20px oklch(22% .045 255 / 0.10)",
+        "ds-modal": "0 24px 48px oklch(22% .045 255 / 0.20)",
+        "ds-fab": "0 10px 22px oklch(64% .19 42 / 0.40)",
       },
       fontFamily: {
         display: ["var(--font-display)"],
         body: ["var(--font-body)"],
         mono: ["var(--font-mono)"],
+        // Design Spec v1.0 — Manrope (display) / Source Sans 3 (body),
+        // cargadas vía next/font/google en layout.tsx dentro de las MISMAS
+        // 2 variables CSS que ya existían (--font-display/--font-body) —
+        // por eso no hace falta declarar nuevas claves acá, `font-display`
+        // y `font-body` ya apuntan a las tipografías correctas del Spec en
+        // todo el sitio (infra existente reutilizada, punto 3 del pedido).
       },
     },
   },

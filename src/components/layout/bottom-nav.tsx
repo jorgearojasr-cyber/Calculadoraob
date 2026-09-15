@@ -48,9 +48,13 @@ export function BottomNav({ user, assistantGroups }: { user: NavUser; assistantG
   const pathname = usePathname();
   const [profileOpen, setProfileOpen] = useState(false);
 
+  // Polish visual (2026-09-14) + Design Spec v1.0 (2026-09-15, punto 8 del
+  // pedido): barra clara (bg-white), activo en ds-orange-600 bold, inactivo
+  // en ds-text-tertiary, íconos 20px, labels 10px. Mismos hrefs y
+  // comportamiento, cero cambios de arquitectura ni de rutas.
   const itemClass = (active: boolean) =>
-    `flex flex-col items-center justify-center gap-1 flex-1 py-2 text-[10px] font-medium ${
-      active ? "text-safety" : "text-white/60"
+    `flex flex-col items-center justify-center gap-1 flex-1 text-[10px] font-bold transition-colors ${
+      active ? "text-ds-orange-600" : "text-ds-text-tertiary font-semibold"
     }`;
 
   return (
@@ -59,12 +63,12 @@ export function BottomNav({ user, assistantGroups }: { user: NavUser; assistantG
         <button
           aria-label="Cerrar menú"
           onClick={() => setProfileOpen(false)}
-          className="md:hidden fixed inset-0 z-40 bg-ink/20"
+          className="lg:hidden fixed inset-0 z-40 bg-ink/20"
         />
       )}
 
       {profileOpen && (
-        <div className="md:hidden fixed bottom-20 right-4 z-50 rounded-2xl bg-white border border-border shadow-lg p-3 min-w-[180px]">
+        <div className="lg:hidden fixed bottom-20 right-4 z-50 rounded-2xl bg-white border border-ds-border shadow-ds-modal p-3 min-w-[180px]">
           {user ? (
             <>
               <p className="text-xs text-ink-muted px-2 pb-2 truncate">{user.name ?? user.email}</p>
@@ -107,7 +111,14 @@ export function BottomNav({ user, assistantGroups }: { user: NavUser; assistantG
         </div>
       )}
 
-      <nav className="md:hidden fixed bottom-0 inset-x-0 z-30 bg-navy border-t border-navy-border flex items-stretch px-2 pb-[env(safe-area-inset-bottom)]">
+      {/* Design Spec v1.0, punto 8: altura 64px (+ safe area) — antes la
+          altura era implícita (py-2 por ítem); ahora se fija explícita en
+          la barra y los ítems solo centran su contenido. Punto 16: oculta
+          desde `lg` (1024px), no `md` (768px) — ver nota en top-nav.tsx. */}
+      <nav
+        className="lg:hidden fixed bottom-0 inset-x-0 z-30 bg-white border-t border-ds-border flex items-stretch px-2"
+        style={{ height: 64, paddingBottom: "env(safe-area-inset-bottom)", boxShadow: "0 -6px 20px rgba(16,32,58,.06)" }}
+      >
         <Link href="/" className={itemClass(pathname === "/")}>
           <Home className="w-5 h-5" />
           Inicio
@@ -117,6 +128,13 @@ export function BottomNav({ user, assistantGroups }: { user: NavUser; assistantG
           Herramientas
         </Link>
 
+        {/* AssistantWidget variant="fab" ya se autoposiciona (-mt-6 para
+            elevarse sobre la barra, aro border-concrete + shadow-lg propios
+            para leerse "recortado" sobre el fondo) — no se envuelve en un
+            wrapper adicional acá para no duplicar ese offset. El aro claro
+            ya combina con la barra ahora blanca (antes contrastaba contra
+            bg-navy), así que sigue viéndose integrado sin tocar el
+            componente compartido con fab-desktop. */}
         <div className="flex-1 flex items-center justify-center">
           <AssistantWidget groups={assistantGroups} variant="fab" />
         </div>

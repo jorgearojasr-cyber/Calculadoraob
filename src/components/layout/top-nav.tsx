@@ -6,41 +6,46 @@ import { Logo } from "@/components/brand/logo";
 import { UserMenu, type NavUser } from "./user-menu";
 import { isWizardRoute } from "@/lib/is-wizard-route";
 import { getMenuFeatures } from "@/lib/product-features";
+import { SearchBar } from "@/components/home/search-bar";
 
-// Cimientos de arquitectura (2026-09-14) — antes este array tenía las 6
-// entradas hardcodeadas a mano (mismo problema que motivó toda esta fase:
-// Guías/Inspecciones/Biblioteca vivían acá Y por separado en el drawer
-// mobile). Ahora se arma en 2 partes:
-//   - STRUCTURAL_NAV_ITEMS: navegación del sitio en sí, no son "features de
-//     producto" (Inicio es la home; Calculadoras es un ancla al Home, no
-//     una ruta propia; Acerca de nosotros es una página informativa
-//     estática) — quedan acá tal cual, no tiene sentido forzarlas por el
-//     registro (ver punto 5 del pedido: "mantenerlos fuera del registry
-//     cuando corresponda").
-//   - Lo que viene de `getMenuFeatures()` (Guías, Inspecciones, Biblioteca
-//     hoy — Regularización queda fuera, showInMenu:false, decisión ya
-//     tomada) se inserta DESPUÉS de "Guías y consejos" en su posición
-//     original... en realidad se arma en el orden exacto que ya tenían
-//     (ver `order` en product-features.ts, alineado a propósito con este
-//     mismo orden visual) y se intercala en el índice correcto más abajo,
-//     así el resultado final es EXACTAMENTE la misma lista y el mismo
-//     orden que antes, solo que 3 de los 6 ítems ahora vienen de una
-//     fuente compartida con el buscador y el drawer mobile.
+// Design Spec v1.0 (OBRABIEN.CL, fase "Implementación Design Spec v1.0",
+// 2026-09-15, punto 9 del pedido) — el header desktop pasa de 6 ítems
+// (Inicio/Calculadoras/Guías y consejos/Inspecciones/Biblioteca/Acerca de
+// nosotros) a exactamente 5: Inicio/Calculadoras/Planificar/Aprender/
+// Inspecciones. Biblioteca y Acerca de nosotros se movieron a UserMenu
+// (con sesión) y SiteFooter (sin sesión, en el Home) — ver esos archivos.
+//
+// "Planificar" es nuevo acá (antes no estaba en ningún nav — el Home V2 ya
+// le dio una ruta real, /planificar, ver esa fase) — estructural, igual
+// criterio que "Calculadoras": no viene del registro central porque
+// PLANIFICA no tiene FeatureEntry (tiene su propio modelo Prisma real,
+// ProjectPlan — ver product-features.ts).
+//
+// "Aprender" es el mismo feature `guias` del registro (href /guias, MISMA
+// fuente que el buscador/drawer/Home), solo con el label del Design Spec
+// en este nav puntual — no se le cambia el `name` real en
+// product-features.ts (ese sigue siendo "Guías y consejos", usado en
+// /guias, el buscador, etc.).
 const STRUCTURAL_NAV_BEFORE = [{ href: "/", label: "Inicio", match: (p: string) => p === "/" }];
-const STRUCTURAL_NAV_AFTER_FEATURES = [
-  { href: "/acerca-de", label: "Acerca de nosotros", match: (p: string) => p.startsWith("/acerca-de") },
-];
 // "Calculadoras" es un ancla (`/#empezar`), no una ruta con `pathname` propio
 // que resaltar — mismo comportamiento de `match` que ya tenía (`() => false`).
 const CALCULADORAS_NAV_ITEM = { href: "/#empezar", label: "Calculadoras", match: () => false };
+const PLANIFICAR_NAV_ITEM = { href: "/planificar", label: "Planificar", match: (p: string) => p.startsWith("/planificar") || p.startsWith("/plan/") };
+const NAV_LABEL_OVERRIDES: Record<string, string> = { guias: "Aprender" };
+// Solo Aprender + Inspecciones entran en el header desktop (5 links máx.,
+// punto 9 del pedido) — Regularización ya no estaba (showInMenu:false,
+// decisión previa) y Biblioteca se mueve a UserMenu/Footer.
+const DESKTOP_FEATURE_IDS = new Set(["guias", "inspecciones"]);
 
 function buildNavItems() {
-  const featureItems = getMenuFeatures().map((feature) => ({
-    href: feature.href!,
-    label: feature.name,
-    match: (p: string) => p.startsWith(feature.href!),
-  }));
-  return [...STRUCTURAL_NAV_BEFORE, CALCULADORAS_NAV_ITEM, ...featureItems, ...STRUCTURAL_NAV_AFTER_FEATURES];
+  const featureItems = getMenuFeatures()
+    .filter((feature) => DESKTOP_FEATURE_IDS.has(feature.id))
+    .map((feature) => ({
+      href: feature.href!,
+      label: NAV_LABEL_OVERRIDES[feature.id] ?? feature.name,
+      match: (p: string) => p.startsWith(feature.href!),
+    }));
+  return [STRUCTURAL_NAV_BEFORE[0], CALCULADORAS_NAV_ITEM, PLANIFICAR_NAV_ITEM, ...featureItems];
 }
 
 // Rutas donde el nav se muestra "simplificado" — solo el logo, sin ítems
@@ -59,24 +64,30 @@ export function TopNav({ isAdmin, user }: { isAdmin: boolean; user: NavUser }) {
   if (isWizardRoute(pathname)) return null;
 
   return (
-    <header className="hidden md:flex fixed inset-x-0 top-0 z-30 items-center bg-white border-b border-border py-3.5 px-10">
+    // Design Spec v1.0, punto 16: el quiebre mobile→desktop pasa de `md`
+    // (768px) a `lg` (1024px) — en la franja 768-1024 (tablet) el sitio
+    // sigue mostrando MobileTopBar + BottomNav, no este header. Cambio
+    // acotado a los 3 componentes de navegación (este archivo,
+    // mobile-top-bar.tsx, bottom-nav.tsx) + main-content.tsx (que
+    // compensa su padding/breakpoint) — NO es un cambio global del
+    // breakpoint `md` de Tailwind, que sigue significando 768px en el
+    // resto del sitio (fuera de alcance de esta fase).
+    <header className="hidden lg:flex fixed inset-x-0 top-0 z-30 items-center h-[72px] bg-white border-b border-ds-border px-6">
       <div className="flex-shrink-0">
         <Logo />
       </div>
 
       {!isSimplified && (
         <>
-          <nav className="flex items-center gap-7 ml-[34px]">
+          <nav className="flex items-center gap-[22px] ml-8 whitespace-nowrap">
             {navItems.map((item) => {
               const active = item.match(pathname);
               return (
                 <Link
                   key={item.href}
                   href={item.href}
-                  className={`pb-[3px] text-[15px] border-b-2 transition-colors ${
-                    active
-                      ? "border-action text-action font-bold"
-                      : "border-transparent text-ink-muted font-medium hover:text-ink"
+                  className={`pb-[3px] font-body text-[14px] font-semibold border-b-2 transition-colors whitespace-nowrap ${
+                    active ? "border-ds-orange-600 text-ds-orange-600" : "border-transparent text-ds-text-secondary hover:text-ds-navy-900"
                   }`}
                 >
                   {item.label}
@@ -85,20 +96,26 @@ export function TopNav({ isAdmin, user }: { isAdmin: boolean; user: NavUser }) {
             })}
           </nav>
 
-          <div className="ml-auto flex items-center gap-3">
+          <div className="ml-6 flex-shrink-0">
+            <SearchBar placeholder="¿Qué necesitas hacer?" size="compact" />
+          </div>
+
+          <div className="ml-auto flex items-center gap-2.5 flex-shrink-0">
             {user ? (
               <UserMenu user={user} isAdmin={isAdmin} />
             ) : (
               <>
                 <Link
                   href="/login"
-                  className="rounded-[10px] px-[18px] py-2.5 text-[15px] font-semibold text-safety border border-border hover:border-ink transition-colors"
+                  className="rounded-ds-input px-4 flex items-center font-body text-[14px] font-semibold text-ds-navy-900 border border-ds-border hover:border-ds-navy-700 transition-colors whitespace-nowrap"
+                  style={{ height: 34 }}
                 >
                   Iniciar sesión
                 </Link>
                 <Link
                   href="/registro"
-                  className="rounded-[10px] px-5 py-[11px] text-[15px] font-bold text-white bg-action hover:bg-action-hover transition-colors"
+                  className="rounded-ds-input px-4 flex items-center font-body text-[14px] font-bold text-white bg-ds-orange-600 hover:bg-ds-orange-700 transition-colors whitespace-nowrap"
+                  style={{ height: 34 }}
                 >
                   Comenzar gratis
                 </Link>

@@ -1,21 +1,27 @@
 import type { Metadata } from "next";
-import { Figtree, IBM_Plex_Mono } from "next/font/google";
+import { Manrope, Source_Sans_3, IBM_Plex_Mono } from "next/font/google";
 import "./globals.css";
 
-// Sistema de marca definitivo 2026-07-28: Figtree reemplaza a Archivo
-// (Archivo competía visualmente con el wordmark redondeado del logo real).
-// Se mantienen las 2 variables CSS (--font-display/--font-body) para no
-// tocar cada uso de font-display/font-body en los componentes, pero
-// ambas apuntan a Figtree ahora.
-const figtree = Figtree({
+// Design Spec v1.0 (OBRABIEN.CL, fase "Implementación Design Spec v1.0",
+// 2026-09-15) — sección C del PDF exige Manrope para Display/H1/H2/H3 y
+// Source Sans 3 para Body/Small/Label/Eyebrow. Reemplaza a Figtree (que a
+// su vez había reemplazado a Archivo el 2026-07-28) usando la MISMA
+// infraestructura ya existente: next/font/google + las 2 variables CSS
+// --font-display/--font-body que ya consume todo el sitio (`font-display`/
+// `font-body` en Tailwind) — no hace falta tocar un solo componente para
+// que el cambio de tipografía se propague, ni incluir archivos de fuente a
+// mano (punto 3 del pedido: "no incluir archivos de fuentes manualmente si
+// no corresponde" — no corresponde, next/font/google sirve Manrope y
+// Source Sans 3 igual que servía Figtree).
+const manrope = Manrope({
   subsets: ["latin"],
   weight: ["400", "500", "600", "700", "800"],
   variable: "--font-display",
 });
 
-const figtreeBody = Figtree({
+const sourceSans3 = Source_Sans_3({
   subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
+  weight: ["400", "600", "700"],
   variable: "--font-body",
 });
 
@@ -39,7 +45,7 @@ export default function RootLayout({
   return (
     <html lang="es">
       <body
-        className={`${figtree.variable} ${figtreeBody.variable} ${ibmPlexMono.variable} font-body antialiased`}
+        className={`${manrope.variable} ${sourceSans3.variable} ${ibmPlexMono.variable} font-body antialiased`}
       >
         {children}
       </body>
