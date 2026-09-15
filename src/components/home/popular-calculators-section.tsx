@@ -28,7 +28,9 @@ export async function PopularCalculatorsSection() {
         <h2 className="font-display text-[17px] sm:text-[19px] font-extrabold text-ds-navy-900" style={{ letterSpacing: "-0.02em" }}>
           Calculadoras populares
         </h2>
-        <Link href="/#empezar" className="text-[13px] sm:text-sm font-bold text-action inline-flex items-center gap-1 flex-shrink-0">
+        {/* Design Spec v1.0 — Parte 2, 2026-09-15: apunta a /calculadoras
+            (antes /#empezar), la nueva pantalla dedicada. */}
+        <Link href="/calculadoras" className="text-[13px] sm:text-sm font-bold text-action inline-flex items-center gap-1 flex-shrink-0">
           Ver todas
           <ArrowRight className="w-3.5 h-3.5" />
         </Link>

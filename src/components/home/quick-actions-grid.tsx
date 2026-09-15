@@ -42,7 +42,11 @@ const STRUCTURAL_ACTIONS: Record<"calcular" | "planificar" | "mis-proyectos", Qu
     id: "calcular",
     label: "Calcular",
     description: "Materiales y costos",
-    href: "/#empezar",
+    // Design Spec v1.0 — Parte 2 (Calculadoras/Herramientas), 2026-09-15,
+    // punto 19 del pedido: apunta a la nueva ruta canónica /calculadoras
+    // en vez del ancla al Home — única actualización de enlace en Home,
+    // sin tocar su estética.
+    href: "/calculadoras",
     icon: Calculator,
   },
   planificar: {

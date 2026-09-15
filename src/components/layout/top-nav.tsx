@@ -27,9 +27,15 @@ import { SearchBar } from "@/components/home/search-bar";
 // product-features.ts (ese sigue siendo "Guías y consejos", usado en
 // /guias, el buscador, etc.).
 const STRUCTURAL_NAV_BEFORE = [{ href: "/", label: "Inicio", match: (p: string) => p === "/" }];
-// "Calculadoras" es un ancla (`/#empezar`), no una ruta con `pathname` propio
-// que resaltar — mismo comportamiento de `match` que ya tenía (`() => false`).
-const CALCULADORAS_NAV_ITEM = { href: "/#empezar", label: "Calculadoras", match: () => false };
+// Design Spec v1.0 — Parte 2 (Calculadoras/Herramientas), 2026-09-15,
+// punto 17 del pedido: "Calculadoras" pasa de ancla (`/#empezar`) a la
+// ruta canónica real `/calculadoras` (ver esa página para la decisión de
+// arquitectura completa).
+const CALCULADORAS_NAV_ITEM = {
+  href: "/calculadoras",
+  label: "Calculadoras",
+  match: (p: string) => p.startsWith("/calculadoras"),
+};
 const PLANIFICAR_NAV_ITEM = { href: "/planificar", label: "Planificar", match: (p: string) => p.startsWith("/planificar") || p.startsWith("/plan/") };
 const NAV_LABEL_OVERRIDES: Record<string, string> = { guias: "Aprender" };
 // Solo Aprender + Inspecciones entran en el header desktop (5 links máx.,

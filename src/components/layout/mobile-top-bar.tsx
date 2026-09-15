@@ -27,7 +27,9 @@ import { getMenuFeatures } from "@/lib/product-features";
 function buildDrawerLinks() {
   const featureLinks = getMenuFeatures().map((feature) => ({ href: feature.href!, label: feature.name }));
   return [
-    { href: "/#empezar", label: "Calculadoras" },
+    // Design Spec v1.0 — Parte 2, 2026-09-15: ruta canónica real en vez
+    // del ancla al Home (ver top-nav.tsx para la misma decisión).
+    { href: "/calculadoras", label: "Calculadoras" },
     ...featureLinks,
     { href: "/acerca-de", label: "Acerca de nosotros" },
   ];

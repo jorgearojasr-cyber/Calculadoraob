@@ -14,14 +14,12 @@ type NavUser = { name: string | null; email: string | null } | null;
 //
 // Estructura (5 slots, ninguno viene del registro central):
 //   1. "Inicio" (/) — navegación estructural, no una feature.
-//   2. "Herramientas" (/#empezar) — MISMO ancla y comportamiento que el
-//      slot 2 tenía antes bajo el label "Proyectos" (investigado antes de
-//      tocarlo, punto 14 del pedido: es el ancla al selector "por
-//      proyecto/material" del Home, idéntico a "Calculadoras" en
-//      TopNav/drawer). Se renombra únicamente el label — el label
-//      "Proyectos" era confuso porque el slot 4 ya se llama "Mis
-//      proyectos" y lleva a algo distinto (SavedProject); no se cambia el
-//      href ni se rompe ningún comportamiento existente.
+//   2. "Herramientas" (/calculadoras) — Design Spec v1.0, Parte 2
+//      (2026-09-15, punto 18 del pedido): pasa del ancla `/#empezar` a la
+//      ruta canónica real /calculadoras, ahora que esa pantalla existe
+//      (mismo cambio que TopNav/drawer, ver top-nav.tsx). Antes de esta
+//      fase apuntaba al selector "por proyecto/material" del Home bajo el
+//      label "Proyectos" (fase Home ObraBien V2, 2026-09-14).
 //   3. FAB central — AssistantWidget ("Preguntar ahora"), no es un link.
 //      Comportamiento intacto (fuera de alcance del punto 14 — no se
 //      reubica ni se convierte en "Nuevo proyecto" en esta fase).
@@ -123,7 +121,7 @@ export function BottomNav({ user, assistantGroups }: { user: NavUser; assistantG
           <Home className="w-5 h-5" />
           Inicio
         </Link>
-        <Link href="/#empezar" className={itemClass(false)}>
+        <Link href="/calculadoras" className={itemClass(pathname.startsWith("/calculadoras"))}>
           <Wrench className="w-5 h-5" />
           Herramientas
         </Link>
