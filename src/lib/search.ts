@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { TASK_IMAGES } from "@/lib/popular-tasks";
+import { getSearchableFeatures, PRODUCT_AREAS } from "@/lib/product-features";
 
 export type SearchResult = {
   type: "module" | "category" | "task" | "feature";
@@ -15,63 +16,15 @@ export type SearchResult = {
   stepCount: number | null;
 };
 
-// Saneamiento de navegación (2026-09-14, auditoría de producto) — features
-// standalone que NO son Module/Category/ProjectGroup/ProjectTask (Inspecciones,
-// Regularización, Guías, Biblioteca) eran invisibles para el buscador: cada
-// una vive en su propia tabla (InspectionCase, RegularizationCase, ModuleGuide,
-// ProjectShowcase), sin fila equivalente en ninguna de las 4 fuentes que
-// searchContent ya consultaba. Se listan acá a mano (no hay "N filas" que
-// traer de la BD, son 4 secciones fijas del producto) con palabras clave en
-// lenguaje natural simple (pedido explícito: "inspección" y "recibir casa"
-// deben encontrar Inspecciones igual que "inspeccionar"). Reutilizan el
-// mismo scoreMatch (frase + tokens) que ya usan Module/Category — ningún
-// mecanismo de búsqueda nuevo.
-type FeatureEntry = {
-  id: string;
-  name: string;
-  description: string;
-  href: string;
-  categoryName: string;
-  keywords: string;
-};
-
-const FEATURES: FeatureEntry[] = [
-  {
-    id: "feature-inspecciones",
-    name: "Inspecciones",
-    description:
-      "Revisa tu obra o la casa que vas a recibir con una checklist guiada, antes de la recepción o entrega.",
-    href: "/inspecciones",
-    categoryName: "Revisa tu obra",
-    keywords:
-      "inspeccion inspecciones inspeccionar revisar revision obra recibir casa recepcion vivienda revisar ampliacion checklist",
-  },
-  {
-    id: "feature-regularizacion",
-    name: "Regularización",
-    description: "Regulariza tu vivienda o ampliación construida sin permiso, según la Ley N.º 20.898 (Ley del Mono).",
-    href: "/regularizacion",
-    categoryName: "Regulariza",
-    keywords:
-      "regularizar regularizacion ley del mono ampliar sin permiso permiso de edificacion vivienda dgoc municipalidad",
-  },
-  {
-    id: "feature-guias",
-    name: "Guías y consejos",
-    description: "Consejos prácticos, errores comunes y experiencia de obra para proyectos que ya tienen guía completa.",
-    href: "/guias",
-    categoryName: "Aprende",
-    keywords: "guia guias aprender consejos como construir tips recomendaciones",
-  },
-  {
-    id: "feature-galeria",
-    name: "Biblioteca",
-    description: "Proyectos terminados por otros usuarios, como ejemplo e inspiración para el tuyo.",
-    href: "/galeria",
-    categoryName: "Aprende",
-    keywords: "biblioteca proyectos ejemplos fotos terminados inspiracion",
-  },
-];
+// Cimientos de arquitectura (2026-09-14) — antes esta lista vivía acá mismo
+// (fase de saneamiento, rama saneamiento-navegacion-guias): un array
+// FEATURES local con Inspecciones/Regularización/Guías/Biblioteca a mano.
+// Se saca a `src/lib/product-features.ts` (el registro central de features
+// standalone) para que el buscador y el menú (TopNav/MobileTopBar) lean la
+// MISMA fuente — ver ese archivo para el porqué y qué NO es. `getSearchableFeatures()`
+// ya filtra `status:"available" && showInSearch`, así que acá no hace falta
+// repetir ese chequeo. Las keywords y el comportamiento de búsqueda
+// (scoreMatch, frase + tokens) quedan IDÉNTICOS a como estaban.
 
 // Minúsculas + sin tildes/diacríticos, para tolerar variaciones de acentos
 // (ej. "pintura" encuentra "Pintura" aunque el usuario no tipee la tilde,
@@ -323,7 +276,7 @@ export async function searchContent(rawQuery: string): Promise<SearchResult[]> {
     });
   }
 
-  for (const feature of FEATURES) {
+  for (const feature of getSearchableFeatures()) {
     const score = scoreMatch(query, feature.name, feature.description, feature.keywords);
     if (score === null) continue;
     scored.push({
@@ -333,8 +286,12 @@ export async function searchContent(rawQuery: string): Promise<SearchResult[]> {
         id: feature.id,
         name: feature.name,
         description: feature.description,
-        href: feature.href,
-        categoryName: feature.categoryName,
+        // `href` es requerido en runtime para toda feature con
+        // status:"available" (getSearchableFeatures ya filtró por eso) —
+        // el "!" documenta esa garantía en vez de forzar el tipo entero a
+        // no-opcional (ver comentario en product-features.ts).
+        href: feature.href!,
+        categoryName: PRODUCT_AREAS[feature.area].label,
         imageUrl: null,
         stepCount: null,
       },

@@ -9,6 +9,54 @@ import { AssistantWidget, type AssistantGroup } from "@/components/assistant/ass
 
 type NavUser = { name: string | null; email: string | null } | null;
 
+// DOCUMENTACIÓN — Cimientos de arquitectura (2026-09-14, punto 6 del
+// pedido): esta fase NO aplica todavía la nueva BottomNav visual del mockup
+// (Inicio / Herramientas / [+] / Profesionales / Perfil) — se deja
+// documentado acá qué hay hoy y qué debería migrar en la futura fase
+// visual, sin tocar la estructura ni el comportamiento actual.
+//
+// Estructura actual (5 slots, ninguno viene del registro central):
+//   1. "Inicio" (/) — navegación estructural, no una feature.
+//   2. "Proyectos" (/#empezar) — pese al label, es el mismo ancla al
+//      selector "por proyecto/material" del Home que "Calculadoras" en
+//      TopNav/drawer — no es "Mis proyectos" (eso es el slot 4). Nombre
+//      confuso heredado, fuera de alcance de esta fase (sería un cambio
+//      visual/de copy, no de arquitectura).
+//   3. FAB central — AssistantWidget ("Preguntar ahora"), no es un link.
+//   4. "Mis proyectos" (/proyectos) — SavedProject, requiere sesión
+//      (protegido por middleware.ts, no por esta UI).
+//   5. "Perfil" — abre un popover propio (no una ruta) con: Lista de
+//      compras, Galería de proyectos, Inspecciones (solo si `user` existe)
+//      o "Ingresar" (si no hay sesión).
+//
+// Mapeo hacia la futura BottomNav (Inicio / Herramientas / Nuevo proyecto /
+// Profesionales / Perfil), a evaluar en la fase visual:
+//   - "Inicio" se mantiene igual.
+//   - "Herramientas" reemplazaría al slot 2 actual ("Proyectos") — probable
+//     candidato para mostrar ahí Calculadoras + las features del registro
+//     (getMenuFeatures(), ya usado por TopNav/drawer) en vez de un solo
+//     ancla al Home.
+//   - El FAB central probablemente se conserva o se reubica como "Nuevo
+//     proyecto" — a decidir en esa fase, no acá.
+//   - "Profesionales" es un slot NUEVO sin funcionalidad real todavía (área
+//     `profesionales` en product-features.ts, `status:"planned"` — ver
+//     PLANNED_FEATURES) — NO se agrega ningún link ni placeholder público
+//     en esta fase, tal como pide el punto 6 del pedido.
+//   - "Perfil" — el popover actual (Lista de compras/Galería/Inspecciones/
+//     sesión) tendría que revisarse: Inspecciones y Galería ya son
+//     features del registro central (mostradas también en TopNav/drawer),
+//     así que este popover hoy duplica esos 2 links como "acceso
+//     adicional para logueados" — decisión ya tomada explícitamente en el
+//     fix de navegación mobile anterior (no se quita de acá, es
+//     intencional). Lista de compras NO se migró al registro en esta fase
+//     (ver product-feature-registry.md, sección "qué se evaluó y no se
+//     migró") — sigue siendo exclusiva de este popover.
+//
+// No se crearon tipos/helpers nuevos para BottomNav en esta fase — el
+// pedido los pide "solo si son realmente necesarios", y no hay ningún
+// dato repetido en otro lado que migrar todavía (a diferencia de
+// TopNav/MobileTopBar, que sí compartían Guías/Inspecciones/Biblioteca
+// entre sí antes de esta fase).
 export function BottomNav({ user, assistantGroups }: { user: NavUser; assistantGroups: AssistantGroup[] }) {
   const pathname = usePathname();
   const [profileOpen, setProfileOpen] = useState(false);

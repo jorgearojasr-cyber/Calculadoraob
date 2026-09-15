@@ -31,6 +31,66 @@ vi.mock("@/lib/prisma", () => ({
 
 vi.mock("@/lib/popular-tasks", () => ({ TASK_IMAGES: {} }));
 
+// Cimientos de arquitectura (2026-09-14) — search.ts ya no declara las
+// features standalone a mano, las lee de src/lib/product-features.ts (el
+// registro central). Se mockea acá con un fixture que copia LITERAL el
+// name/description/href/area/keywords de las 4 entradas reales de
+// PRODUCT_FEATURES — así este archivo sigue probando que las keywords
+// aprobadas (lenguaje natural) funcionan de punta a punta a través de
+// searchContent, sin acoplarse a la implementación interna del registro
+// (eso lo prueba product-features.test.ts por separado). Si el día de
+// mañana el registro real cambia esas keywords, este fixture necesita
+// actualizarse a mano — es el mismo trade-off que loader.test.ts ya acepta
+// con su BASE_RECORD.
+const SEARCH_FEATURE_FIXTURES = [
+  {
+    id: "inspecciones",
+    name: "Inspecciones",
+    description: "Revisa tu obra o la casa que vas a recibir con una checklist guiada, antes de la recepción o entrega.",
+    href: "/inspecciones",
+    area: "revisa" as const,
+    keywords:
+      "inspeccion inspecciones inspeccionar revisar revision obra recibir casa recepcion vivienda revisar ampliacion checklist",
+  },
+  {
+    id: "regularizacion",
+    name: "Regularización",
+    description: "Regulariza tu vivienda o ampliación construida sin permiso, según la Ley N.º 20.898 (Ley del Mono).",
+    href: "/regularizacion",
+    area: "regulariza" as const,
+    keywords:
+      "regularizar regularizacion ley del mono ampliar sin permiso permiso de edificacion vivienda dgoc municipalidad",
+  },
+  {
+    id: "guias",
+    name: "Guías y consejos",
+    description: "Consejos prácticos, errores comunes y experiencia de obra para proyectos que ya tienen guía completa.",
+    href: "/guias",
+    area: "aprende" as const,
+    keywords: "guia guias aprender consejos como construir tips recomendaciones",
+  },
+  {
+    id: "biblioteca",
+    name: "Biblioteca",
+    description: "Proyectos terminados por otros usuarios, como ejemplo e inspiración para el tuyo.",
+    href: "/galeria",
+    area: "aprende" as const,
+    keywords: "biblioteca proyectos ejemplos fotos terminados inspiracion",
+  },
+];
+
+const getSearchableFeaturesMock = vi.fn();
+getSearchableFeaturesMock.mockReturnValue(SEARCH_FEATURE_FIXTURES);
+
+vi.mock("@/lib/product-features", () => ({
+  getSearchableFeatures: (...args: unknown[]) => getSearchableFeaturesMock(...args),
+  PRODUCT_AREAS: {
+    revisa: { label: "Revisa tu obra" },
+    regulariza: { label: "Regulariza" },
+    aprende: { label: "Aprende" },
+  },
+}));
+
 type FakeModule = {
   id: string;
   slug: string;
@@ -88,6 +148,8 @@ beforeEach(() => {
   categoryFindManyMock.mockReset();
   projectGroupFindManyMock.mockReset();
   projectTaskFindManyMock.mockReset();
+  getSearchableFeaturesMock.mockReset();
+  getSearchableFeaturesMock.mockReturnValue(SEARCH_FEATURE_FIXTURES);
 });
 
 describe("searchContent — features standalone (Inspecciones/Regularización/Guías/Biblioteca)", () => {
@@ -125,6 +187,21 @@ describe("searchContent — features standalone (Inspecciones/Regularización/Gu
     const match = results.find((r) => r.name === "Inspecciones");
     expect(match?.href).toBe("/inspecciones");
     expect(match?.type).toBe("feature");
+  });
+
+  // El filtro real de showInSearch/status vive en product-features.ts (ver
+  // product-features.test.ts) — acá se prueba la INTEGRACIÓN: si el
+  // registro central ya excluyó una feature (porque showInSearch:false o
+  // porque no está publicada/disponible), searchContent nunca la agrega
+  // por su cuenta — confía ciegamente en lo que getSearchableFeatures
+  // devuelve, sin una lista propia de respaldo.
+  it("una feature que el registro no devuelve (showInSearch:false o no disponible) no aparece en los resultados", async () => {
+    getSearchableFeaturesMock.mockReturnValue(
+      SEARCH_FEATURE_FIXTURES.filter((f) => f.id !== "regularizacion")
+    );
+    const { searchContent } = await import("./search");
+    const results = await searchContent("regularizar");
+    expect(results.some((r) => r.type === "feature" && r.name === "Regularización")).toBe(false);
   });
 });
 

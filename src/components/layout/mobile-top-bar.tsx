@@ -8,30 +8,30 @@ import { Logo } from "@/components/brand/logo";
 import { SignOutButton } from "@/components/auth/sign-out-button";
 import type { NavUser } from "./user-menu";
 import { isWizardRoute } from "@/lib/is-wizard-route";
+import { getMenuFeatures } from "@/lib/product-features";
 
 // Mismos ítems que no caben en las 4 pestañas fijas del BottomNav
 // (Inicio/Proyectos/Mis proyectos/Perfil ya cubren lo demás) + los
-// botones de sesión, espejo del lado derecho del TopNav de desktop —
-// mismo orden que NAV_ITEMS ahí (sin "Inicio", que ya cubre la pestaña
-// fija del BottomNav).
+// botones de sesión, espejo del lado derecho del TopNav de desktop.
 //
-// "Calculadoras" e "Inspecciones" (auditoría 2026-09-14, corrección
-// pedida por Jorge): antes solo vivían en el TopNav de desktop —
-// "Inspecciones" ni siquiera estaba acá, solo dentro del submenú
-// "Perfil" del BottomNav Y solo para usuarios con sesión iniciada, así
-// que un visitante mobile anónimo no tenía NINGUNA forma de llegar sin
-// escribir la URL a mano. Decisión de producto: visible para cualquiera,
-// sin login, en ambos anchos — igual que ya se veía en desktop. Sigue
-// existiendo además dentro de "Perfil" (ver BottomNav) como acceso
-// adicional para quien ya inició sesión — no se quitó de ahí, esto solo
-// agrega el acceso principal.
-const DRAWER_LINKS = [
-  { href: "/#empezar", label: "Calculadoras" },
-  { href: "/guias", label: "Guías y consejos" },
-  { href: "/inspecciones", label: "Inspecciones" },
-  { href: "/galeria", label: "Biblioteca" },
-  { href: "/acerca-de", label: "Acerca de nosotros" },
-];
+// Cimientos de arquitectura (2026-09-14) — antes este array tenía las
+// mismas 5 entradas hardcodeadas acá Y por separado en TopNav.tsx
+// (exactamente el problema que motivó esta fase: agregar/quitar una
+// feature obligaba a acordarse de tocar los 2 archivos). Ahora
+// Guías/Inspecciones/Biblioteca vienen de `getMenuFeatures()` — la MISMA
+// fuente que ya consume TopNav.tsx y el buscador — y solo "Calculadoras"
+// (ancla al Home, no una feature) y "Acerca de nosotros" (página estática
+// informativa, no una feature) se quedan hardcodeadas acá, igual criterio
+// que en TopNav.tsx (ver ese archivo: "mantenerlos fuera del registry
+// cuando corresponda").
+function buildDrawerLinks() {
+  const featureLinks = getMenuFeatures().map((feature) => ({ href: feature.href!, label: feature.name }));
+  return [
+    { href: "/#empezar", label: "Calculadoras" },
+    ...featureLinks,
+    { href: "/acerca-de", label: "Acerca de nosotros" },
+  ];
+}
 
 const SIMPLIFIED_ROUTES = new Set(["/login", "/registro"]);
 
@@ -39,6 +39,7 @@ export function MobileTopBar({ user }: { user: NavUser }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const isSimplified = SIMPLIFIED_ROUTES.has(pathname);
+  const drawerLinks = buildDrawerLinks();
 
   // Mismo criterio que TopNav (desktop): el wizard trae su propio header.
   if (isWizardRoute(pathname)) return null;
@@ -81,7 +82,7 @@ export function MobileTopBar({ user }: { user: NavUser }) {
           </div>
 
           <nav className="grid gap-1 mb-6">
-            {DRAWER_LINKS.map((item) => (
+            {drawerLinks.map((item) => (
               <Link
                 key={item.href}
                 href={item.href}
