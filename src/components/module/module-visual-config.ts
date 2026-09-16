@@ -163,8 +163,17 @@ export type ModuleVisualConfig = {
   // stepGroup -> layout combinado (largo+ancho en una sola pregunta con
   // caja de superficie en vivo) — ver COMBINED_AREA_QUESTION más abajo.
   combinedAreaQuestion?: Record<string, CombinedAreaQuestionConfig>;
-  // Ver HERO_RESULT_KEYS.
-  heroResultKey?: string;
+  // Ver HERO_RESULT_KEYS. Acepta un arreglo cuando el dato protagonista
+  // puede venir de Formula distintas según una condición mutuamente
+  // excluyente en las RESPUESTAS del usuario (ej. Radier: bajo
+  // metodo_hormigon=premezclado corresponde destacar "volumen_premezclado";
+  // en cualquier otro caso, "volumen_total"). ResultScreen prueba cada key
+  // en orden y usa la primera que exista en `pricedResults` — a diferencia
+  // de lo que asumía un comentario anterior, "volumen_total" en Radier NO
+  // tiene `condition` en la Formula (se computa siempre, en ambos métodos),
+  // así que el orden del arreglo es lo que decide cuál gana cuando las dos
+  // keys coexisten (verificado contra la BD real: 2026-09-15).
+  heroResultKey?: string | string[];
   // Ver RECALCULATE_FIELDS.
   recalculateField?: string;
   // Ver OPTIONAL_QUESTION_KEYS.
@@ -283,19 +292,33 @@ export const MODULE_CONFIG: Record<string, ModuleVisualConfig> = {
     // Fase 5 (13-ago-2026): "Volumen de hormigón" pasa a ser el resultado
     // protagonista (ResultHero, azul) en vez de Cemento — pedido explícito
     // del usuario ("VOLUMEN DE HORMIGÓN — AZUL" como su propio bloque,
-    // separado de "MATERIALES"). Solo existe bajo metodo_hormigon=manual
-    // (condition de la Formula); con premezclado, "volumen_total" no se
-    // computa, heroResult no encuentra match, showsHero cae a false, y el
-    // comportamiento vuelve a ser exactamente el de siempre para ese
-    // camino (volumen_premezclado como primer ítem destacado de la lista
-    // — ver comentario en result-screen.tsx sobre showsHero). Se excluye
-    // "volumen_total" de la lista genérica para que no aparezca dos veces
-    // (una vez en ResultHero, otra como fila de "Materiales") —
-    // "volumen_premezclado" NO está en esta lista a propósito: bajo
-    // premezclado no hay hero, así que necesita seguir siendo el primer
-    // ítem de la lista para conservar su propio destaque, como antes.
-    heroResultKey: "volumen_total",
-    excludeFromListKeys: ["volumen_total"],
+    // separado de "MATERIALES").
+    //
+    // Corrección (Parte 4, cierre pre-commit, 2026-09-15): el comentario
+    // original de esta fase asumía que "volumen_total" tenía `condition:
+    // metodo_hormigon=manual` y por lo tanto no se computaba bajo
+    // premezclado — verificado contra la BD real, esto es falso: la
+    // Formula "volumen_total" tiene `condition: null` (se calcula SIEMPRE,
+    // en ambos métodos); solo "volumen_premezclado" tiene
+    // `condition: metodo_hormigon=="premezclado"`. Con heroResultKey como
+    // string simple, esto hacía que el hero mostrara "volumen_total" bajo
+    // premezclado también, dejando "Volumen de hormigón a pedir"
+    // (volumen_premezclado) enterrado como fila normal de la lista — el
+    // mismo problema de jerarquía que una fase anterior ("Fase 8 - Ajusta
+    // tu radier") ya había diagnosticado y resuelto con un heroResultKey de
+    // arreglo, pero cuyo commit se revirtió por accidente (ver 4211d9b,
+    // "fix(piscinas): revierte contenido ajeno...") antes de completar su
+    // contraparte en result-screen.tsx. Se retoma acá esa misma solución:
+    // ResultScreen prueba cada key en orden y usa la primera que exista en
+    // los resultados de esta corrida — bajo premezclado eso es
+    // "volumen_premezclado" (gana por ir primero en el arreglo); bajo
+    // manual, esa key nunca se computa, así que cae a "volumen_total".
+    // Nunca coexisten como hero: solo una de las dos gana cada vez.
+    heroResultKey: ["volumen_premezclado", "volumen_total"],
+    // Ambas keys se sacan de la lista genérica de "Materiales" para no
+    // duplicar el dato que ya se ve gigante en ResultHero — cualquiera que
+    // haya ganado como hero en esta corrida.
+    excludeFromListKeys: ["volumen_total", "volumen_premezclado"],
     heroPosition: "beforeMaterials",
     refuerzo: {
       title: "Refuerzo recomendado",
@@ -955,8 +978,10 @@ export const RECALCULATE_FIELDS: Record<string, string> = Object.fromEntries(
 // Módulos donde el dato protagonista (ResultHero) NO es el primer resultado
 // priced sino un resultado informativo más relevante para el usuario (ej.
 // Piscina: volumen de agua antes que hormigón) — mecanismo genérico, un
-// Formula.key fuerza qué resultado ocupa la tarjeta hero.
-export const HERO_RESULT_KEYS: Record<string, string> = Object.fromEntries(
+// Formula.key (o, cuando el protagonista depende de una respuesta
+// mutuamente excluyente como el método de hormigón de Radier, un arreglo de
+// keys en orden de prioridad) fuerza qué resultado ocupa la tarjeta hero.
+export const HERO_RESULT_KEYS: Record<string, string | string[]> = Object.fromEntries(
   Object.entries(MODULE_CONFIG)
     .filter(([, m]) => m.heroResultKey)
     .map(([slug, m]) => [slug, m.heroResultKey!])

@@ -24,32 +24,32 @@ export function RecipeCard({
   items: CalculationResult[];
 }) {
   return (
-    <div className="rounded-2xl p-5 mb-3 bg-white border border-border">
-      <p className="text-xs font-mono uppercase tracking-wider text-ink-muted mb-3">{title}</p>
+    <div className="rounded-ds-card p-5 mb-3 bg-white border border-ds-border">
+      <p className="font-body text-xs font-semibold uppercase tracking-wider text-ds-text-tertiary mb-3">{title}</p>
 
       <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-        <span className="font-medium text-[15px]">{primary.label}</span>
-        <span className="font-display text-2xl font-semibold text-right">
+        <span className="font-body font-semibold text-[15px] text-ds-navy-900">{primary.label}</span>
+        <span className="font-display text-2xl font-bold text-right tabular-nums text-ds-navy-900">
           {formatQuantity(primary.value)}{" "}
-          <span className="text-sm font-body font-normal text-ink-muted">
+          <span className="text-sm font-body font-medium text-ds-text-secondary">
             {pluralizeUnit(primary.value, primary.unit)}
           </span>
         </span>
       </div>
-      {primary.note && <p className="mt-2 text-xs text-ink-muted">{primary.note}</p>}
+      {primary.note && <p className="mt-2 font-body text-xs text-ds-text-secondary">{primary.note}</p>}
 
       {items.length > 0 && (
-        <div className="mt-4 pt-4 border-t border-border grid grid-cols-2 gap-x-4 gap-y-3">
+        <div className="mt-4 pt-4 border-t border-ds-border grid grid-cols-2 gap-x-4 gap-y-3">
           {items.map((item) => (
             <div key={item.key}>
-              <p className="text-xs text-ink-muted">{item.label}</p>
-              <p className="font-display text-lg font-semibold">
+              <p className="font-body text-xs text-ds-text-secondary">{item.label}</p>
+              <p className="font-display text-lg font-bold text-ds-navy-900 tabular-nums">
                 {formatQuantity(item.value)}{" "}
-                <span className="text-xs font-body font-normal text-ink-muted">
+                <span className="text-xs font-body font-medium text-ds-text-secondary">
                   {pluralizeUnit(item.value, item.unit)}
                 </span>
               </p>
-              {item.note && <p className="mt-0.5 text-[11px] text-ink-faint">{item.note}</p>}
+              {item.note && <p className="mt-0.5 font-body text-[11px] text-ds-text-tertiary">{item.note}</p>}
             </div>
           ))}
         </div>
@@ -61,7 +61,7 @@ export function RecipeCard({
           agregada, compactación y curado. Genérico, sin nada de Radier
           hardcodeado, para que cualquier futuro módulo con RecipeCard
           herede la misma aclaración. */}
-      <p className="mt-4 pt-3 border-t border-border/60 text-[11px] text-ink-faint">
+      <p className="mt-4 pt-3 border-t border-ds-border/70 font-body text-[11px] text-ds-text-tertiary">
         Dosificación de referencia para la preparación en obra — no es una garantía automática de la resistencia
         final, que también depende de la granulometría de los áridos, el agua agregada, la compactación y el curado.
       </p>

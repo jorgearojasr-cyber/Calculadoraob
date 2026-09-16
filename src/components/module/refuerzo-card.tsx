@@ -25,14 +25,14 @@ export function RefuerzoCard({
   nota: string;
 }) {
   return (
-    <div className="rounded-2xl p-5 mb-3 bg-white border border-border">
-      <p className="text-xs font-mono uppercase tracking-wider text-ink-muted mb-2">{title}</p>
-      <p className="text-[15px] mb-2">
+    <div className="rounded-ds-card p-5 mb-3 bg-white border border-ds-border">
+      <p className="font-body text-xs font-semibold uppercase tracking-wider text-ds-text-tertiary mb-2">{title}</p>
+      <p className="font-body text-[15px] mb-2 text-ds-navy-900">
         <span className="font-medium">{materialLabel}:</span>{" "}
-        <span className="font-semibold text-caution">{estado}</span>
+        <span className="font-bold text-ds-orange-700">{estado}</span>
       </p>
-      <p className="text-sm text-ink-muted">{explicacion}</p>
-      <p className="mt-3 pt-3 border-t border-border/60 text-[11px] text-ink-faint">{nota}</p>
+      <p className="font-body text-sm text-ds-text-secondary">{explicacion}</p>
+      <p className="mt-3 pt-3 border-t border-ds-border/70 font-body text-[11px] text-ds-text-tertiary">{nota}</p>
     </div>
   );
 }

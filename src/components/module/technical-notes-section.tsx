@@ -19,12 +19,12 @@ export function TechnicalNotesSection({
   if (items.length === 0) return null;
 
   return (
-    <div className="rounded-2xl p-5 mb-3 bg-white border border-border">
+    <div className="rounded-ds-card p-5 mb-3 bg-white border border-ds-border">
       <CollapsibleHelp label={label} ariaLabel={label}>
         <div className="grid gap-2">
           {items.map((r) => (
-            <p key={r.key} className="text-xs text-ink-muted">
-              <span className="font-medium">{r.label}:</span> {r.note}
+            <p key={r.key} className="font-body text-xs text-ds-text-secondary">
+              <span className="font-semibold">{r.label}:</span> {r.note}
             </p>
           ))}
         </div>

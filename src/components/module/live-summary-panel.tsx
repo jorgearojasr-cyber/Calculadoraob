@@ -32,11 +32,11 @@ function SummaryList({ items, onEditItem }: { items: SummaryItem[]; onEditItem: 
       {items.map((item) => (
         <div
           key={item.questionKey}
-          className="flex items-start justify-between gap-3 py-2 border-b border-border last:border-0"
+          className="flex items-start justify-between gap-3 py-2 border-b border-ds-border last:border-0"
         >
           <div className="min-w-0">
-            <dt className="text-xs text-ink-faint">{item.label}</dt>
-            <dd className={`text-sm font-medium truncate ${item.answered ? "text-ink" : "text-ink-faint"}`}>
+            <dt className="font-body text-xs text-ds-text-tertiary">{item.label}</dt>
+            <dd className={`font-body text-sm font-semibold truncate ${item.answered ? "text-ds-navy-900" : "text-ds-text-tertiary"}`}>
               {item.answered ? item.value : "Pendiente"}
             </dd>
           </div>
@@ -44,7 +44,7 @@ function SummaryList({ items, onEditItem }: { items: SummaryItem[]; onEditItem: 
             <button
               type="button"
               onClick={() => onEditItem(item.questionKey)}
-              className="flex-shrink-0 inline-flex items-center gap-1 text-xs font-medium text-safety hover:underline"
+              className="flex-shrink-0 inline-flex items-center gap-1 font-body text-xs font-semibold text-ds-orange-600 hover:text-ds-orange-700 hover:underline"
             >
               <Pencil className="w-3 h-3" />
               Cambiar
@@ -71,19 +71,19 @@ export function LiveSummaryPanel({
   return (
     <>
       {/* Desktop: columna lateral siempre abierta */}
-      <div className="hidden lg:block rounded-2xl border border-border bg-concrete p-5">
+      <div className="hidden lg:block rounded-ds-card border border-ds-border bg-ds-muted p-5">
         <div className="flex items-center justify-between mb-3 gap-3">
-          <p className="font-mono text-xs uppercase tracking-wider text-ink-muted">{title}</p>
-          <p className="font-mono text-[11px] text-ink-faint flex-shrink-0">{countLabel}</p>
+          <p className="font-body text-xs font-semibold uppercase tracking-wider text-ds-text-tertiary">{title}</p>
+          <p className="font-body text-[11px] text-ds-text-tertiary flex-shrink-0">{countLabel}</p>
         </div>
         <SummaryList items={items} onEditItem={onEditItem} />
       </div>
 
       {/* Mobile: tarjeta plegable */}
-      <details className="lg:hidden rounded-2xl border border-border bg-concrete open:pb-1" open={answeredCount > 0}>
+      <details className="lg:hidden rounded-ds-card border border-ds-border bg-ds-muted open:pb-1" open={answeredCount > 0}>
         <summary className="flex items-center justify-between gap-3 px-5 py-4 cursor-pointer list-none">
-          <span className="font-mono text-xs uppercase tracking-wider text-ink-muted">{title}</span>
-          <span className="font-mono text-[11px] text-ink-faint">{countLabel}</span>
+          <span className="font-body text-xs font-semibold uppercase tracking-wider text-ds-text-tertiary">{title}</span>
+          <span className="font-body text-[11px] text-ds-text-tertiary">{countLabel}</span>
         </summary>
         <div className="px-5 pb-4">
           <SummaryList items={items} onEditItem={onEditItem} />

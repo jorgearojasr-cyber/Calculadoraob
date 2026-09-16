@@ -43,26 +43,27 @@ export function RecalculateField({
   };
 
   return (
-    <div className="mb-3 rounded-2xl p-4 bg-white border border-border flex flex-wrap items-end gap-3">
+    <div className="mb-3 rounded-ds-card p-4 bg-white border border-ds-border flex flex-wrap items-end gap-3">
       <label className="grid gap-1.5">
-        <span className="text-sm font-medium">{label}</span>
-        <div className="flex items-center gap-2 rounded-xl px-3 py-2 border-[1.5px] border-ink">
+        <span className="font-body text-sm font-semibold text-ds-navy-900">{label}</span>
+        <div className="flex items-center gap-2 rounded-ds-input px-3 py-2 border-[1.5px] border-ds-border focus-within:border-ds-orange-600 focus-within:ring-[3px] focus-within:ring-ds-orange-100 transition-all">
           <input
             type="text"
             inputMode="decimal"
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
             onFocus={(e) => e.target.select()}
-            className="w-20 bg-transparent outline-none font-display text-lg"
+            className="w-20 bg-transparent outline-none font-display text-lg text-ds-navy-900"
           />
-          {unit && <span className="font-mono text-xs text-ink-muted">{unit}</span>}
+          {unit && <span className="font-body text-xs font-semibold text-ds-text-secondary">{unit}</span>}
         </div>
       </label>
       <button
         type="button"
         onClick={handleRecalculate}
         disabled={!hasChanged || isPending}
-        className="rounded-full px-5 py-2.5 text-sm font-semibold text-white bg-action disabled:opacity-40 disabled:cursor-not-allowed"
+        className="rounded-xl px-5 font-body text-sm font-bold text-white bg-ds-orange-600 hover:bg-ds-orange-700 active:scale-[0.98] transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+        style={{ height: 44 }}
       >
         {isPending ? "Recalculando…" : "Recalcular"}
       </button>

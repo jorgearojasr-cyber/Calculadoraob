@@ -41,18 +41,18 @@ export function ResultHero({
       : null;
 
   return (
-    <div className="rounded-2xl p-6 mb-3 bg-navy text-white">
-      <p className="font-mono text-xs uppercase tracking-wider text-white/60 mb-3">Tu {moduleName}</p>
-      <div className="flex flex-wrap items-start justify-between gap-4">
+    <div className="rounded-ds-card-lg p-6 sm:p-7 mb-3 bg-ds-navy-900 text-white shadow-ds-card-elevated">
+      <p className="font-body text-xs font-semibold uppercase tracking-wider text-white/55 mb-3">Tu {moduleName}</p>
+      <div className="flex flex-wrap items-start justify-between gap-5">
         <div>
-          <p className="font-display text-[44px] sm:text-[52px] font-extrabold leading-none">
+          <p className="font-display text-[44px] sm:text-[52px] font-extrabold leading-none tabular-nums">
             {formatQuantity(result.value)}
           </p>
-          <p className="mt-1 text-lg font-medium text-white/90">
+          <p className="mt-1.5 font-body text-lg font-semibold text-white/90">
             {pluralizeUnit(result.value, result.unit)} de {(result.materialName ?? result.label).toLowerCase()}
           </p>
           {(otherMaterialsText || primaryInfo) && (
-            <p className="mt-2 text-sm text-white/60 max-w-md">
+            <p className="mt-2.5 font-body text-sm text-white/60 max-w-md">
               {otherMaterialsText}
               {otherMaterialsText && primaryInfo && " "}
               {primaryInfo && (
@@ -64,9 +64,12 @@ export function ResultHero({
           )}
         </div>
         {total !== null && (
-          <div className="text-right flex-shrink-0">
-            <p className="text-xs text-white/60">Total aproximado</p>
-            <p className="font-display text-xl font-bold whitespace-nowrap">${currencyFormatter.format(total)}</p>
+          <div className="text-right flex-shrink-0 rounded-ds-card px-4 py-3 bg-white/10">
+            <p className="font-body text-xs font-semibold text-white/60">Costo total estimado</p>
+            <p className="mt-0.5 font-display text-xl sm:text-2xl font-extrabold whitespace-nowrap tabular-nums">
+              ${currencyFormatter.format(total)}
+            </p>
+            <p className="mt-0.5 font-body text-[11px] text-white/50">Valor referencial</p>
           </div>
         )}
       </div>

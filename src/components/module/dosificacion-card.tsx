@@ -42,23 +42,23 @@ export function DosificacionCard({
   sourceLabel: string;
 }) {
   return (
-    <div className="rounded-2xl p-5 mb-3 bg-caution-tint border border-caution-border">
-      <p className="text-xs font-mono uppercase tracking-wider text-caution mb-0.5">{title}</p>
-      <p className="text-xs text-ink-muted mb-4">{subtitle}</p>
+    <div className="rounded-ds-card p-5 mb-3 bg-ds-orange-100/40 border border-ds-orange-600/25">
+      <p className="font-body text-xs font-semibold uppercase tracking-wider text-ds-orange-700 mb-0.5">{title}</p>
+      <p className="font-body text-xs text-ds-text-secondary mb-4">{subtitle}</p>
 
       <div className="grid grid-cols-2 gap-x-4 gap-y-3">
         <div>
-          <p className="text-xs text-ink-muted">{baseLabel}</p>
-          <p className="font-display text-lg font-semibold">
-            {baseValue} <span className="text-xs font-body font-normal text-ink-muted">{baseUnit}</span>
+          <p className="font-body text-xs text-ds-text-secondary">{baseLabel}</p>
+          <p className="font-display text-lg font-bold text-ds-navy-900 tabular-nums">
+            {baseValue} <span className="text-xs font-body font-medium text-ds-text-secondary">{baseUnit}</span>
           </p>
         </div>
         {items.map((item) => (
           <div key={item.key}>
-            <p className="text-xs text-ink-muted">{item.label}</p>
-            <p className="font-display text-lg font-semibold">
+            <p className="font-body text-xs text-ds-text-secondary">{item.label}</p>
+            <p className="font-display text-lg font-bold text-ds-navy-900 tabular-nums">
               {formatQuantity(item.value)}{" "}
-              <span className="text-xs font-body font-normal text-ink-muted">
+              <span className="text-xs font-body font-medium text-ds-text-secondary">
                 {pluralizeUnit(item.value, item.unit)}
               </span>
             </p>
@@ -66,19 +66,19 @@ export function DosificacionCard({
         ))}
       </div>
 
-      <p className="mt-4 pt-3 border-t border-caution-border/60 text-xs text-ink-muted">💡 {tip}</p>
-      <p className="mt-2 text-[11px] text-ink-faint">⚠️ {disclaimer}</p>
+      <p className="mt-4 pt-3 border-t border-ds-orange-600/20 font-body text-xs text-ds-text-secondary">💡 {tip}</p>
+      <p className="mt-2 font-body text-[11px] text-ds-text-tertiary">⚠️ {disclaimer}</p>
 
-      <div className="mt-3 pt-3 border-t border-caution-border/60 flex flex-wrap items-center justify-between gap-2">
-        <p className="text-[11px] text-ink-faint">Fuente técnica: {sourceLabel}</p>
+      <div className="mt-3 pt-3 border-t border-ds-orange-600/20 flex flex-wrap items-center justify-between gap-2">
+        <p className="font-body text-[11px] text-ds-text-tertiary">Fuente técnica: {sourceLabel}</p>
         {items.some((item) => item.note) && (
           <CollapsibleHelp label="¿Cómo se obtiene esta referencia?" ariaLabel="Cómo se obtiene la dosificación referencial">
             <div className="grid gap-1.5">
               {items.map(
                 (item) =>
                   item.note && (
-                    <p key={item.key} className="text-xs text-ink-muted">
-                      <span className="font-medium">{item.label}:</span> {item.note}
+                    <p key={item.key} className="font-body text-xs text-ds-text-secondary">
+                      <span className="font-semibold">{item.label}:</span> {item.note}
                     </p>
                   )
               )}

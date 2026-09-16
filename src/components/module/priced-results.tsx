@@ -114,31 +114,31 @@ export function PricedResults({
         return (
         <div
           key={result.key}
-          className={`rounded-2xl p-5 border ${featured ? "bg-safety-tint border-safety-border" : "bg-white border-border"}`}
+          className={`rounded-ds-card p-5 border ${featured ? "bg-ds-orange-100/40 border-ds-orange-600/30" : "bg-white border-ds-border"}`}
         >
           {featured ? (
             <div className="flex flex-wrap items-end justify-between gap-x-4 gap-y-1">
-              <span className="font-medium text-[15px]">{result.label}</span>
-              <span className="font-display text-[40px] sm:text-[44px] font-extrabold leading-none text-safety text-right">
+              <span className="font-body font-semibold text-[15px] text-ds-navy-900">{result.label}</span>
+              <span className="font-display text-[36px] sm:text-[40px] font-extrabold leading-none text-ds-orange-700 text-right tabular-nums">
                 {formatQuantity(result.value)}{" "}
-                <span className="text-base font-body font-medium text-safety/80">
+                <span className="text-base font-body font-medium text-ds-orange-700/80">
                   {pluralizeUnit(result.value, result.unit)}
                 </span>
               </span>
             </div>
           ) : (
             <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-              <span className="font-medium text-[15px]">{result.label}</span>
-              <span className="font-display text-xl font-semibold text-right">
+              <span className="font-body font-semibold text-[15px] text-ds-navy-900">{result.label}</span>
+              <span className="font-display text-xl font-bold text-right tabular-nums text-ds-navy-900">
                 {formatQuantity(result.value)}{" "}
-                <span className="text-sm font-body text-ink-muted">
+                <span className="text-sm font-body font-medium text-ds-text-secondary">
                   {pluralizeUnit(result.value, result.unit)}
                 </span>
               </span>
             </div>
           )}
           {result.materialName && (
-            <p className="mt-1 text-xs font-medium text-ink-muted">{result.materialName}</p>
+            <p className="mt-1 font-body text-xs font-semibold text-ds-text-secondary">{result.materialName}</p>
           )}
           {/* Fase 2 (Radier): la nota técnica (fuente, dosificación,
               fórmula) queda colapsada por defecto — la tarjeta prioriza
@@ -150,15 +150,15 @@ export function PricedResults({
           {result.note && !suppressNoteForKeys?.includes(result.key) && (
             <div className="mt-2">
               <CollapsibleHelp label="¿Cómo calculamos esta cantidad?" ariaLabel={`Cómo se calcula ${result.label}`}>
-                <p className="text-xs text-ink-muted">{result.note}</p>
+                <p className="font-body text-xs text-ds-text-secondary">{result.note}</p>
               </CollapsibleHelp>
             </div>
           )}
 
           {result.materialName && (
-            <div className="mt-3 pt-3 border-t border-border">
+            <div className="mt-3 pt-3 border-t border-ds-border">
               <div className="flex flex-wrap items-center gap-3">
-                <label className="text-xs text-ink-muted flex items-center gap-2">
+                <label className="font-body text-xs font-semibold text-ds-text-secondary flex items-center gap-2">
                   Precio unitario ($)
                   <input
                     type="text"
@@ -167,33 +167,33 @@ export function PricedResults({
                     onChange={(e) => handlePriceChange(result.key, e.target.value)}
                     onFocus={(e) => e.target.select()}
                     placeholder="0"
-                    className="w-24 rounded-lg px-2 py-1 border border-border text-sm outline-none focus:border-ink"
+                    className="w-24 rounded-ds-input px-2 py-1.5 border border-ds-border font-body text-sm text-ds-navy-900 outline-none focus:border-ds-orange-600 focus:ring-[3px] focus:ring-ds-orange-100 transition-all"
                   />
                 </label>
                 {subtotal !== null && (
-                  <span className="ml-auto text-sm font-semibold">
+                  <span className="ml-auto font-body text-sm font-bold text-ds-navy-900 tabular-nums">
                     Subtotal: ${currencyFormatter.format(subtotal)}
                   </span>
                 )}
               </div>
               {result.referencePriceNote && (
-                <p className="mt-1.5 text-[11px] text-ink-faint">{result.referencePriceNote}</p>
+                <p className="mt-1.5 font-body text-[11px] text-ds-text-tertiary">{result.referencePriceNote}</p>
               )}
             </div>
           )}
 
           {secondaries.length > 0 && (
-            <div className="mt-3 pt-3 border-t border-border/60 grid gap-2">
+            <div className="mt-3 pt-3 border-t border-ds-border/70 grid gap-2">
               {secondaries.map(({ result: sec }) => (
                 <div key={sec.key}>
                   <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5">
-                    <span className="text-xs text-ink-muted">{sec.label}</span>
-                    <span className="text-sm font-medium text-ink-muted text-right">
+                    <span className="font-body text-xs text-ds-text-secondary">{sec.label}</span>
+                    <span className="font-body text-sm font-semibold text-ds-text-secondary text-right tabular-nums">
                       {formatQuantity(sec.value)}{" "}
                     <span className="text-xs">{pluralizeUnit(sec.value, sec.unit)}</span>
                     </span>
                   </div>
-                  {sec.note && <p className="mt-1 text-xs text-ink-muted/80">{sec.note}</p>}
+                  {sec.note && <p className="mt-1 font-body text-xs text-ds-text-tertiary">{sec.note}</p>}
                 </div>
               ))}
             </div>
@@ -203,14 +203,14 @@ export function PricedResults({
       })}
 
       {anyPriced && !hideTotal && (
-        <div className="rounded-2xl p-5 bg-navy/[0.04] border border-navy/20">
+        <div className="rounded-ds-card p-5 bg-ds-navy-900 text-white">
           <div className="flex items-baseline justify-between gap-4">
-            <span className="font-semibold text-[15px]">Total aproximado</span>
-            <span className="font-display text-xl font-bold whitespace-nowrap">
+            <span className="font-body font-semibold text-[15px]">Total aproximado</span>
+            <span className="font-display text-xl font-extrabold whitespace-nowrap tabular-nums">
               ${currencyFormatter.format(total)}
             </span>
           </div>
-          <p className="mt-1 text-xs text-ink-muted">
+          <p className="mt-1 font-body text-xs text-white/60">
             Total aproximado (solo materiales con precio ingresado)
           </p>
         </div>

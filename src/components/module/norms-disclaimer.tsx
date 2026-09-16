@@ -28,7 +28,7 @@ export function NormsDisclaimer({ norms }: { norms: NormSummary[] }) {
   return (
     <div className="mt-6 grid gap-3">
       {reforzadas.length > 0 && (
-        <div className="rounded-2xl p-4 bg-danger-tint border-2 border-danger">
+        <div className="rounded-ds-card p-4 bg-danger-tint border-2 border-danger">
           <div className="flex items-start gap-2.5">
             <TriangleAlert className="w-6 h-6 flex-shrink-0 mt-0.5 text-danger" strokeWidth={2.75} />
             <CollapsibleHelp
@@ -36,13 +36,13 @@ export function NormsDisclaimer({ norms }: { norms: NormSummary[] }) {
               ariaLabel="Más detalle sobre este riesgo de seguridad"
               labelClassName="text-danger font-semibold"
             >
-              <div className="text-xs text-ink-muted grid gap-1.5">
+              <div className="font-body text-xs text-ds-text-secondary grid gap-1.5">
                 {reforzadasNotes.length === 0 ? (
                   <p>Estos valores representan práctica de obra habitual, no una norma citada.</p>
                 ) : (
                   reforzadasNotes.map((note) => <p key={note}>{note}</p>)
                 )}
-                <p className="font-medium text-danger">
+                <p className="font-semibold text-danger">
                   Esta calculadora no reemplaza el cálculo de un profesional habilitado — confírmalo antes
                   de construir, especialmente si hay riesgo estructural, de gas o eléctrico.
                 </p>
@@ -53,18 +53,18 @@ export function NormsDisclaimer({ norms }: { norms: NormSummary[] }) {
       )}
 
       {citadas.length > 0 && (
-        <div className="rounded-2xl p-4 bg-info-tint border border-border">
+        <div className="rounded-ds-card p-4 bg-ds-muted border border-ds-border">
           <div className="flex items-start gap-2.5">
-            <BookCheck className="w-4 h-4 flex-shrink-0 mt-0.5 text-ink-muted" />
+            <BookCheck className="w-4 h-4 flex-shrink-0 mt-0.5 text-ds-text-tertiary" />
             <CollapsibleHelp
               label={`Basado en norma técnica: ${citadas.map((n) => n.code).join(", ")}`}
               ariaLabel="Más detalle sobre las normas técnicas citadas"
             >
-              <ul className="text-xs text-ink-muted grid gap-0.5">
+              <ul className="font-body text-xs text-ds-text-secondary grid gap-0.5">
                 {citadas.map((norm) => (
                   <li key={norm.id}>
                     {norm.code} — {norm.title}
-                    {norm.note && <span className="block text-ink-faint">{norm.note}</span>}
+                    {norm.note && <span className="block text-ds-text-tertiary">{norm.note}</span>}
                   </li>
                 ))}
               </ul>
@@ -74,7 +74,7 @@ export function NormsDisclaimer({ norms }: { norms: NormSummary[] }) {
       )}
 
       {noVerificadas.length > 0 && (
-        <div className="rounded-2xl p-4 bg-caution-tint border border-caution-border">
+        <div className="rounded-ds-card p-4 bg-caution-tint border border-caution-border">
           <div className="flex items-start gap-2.5">
             <TriangleAlert className="w-4 h-4 flex-shrink-0 mt-0.5 text-caution" />
             <CollapsibleHelp
@@ -82,7 +82,7 @@ export function NormsDisclaimer({ norms }: { norms: NormSummary[] }) {
               ariaLabel="Más detalle sobre estos valores no verificados"
               labelClassName="text-caution"
             >
-              <div className="text-xs text-ink-muted grid gap-1.5">
+              <div className="font-body text-xs text-ds-text-secondary grid gap-1.5">
                 {noVerificadasNotes.length === 0 ? (
                   <p>Estos valores representan práctica de obra habitual, no una norma citada.</p>
                 ) : (

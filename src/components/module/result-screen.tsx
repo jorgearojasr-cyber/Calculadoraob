@@ -120,7 +120,13 @@ export function ResultScreen({
   // usuario no es el primer resultado priced (ej. Piscina: volumen de agua
   // antes que hormigón). Sin este prop, se mantiene el criterio de
   // siempre (primer resultado no-secundario CON materialName).
-  heroResultKey?: string;
+  //
+  // Acepta un arreglo cuando el protagonista depende de una respuesta
+  // mutuamente excluyente (ej. Radier: bajo metodo_hormigon=premezclado
+  // corresponde "volumen_premezclado"; en cualquier otro caso,
+  // "volumen_total") — se prueba cada key en orden y se usa la primera que
+  // exista en `pricedResults` de esta corrida (ver heroResult abajo).
+  heroResultKey?: string | string[];
   // Fase 9B (04-ago-2026): grupos "cantidad base + ingredientes" que se
   // pintan como RecipeCard en vez de aparecer en la lista genérica de
   // PricedResults (ver RECIPE_GROUPS en module-visual-config.ts). Sin
@@ -209,8 +215,15 @@ export function ResultScreen({
   // resultado no tiene materialName (algún módulo sin materiales físicos,
   // ej. solo entrega una cantidad informativa), no se arma la tarjeta
   // protagonista — ResultHero asume un material real.
-  const heroResult = heroResultKey
-    ? (pricedResults.find((r) => r.key === heroResultKey) ?? null)
+  //
+  // heroResultKey puede ser un arreglo (ver prop, arriba) — se prueba cada
+  // key en el orden dado y se usa la primera que exista en los resultados
+  // de esta corrida. Nunca coexisten dos keys de un mismo arreglo a la vez
+  // (son mutuamente excluyentes por `condition` en la Formula), así que
+  // esto nunca es ambiguo: como máximo una hace match.
+  const heroKeys = heroResultKey ? (Array.isArray(heroResultKey) ? heroResultKey : [heroResultKey]) : null;
+  const heroResult = heroKeys
+    ? (heroKeys.map((key) => pricedResults.find((r) => r.key === key)).find((r) => r !== undefined) ?? null)
     : (pricedResults.find((r) => !r.isSecondary) ?? null);
   const otherMaterialNames = pricedResults
     .filter((r) => !r.isSecondary && r.materialName && r.key !== heroResult?.key)
@@ -219,7 +232,7 @@ export function ResultScreen({
   // Con heroResultKey explícito, el módulo decidió a propósito destacar un
   // resultado informativo (sin materialName/precio) — no se exige
   // materialName como en el criterio genérico.
-  const showsHero = heroResultKey ? Boolean(heroResult) : Boolean(heroResult?.materialName);
+  const showsHero = heroKeys ? Boolean(heroResult) : Boolean(heroResult?.materialName);
   // PricedResults agranda el primer resultado no-secundario de su propia
   // lista (ver `featured` ahí) — solo hay que ocultar ese agrandado cuando
   // es EXACTAMENTE el mismo dato que ya se ve gigante en ResultHero. Con
@@ -404,8 +417,8 @@ export function ResultScreen({
 
   return (
     <div>
-      <p className="font-mono text-xs uppercase tracking-wider mb-2 text-safety">Resultado</p>
-      <h2 className="font-display text-[22px] font-semibold tracking-tight mb-6">
+      <p className="font-body text-xs font-semibold uppercase tracking-wider mb-2 text-ds-orange-600">Resultado</p>
+      <h2 className="font-display text-2xl font-extrabold tracking-tight text-ds-navy-900 mb-6">
         Esto es lo que necesitas
       </h2>
 
@@ -432,10 +445,10 @@ export function ResultScreen({
           {infoResults
             .filter((info) => info.key !== refuerzoConfig?.estadoKey && info.key !== refuerzoConfig?.explicacionKey)
             .map((info) => (
-              <div key={info.key} className="rounded-2xl p-5 bg-white border border-border">
+              <div key={info.key} className="rounded-ds-card p-5 bg-white border border-ds-border">
                 <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-                  <span className="font-medium text-[15px]">{info.label}</span>
-                  <span className="font-display text-lg font-semibold text-right">
+                  <span className="font-body font-semibold text-[15px] text-ds-navy-900">{info.label}</span>
+                  <span className="font-display text-lg font-bold text-right text-ds-navy-900">
                     {String(info.value)}
                   </span>
                 </div>
@@ -445,17 +458,17 @@ export function ResultScreen({
       )}
 
       {consumptionBreakdown && consumptionBreakdown.length > 0 && (
-        <div className="rounded-2xl p-5 mb-3 bg-white border border-border">
-          <p className="text-xs font-mono uppercase tracking-wider text-ink-muted mb-3">
+        <div className="rounded-ds-card p-5 mb-3 bg-white border border-ds-border">
+          <p className="font-body text-xs font-semibold uppercase tracking-wider text-ds-text-tertiary mb-3">
             Desglose por artefacto
           </p>
           <div className="grid gap-2">
             {[...consumptionBreakdown]
               .sort((a, b) => b.kwhMes - a.kwhMes)
               .map((item) => (
-                <div key={item.label} className="flex items-center justify-between gap-3 text-sm">
-                  <span className="min-w-0 truncate">{item.label}</span>
-                  <span className="font-mono text-ink-muted shrink-0">{item.kwhMes.toFixed(1)} kWh/mes</span>
+                <div key={item.label} className="flex items-center justify-between gap-3 font-body text-sm">
+                  <span className="min-w-0 truncate text-ds-navy-900">{item.label}</span>
+                  <span className="font-body text-ds-text-secondary shrink-0 tabular-nums">{item.kwhMes.toFixed(1)} kWh/mes</span>
                 </div>
               ))}
           </div>
@@ -463,21 +476,21 @@ export function ResultScreen({
       )}
 
       {tramosBreakdown && (
-        <div className="rounded-2xl p-5 mb-3 bg-white border border-border">
-          <p className="text-xs font-mono uppercase tracking-wider text-ink-muted mb-3">
+        <div className="rounded-ds-card p-5 mb-3 bg-white border border-ds-border">
+          <p className="font-body text-xs font-semibold uppercase tracking-wider text-ds-text-tertiary mb-3">
             Desglose de la superficie (Área personalizada)
           </p>
           <div className="grid gap-2">
             {tramosBreakdown.map((tramo, i) => (
-              <div key={i} className="flex items-center justify-between gap-3 text-sm">
-                <span className="min-w-0 truncate">
-                  <span className={tramo.tipo === "resta" ? "text-safety" : "text-navy"}>
+              <div key={i} className="flex items-center justify-between gap-3 font-body text-sm">
+                <span className="min-w-0 truncate text-ds-navy-900">
+                  <span className={tramo.tipo === "resta" ? "text-ds-orange-600" : "text-ds-navy-700"}>
                     {tramo.tipo === "resta" ? "−" : "+"}
                   </span>{" "}
                   {tramo.etiqueta || (tramo.tipo === "resta" ? "Tramo que resta" : "Tramo que suma")}
-                  <span className="text-ink-faint"> · {formatQuantity(tramo.largo)} × {formatQuantity(tramo.ancho)} m</span>
+                  <span className="text-ds-text-tertiary"> · {formatQuantity(tramo.largo)} × {formatQuantity(tramo.ancho)} m</span>
                 </span>
-                <span className="font-mono text-ink-muted shrink-0">{formatQuantity(tramo.area)} m²</span>
+                <span className="font-body text-ds-text-secondary shrink-0 tabular-nums">{formatQuantity(tramo.area)} m²</span>
               </div>
             ))}
           </div>
@@ -552,7 +565,8 @@ export function ResultScreen({
             <button
               onClick={() => handleSaveProject("next-phase")}
               disabled={isSaving}
-              className="rounded-full px-6 py-3 text-sm font-semibold text-white flex items-center gap-2 bg-action disabled:opacity-50"
+              className="rounded-xl px-6 font-body text-[15px] font-bold text-white flex items-center gap-2 bg-ds-orange-600 hover:bg-ds-orange-700 active:scale-[0.98] transition-all disabled:opacity-50"
+              style={{ height: 48 }}
             >
               {saveState === "saving-next" ? (
                 "Guardando…"
@@ -566,7 +580,8 @@ export function ResultScreen({
             <button
               onClick={() => handleSaveProject("plan")}
               disabled={isSaving}
-              className="rounded-full px-6 py-3 text-sm font-medium border border-ink flex items-center gap-2 disabled:opacity-50"
+              className="rounded-xl px-6 font-body text-[15px] font-semibold text-ds-navy-900 border-[1.5px] border-ds-border hover:border-ds-navy-900/40 flex items-center gap-2 transition-colors disabled:opacity-50"
+              style={{ height: 48 }}
             >
               <FolderPlus className="w-4 h-4" />
               {saveState === "saving-plan" ? "Guardando…" : "Guardar proyecto"}
@@ -576,7 +591,8 @@ export function ResultScreen({
           <button
             onClick={() => handleSaveProject("plan")}
             disabled={isSaving}
-            className="rounded-full px-6 py-3 text-sm font-semibold text-white flex items-center gap-2 bg-action disabled:opacity-50"
+            className="rounded-xl px-6 font-body text-[15px] font-bold text-white flex items-center gap-2 bg-ds-orange-600 hover:bg-ds-orange-700 active:scale-[0.98] transition-all disabled:opacity-50"
+            style={{ height: 48 }}
           >
             <FolderPlus className="w-4 h-4" />
             {saveState === "saving-plan" ? "Guardando…" : "Guardar como proyecto"}
@@ -584,38 +600,40 @@ export function ResultScreen({
         )}
         <button
           onClick={onEditAnswers}
-          className="rounded-full px-6 py-3 text-sm font-medium border border-ink flex items-center gap-2"
+          className="rounded-xl px-6 font-body text-[15px] font-semibold text-ds-navy-900 border-[1.5px] border-ds-border hover:border-ds-navy-900/40 flex items-center gap-2 transition-colors"
+          style={{ height: 48 }}
         >
           <Pencil className="w-4 h-4" />
           Editar respuestas
         </button>
         <button
           onClick={onRestart}
-          className="rounded-full px-6 py-3 text-sm font-medium text-ink-muted flex items-center gap-2"
+          className="rounded-xl px-6 font-body text-[15px] font-semibold text-ds-text-secondary hover:text-ds-navy-900 flex items-center gap-2 transition-colors"
+          style={{ height: 48 }}
         >
           <RotateCcw className="w-4 h-4" />
           {buildRestartLabel(moduleName)}
         </button>
       </div>
       {saveState === "error" && (
-        <p className="mt-3 text-sm text-safety">No pudimos guardar el proyecto. Inténtalo de nuevo.</p>
+        <p className="mt-3 font-body text-sm text-danger">No pudimos guardar el proyecto. Inténtalo de nuevo.</p>
       )}
 
-      <p className="mt-4 text-xs text-ink-faint">
+      <p className="mt-4 font-body text-xs text-ds-text-tertiary">
         Copia este prompt y pégalo en tu IA favorita (ChatGPT, Claude, Gemini) para recibir consejos
         personalizados sobre tu proyecto.
       </p>
       <button
         onClick={() => setPromptOpen((v) => !v)}
-        className="mt-1.5 text-sm font-medium text-ink-muted hover:text-ink flex items-center gap-1.5"
+        className="mt-1.5 font-body text-sm font-semibold text-ds-text-secondary hover:text-ds-navy-900 flex items-center gap-1.5 transition-colors"
       >
         <Sparkles className="w-3.5 h-3.5" />
         Generar prompt para IA
       </button>
 
       {promptOpen && (
-        <div className="mt-4 rounded-2xl p-5 bg-white border border-border">
-          <p className="text-xs text-ink-muted mb-3">
+        <div className="mt-4 rounded-ds-card p-5 bg-white border border-ds-border">
+          <p className="font-body text-xs text-ds-text-secondary mb-3">
             Copia este texto y pégalo en ChatGPT, Claude, Gemini o Copilot si quieres profundizar.
             ObraBien no envía nada a ninguna IA por ti.
           </p>
@@ -623,11 +641,12 @@ export function ResultScreen({
             readOnly
             value={prompt}
             rows={8}
-            className="w-full rounded-xl p-3 text-sm font-mono bg-concrete border border-border outline-none"
+            className="w-full rounded-ds-input p-3 font-mono text-sm text-ds-navy-900 bg-ds-muted border border-ds-border outline-none"
           />
           <button
             onClick={handleCopy}
-            className="mt-3 rounded-full px-4 py-2 text-sm font-medium border border-ink inline-flex items-center gap-1.5"
+            className="mt-3 rounded-xl px-4 font-body text-sm font-semibold text-ds-navy-900 border-[1.5px] border-ds-border hover:border-ds-navy-900/40 inline-flex items-center gap-1.5 transition-colors"
+            style={{ height: 40 }}
           >
             {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
             {copied ? "Copiado" : "Copiar prompt"}
