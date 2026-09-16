@@ -1,7 +1,14 @@
+import type { Metadata } from "next";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { getShoppingListData } from "@/lib/shopping-list";
 import { ShoppingListView } from "@/components/shopping-list/shopping-list-view";
+
+// Ver nota en proyectos/page.tsx — mismo criterio (materiales consolidados
+// de SavedProject del usuario).
+export const metadata: Metadata = {
+  robots: { index: false, follow: false },
+};
 
 export default async function ListaComprasPage() {
   const session = await getServerSession(authOptions);

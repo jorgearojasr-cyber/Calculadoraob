@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { Metadata } from "next";
 import { Calculator, MapIcon, ShoppingCart } from "lucide-react";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
@@ -8,6 +9,14 @@ import { ProjectCard } from "@/components/proyectos/project-card";
 import { summarizePersistedResult } from "@/lib/project-summary";
 import { projectDateLabel } from "@/lib/project-date-label";
 import type { CalculateModuleResult } from "@/app/(app)/categorias/[slug]/[moduleSlug]/actions";
+
+// Preparación para dominio propio — datos privados del usuario
+// (SavedProject), nunca deben indexarse. robots.ts ya bloquea /proyectos
+// para crawlers; este noindex es defensa en profundidad (sección 20 del
+// pedido), sin cambiar auth ni la lógica de la página.
+export const metadata: Metadata = {
+  robots: { index: false, follow: false },
+};
 
 // Design Spec v1.0, Parte 6 (Mis proyectos) — catálogo real de SavedProject
 // del usuario. Ordenado por `updatedAt` (más reciente primero): a

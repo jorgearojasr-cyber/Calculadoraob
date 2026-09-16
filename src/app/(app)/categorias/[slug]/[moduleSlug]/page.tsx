@@ -1,9 +1,32 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { ModuleWizard } from "@/components/module/module-wizard";
 import type { WizardQuestion } from "@/components/module/types";
 import type { ModuleGuideData } from "@/components/module/guide-section";
 import { SHAPE_LABELS } from "@/lib/plan-shape";
+
+// Preparación para dominio propio — canonical por módulo, para que
+// variantes con query params (?plan=, ?phase=, ?tipo=, etc., todas del
+// mismo módulo) no se traten como contenido duplicado. Consulta liviana
+// separada del componente de página (solo los campos que necesita el
+// metadata, no las preguntas/guía completas).
+export async function generateMetadata({
+  params,
+}: {
+  params: { slug: string; moduleSlug: string };
+}): Promise<Metadata> {
+  const mod = await prisma.module.findFirst({
+    where: { slug: params.moduleSlug, published: true, category: { slug: params.slug } },
+    select: { name: true, description: true },
+  });
+  if (!mod) return {};
+  return {
+    title: mod.name,
+    description: mod.description,
+    alternates: { canonical: `/categorias/${params.slug}/${params.moduleSlug}` },
+  };
+}
 
 // Sprint UX "Construir una piscina" (03-ago-2026), ítem 4: resuelve — server
 // side, antes de renderizar el wizard — a qué fase se debe continuar si el

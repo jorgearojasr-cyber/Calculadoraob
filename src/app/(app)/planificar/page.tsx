@@ -1,9 +1,16 @@
 import Link from "next/link";
+import type { Metadata } from "next";
 import { ArrowLeft } from "lucide-react";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { PlanCard } from "@/components/plan/plan-card";
+
+export const metadata: Metadata = {
+  title: "Planifica tu proyecto",
+  description: "Avanza paso a paso desde la idea hasta la ejecución, con planes de construcción divididos en fases.",
+  alternates: { canonical: "/planificar" },
+};
 
 // Home ObraBien V2 (2026-09-14, punto 9/15 del pedido) — índice mínimo
 // real de PLANIFICA. Lee `ProjectPlan` desde la BD (no hardcodea el plan

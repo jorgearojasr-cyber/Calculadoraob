@@ -1,8 +1,28 @@
 import Link from "next/link";
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { GuideSection, type ModuleGuideData } from "@/components/module/guide-section";
+
+// Preparación para dominio propio — misma condición de gate que la página
+// (published + guía existente), consulta liviana separada.
+export async function generateMetadata({
+  params,
+}: {
+  params: { moduleSlug: string };
+}): Promise<Metadata> {
+  const mod = await prisma.module.findUnique({
+    where: { slug: params.moduleSlug },
+    select: { name: true, published: true, guide: { select: { summary: true } } },
+  });
+  if (!mod || !mod.guide || !mod.published) return {};
+  return {
+    title: `Guía: ${mod.name}`,
+    description: mod.guide.summary,
+    alternates: { canonical: `/guias/${params.moduleSlug}` },
+  };
+}
 
 export default async function GuiaDetailPage({ params }: { params: { moduleSlug: string } }) {
   const mod = await prisma.module.findUnique({

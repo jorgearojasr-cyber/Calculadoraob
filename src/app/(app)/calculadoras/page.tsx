@@ -1,6 +1,13 @@
+import type { Metadata } from "next";
 import { prisma } from "@/lib/prisma";
 import { CalculatorsExplorer } from "@/components/calculators/calculators-explorer";
 import type { CalculatorModule } from "@/lib/calculators";
+
+export const metadata: Metadata = {
+  title: "Calculadoras",
+  description: "Estima materiales y costos de cualquier proyecto de construcción de forma fácil y confiable.",
+  alternates: { canonical: "/calculadoras" },
+};
 
 // Design Spec v1.0 — Parte 2 (Calculadoras/Herramientas), 2026-09-15.
 // Nueva ruta canónica /calculadoras (punto 16 del pedido) — ninguna ruta

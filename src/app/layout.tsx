@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Manrope, Source_Sans_3, IBM_Plex_Mono } from "next/font/google";
+import { siteConfig } from "@/lib/site-config";
 import "./globals.css";
 
 // Design Spec v1.0 (OBRABIEN.CL, fase "Implementación Design Spec v1.0",
@@ -31,10 +32,42 @@ const ibmPlexMono = IBM_Plex_Mono({
   variable: "--font-mono",
 });
 
+// Preparación para dominio propio (calcula.obrabien.cl) — fase
+// exclusivamente de código, ver src/lib/site-config.ts. metadataBase
+// resuelve todas las URLs relativas (openGraph.url, canonical de cada
+// página) contra esa base; el dominio real (DNS + Vercel) se conecta en
+// una fase posterior, sin tocar este archivo otra vez. Sin `images` en
+// openGraph/twitter a propósito: no existe ningún asset 1200×630 real en
+// el repo (ver public/images/brand/ — solo ilustraciones de otro contexto,
+// no aptas como imagen social) — se documenta como pendiente en vez de
+// improvisar uno.
 export const metadata: Metadata = {
-  title: "ObraBien Calcula",
-  description:
-    "Calcula, aprende y construye gratis. Calcula materiales, cantidades y costos de cualquier proyecto de construcción, sin necesitar experiencia técnica.",
+  metadataBase: new URL(siteConfig.url),
+  title: {
+    default: siteConfig.title,
+    template: `%s | ${siteConfig.name}`,
+  },
+  description: siteConfig.description,
+  alternates: {
+    canonical: "/",
+  },
+  openGraph: {
+    type: "website",
+    siteName: siteConfig.name,
+    locale: "es_CL",
+    title: siteConfig.title,
+    description: siteConfig.description,
+    url: "/",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: siteConfig.title,
+    description: siteConfig.description,
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
 };
 
 export default function RootLayout({

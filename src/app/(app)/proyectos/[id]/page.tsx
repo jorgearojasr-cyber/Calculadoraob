@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { ArrowLeft, ArrowRight } from "lucide-react";
 import { getServerSession } from "next-auth";
@@ -12,6 +13,12 @@ import { ProgressEditor } from "@/components/proyectos/progress-editor";
 import { PlanProgressBar } from "@/components/plan/plan-progress-bar";
 import type { CalculateModuleResult } from "@/app/(app)/categorias/[slug]/[moduleSlug]/actions";
 import type { AnswerSummaryItem } from "../actions";
+
+// Ver nota en proyectos/page.tsx — mismo criterio, un SavedProject
+// individual es aún más específico del usuario.
+export const metadata: Metadata = {
+  robots: { index: false, follow: false },
+};
 
 export default async function SavedProjectPage({ params }: { params: { id: string } }) {
   const session = await getServerSession(authOptions);
