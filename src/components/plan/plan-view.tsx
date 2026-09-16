@@ -1,11 +1,12 @@
 "use client";
 
-import { useMemo, useState, useTransition, type ReactNode } from "react";
+import { useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Check, Circle, Calculator, PartyPopper, ArrowRight } from "lucide-react";
+import { Check, Calculator, PartyPopper, TriangleAlert } from "lucide-react";
 import { togglePhaseCompletionAction } from "@/app/(app)/plan/[slug]/actions";
 import { STALE_SESSION_ERROR, STALE_SESSION_MESSAGE } from "@/lib/stale-session";
+import { PlanProgressBar } from "./plan-progress-bar";
 
 export type PlanPhaseLink = { label: string | null; href: string; moduleName: string; moduleSlug: string };
 export type PlanPhaseData = {
@@ -65,19 +66,44 @@ function computeContornoArea(pool: PoolShape, contornoWidth: number): number {
   return Math.PI * (radioExt * radioExt - radioMuroExt * radioMuroExt);
 }
 
+// Botón primario, mismo tratamiento que ResultScreen (Parte 4): rounded-xl
+// 48px, ds-orange-600. Botón secundario cuando una fase tiene 2+ opciones
+// de módulo (ej. Rectangular/Circular): outline, mismo alto.
+function PhaseActionLinks({ links }: { links: PlanPhaseLink[] }) {
+  if (links.length === 1) {
+    return (
+      <Link
+        href={links[0].href}
+        className="inline-flex items-center gap-2 rounded-xl px-5 font-body text-sm font-bold text-white bg-ds-orange-600 hover:bg-ds-orange-700 active:scale-[0.98] transition-all"
+        style={{ height: 44 }}
+      >
+        <Calculator className="w-4 h-4" />
+        Calcular esta fase
+      </Link>
+    );
+  }
+  return (
+    <div className="flex flex-wrap gap-2">
+      {links.map((link) => (
+        <Link
+          key={link.href}
+          href={link.href}
+          className="inline-flex items-center gap-2 rounded-xl px-4 font-body text-sm font-semibold text-ds-navy-900 border-[1.5px] border-ds-border hover:border-ds-navy-900/40 transition-colors"
+          style={{ height: 44 }}
+        >
+          <Calculator className="w-3.5 h-3.5" />
+          {link.label ?? link.moduleName}
+        </Link>
+      ))}
+    </div>
+  );
+}
+
 // Campo de ancho de contorno + botones de módulo de la fase, con el área
 // calculada precargada en cada href (ver forcedInitialArea en
 // question-group-step.tsx). Se muestra SOLO si hay poolShape disponible —
 // sin eso, el llamador ya renderiza los links tal cual, sin este campo.
-function ContornoAreaField({
-  pool,
-  links,
-  renderLinks,
-}: {
-  pool: PoolShape;
-  links: PlanPhaseLink[];
-  renderLinks: (links: PlanPhaseLink[]) => ReactNode;
-}) {
+function ContornoAreaField({ pool, links }: { pool: PoolShape; links: PlanPhaseLink[] }) {
   const [width, setWidth] = useState("");
   const widthNum = Number(width.replace(",", "."));
   const area =
@@ -105,29 +131,60 @@ function ContornoAreaField({
   return (
     <div>
       <div className="mb-3">
-        <span className="block text-sm font-medium text-ink-muted mb-1.5">
+        <span className="block font-body text-sm font-semibold text-ds-navy-900 mb-1.5">
           ¿Cuánto ancho tendrá el contorno alrededor de la piscina?
         </span>
-        <div className="flex items-center gap-3 rounded-2xl bg-white border-[1.5px] border-ink px-4 py-2.5 max-w-[200px]">
+        <div className="flex items-center gap-2 rounded-ds-input bg-white border-[1.5px] border-ds-border px-4 py-2.5 max-w-[200px] focus-within:border-ds-orange-600 focus-within:ring-[3px] focus-within:ring-ds-orange-100 transition-all">
           <input
             type="text"
             inputMode="decimal"
             value={width}
             onChange={(e) => setWidth(e.target.value)}
             placeholder="0"
-            className="w-full bg-transparent outline-none font-display text-lg placeholder:text-ink-faint"
+            className="w-full bg-transparent outline-none font-display text-lg text-ds-navy-900 placeholder:text-ds-text-tertiary"
           />
-          <span className="font-mono text-sm text-ink-muted">m</span>
+          <span className="font-body text-sm font-semibold text-ds-text-secondary">m</span>
         </div>
         {area !== null && (
-          <p className="mt-1.5 text-xs text-ink-muted">
-            Área del contorno: <span className="font-mono font-semibold">{area} m²</span> — se precarga en
+          <p className="mt-1.5 font-body text-xs text-ds-text-secondary">
+            Área del contorno: <span className="font-semibold text-ds-navy-900">{area} m²</span> — se precarga en
             el módulo que elijas, editable ahí.
           </p>
         )}
       </div>
-      {renderLinks(effectiveLinks)}
+      <PhaseActionLinks links={effectiveLinks} />
     </div>
+  );
+}
+
+type PhaseStatus = "completed" | "current" | "pending";
+
+function statusDotClasses(status: PhaseStatus): string {
+  if (status === "completed") return "bg-ds-success-600 border-ds-success-600 text-white";
+  if (status === "current") return "bg-ds-orange-600 border-ds-orange-600 text-white";
+  return "bg-white border-ds-border text-ds-text-tertiary";
+}
+
+function StatusBadge({ status }: { status: PhaseStatus }) {
+  if (status === "completed") {
+    return (
+      <span className="inline-flex items-center gap-1 font-body text-[11px] font-semibold px-2 py-0.5 rounded-full bg-ds-success-600/10 text-ds-success-600">
+        <Check className="w-3 h-3" />
+        Completada
+      </span>
+    );
+  }
+  if (status === "current") {
+    return (
+      <span className="inline-flex items-center gap-1 font-body text-[11px] font-semibold px-2 py-0.5 rounded-full bg-ds-orange-100 text-ds-orange-700">
+        En curso
+      </span>
+    );
+  }
+  return (
+    <span className="inline-flex items-center gap-1 font-body text-[11px] font-semibold px-2 py-0.5 rounded-full bg-ds-muted text-ds-text-tertiary">
+      Pendiente
+    </span>
   );
 }
 
@@ -162,7 +219,12 @@ export function PlanView({
 
   const completedCount = completedIds.size;
   const justCompletedPhase = phases.find((p) => p.id === justCompletedPhaseId);
-  const nextPhase = phases.find((p) => !completedIds.has(p.id) && p.id !== justCompletedPhaseId);
+  // Fase 5 (Design Spec, "AHORA"): antes `nextPhase` solo se calculaba para
+  // el banner post-guardado — ahora es también la fase que se destaca de
+  // forma permanente en el bloque "AHORA" (primera no completada, sin
+  // importar si se acaba de completar otra). Mismo criterio de siempre
+  // (cualquier orden), solo se usa en un lugar más.
+  const currentPhase = phases.find((p) => !completedIds.has(p.id));
 
   const handleToggle = (phaseId: string, checked: boolean) => {
     setCompletedIds((prev) => {
@@ -190,130 +252,114 @@ export function PlanView({
     });
   };
 
+  const renderPhaseActions = (phase: PlanPhaseData) => {
+    const isContornoPhase = phase.links.some((l) => CONTORNO_MODULE_SLUGS.has(l.moduleSlug));
+    if (isContornoPhase && poolShape) {
+      return <ContornoAreaField pool={poolShape} links={phase.links} />;
+    }
+    return <PhaseActionLinks links={phase.links} />;
+  };
+
   return (
     <div>
       {sessionError && (
-        <div className="rounded-2xl p-4 mb-4 bg-safety-tint border border-safety/30 text-sm text-safety">
-          {sessionError}{" "}
-          <Link href={`/login?callbackUrl=${encodeURIComponent(`/plan/${planSlug}`)}`} className="font-semibold underline">
-            Iniciar sesión
-          </Link>
+        <div className="rounded-ds-card p-4 mb-4 bg-danger-tint border-2 border-danger flex items-start gap-2.5">
+          <TriangleAlert className="w-5 h-5 flex-shrink-0 mt-0.5 text-danger" />
+          <p className="font-body text-sm text-danger">
+            {sessionError}{" "}
+            <Link href={`/login?callbackUrl=${encodeURIComponent(`/plan/${planSlug}`)}`} className="font-semibold underline">
+              Iniciar sesión
+            </Link>
+          </p>
         </div>
       )}
 
       {justCompletedPhase && (
-        <div className="rounded-2xl p-5 mb-4 bg-safety-tint border border-safety/30">
+        <div className="rounded-ds-card p-5 mb-4 bg-ds-success-600/10 border border-ds-success-600/30">
           <div className="flex items-start gap-3">
-            <PartyPopper className="w-5 h-5 text-safety shrink-0 mt-0.5" />
+            <PartyPopper className="w-5 h-5 text-ds-success-600 shrink-0 mt-0.5" />
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-safety">
-                ¡{justCompletedPhase.name} lista!
-              </p>
-              {nextPhase ? (
-                <>
-                  <p className="text-sm text-ink-muted mt-1">Sigue con: {nextPhase.name}</p>
-                  {nextPhase.links.length === 1 && (
-                    <Link
-                      href={nextPhase.links[0].href}
-                      className="mt-3 inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold text-white bg-ink"
-                    >
-                      Ir a {nextPhase.name}
-                      <ArrowRight className="w-3.5 h-3.5" />
-                    </Link>
-                  )}
-                </>
+              <p className="font-body text-sm font-bold text-ds-success-600">¡{justCompletedPhase.name} lista!</p>
+              {currentPhase ? (
+                <p className="font-body text-sm text-ds-text-secondary mt-1">Sigue con: {currentPhase.name}</p>
               ) : (
-                <p className="text-sm text-ink-muted mt-1">¡Completaste todas las fases del plan!</p>
+                <p className="font-body text-sm text-ds-text-secondary mt-1">¡Completaste todas las etapas del plan!</p>
               )}
             </div>
           </div>
         </div>
       )}
 
-      <div className="rounded-2xl p-5 bg-white border border-border mb-6">
-        <div className="flex items-center justify-between mb-2">
-          <p className="text-sm font-semibold">
-            {completedCount} de {phases.length} fases completadas
+      {/* Progreso — Design Spec v1.0 sección J.7: barra real solo cuando hay
+          al menos una etapa completada; sin eso, un mensaje de inicio en
+          vez de una barra/porcentaje en 0% (sección 6/16). */}
+      <div className="rounded-ds-card p-5 bg-white border border-ds-border mb-4">
+        {completedCount > 0 ? (
+          <PlanProgressBar completed={completedCount} total={phases.length} />
+        ) : (
+          <p className="font-body text-sm text-ds-text-secondary">
+            {phases.length} {phases.length === 1 ? "etapa" : "etapas"} — empieza por la primera cuando quieras.
           </p>
-          <span className="text-xs text-ink-muted">
-            {Math.round((completedCount / phases.length) * 100)}%
-          </span>
-        </div>
-        <div className="h-2 rounded-full bg-border overflow-hidden">
-          <div
-            className="h-full bg-safety transition-all"
-            style={{ width: `${(completedCount / phases.length) * 100}%` }}
-          />
-        </div>
+        )}
       </div>
 
-      <div className="grid gap-3">
-        {phases.map((phase) => {
+      {/* AHORA — Design Spec v1.0 sección J.8: máxima claridad para la fase
+          actual, con datos reales de ProjectPlan (nunca un nombre
+          hardcodeado). Si no hay fase pendiente, el plan está completo. */}
+      {currentPhase ? (
+        <div className="rounded-ds-card p-5 mb-6 bg-ds-orange-100/40 border border-ds-orange-600/30">
+          <p className="font-body text-xs font-semibold uppercase tracking-wider text-ds-orange-700 mb-2">Ahora</p>
+          <h2 className="font-display text-xl font-extrabold text-ds-navy-900 tracking-tight mb-4">{currentPhase.name}</h2>
+          {renderPhaseActions(currentPhase)}
+        </div>
+      ) : (
+        phases.length > 0 && (
+          <div className="rounded-ds-card p-5 mb-6 bg-ds-success-600/10 border border-ds-success-600/30 flex items-start gap-2.5">
+            <Check className="w-5 h-5 text-ds-success-600 shrink-0 mt-0.5" />
+            <p className="font-body text-sm font-semibold text-ds-success-600">Completaste todas las etapas de este plan.</p>
+          </div>
+        )
+      )}
+
+      {/* Timeline — Design Spec v1.0 sección J.9-10: dot 32px + conector
+          2px, se adapta a la cantidad real de fases (nunca hardcodeada). */}
+      <div>
+        {phases.map((phase, index) => {
           const isDone = completedIds.has(phase.id);
-          const isHighlighted = phase.id === nextPhase?.id && justCompletedPhase !== undefined;
-          const isContornoPhase = phase.links.some((l) => CONTORNO_MODULE_SLUGS.has(l.moduleSlug));
-          const renderPhaseLinks = (links: PlanPhaseLink[]) =>
-            links.length === 1 ? (
-              <Link
-                href={links[0].href}
-                className="mt-2 inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold text-white bg-ink"
-              >
-                <Calculator className="w-3.5 h-3.5" />
-                Calcular esta fase
-              </Link>
-            ) : (
-              <div className="mt-2 flex flex-wrap gap-2">
-                {links.map((link) => (
-                  <Link
-                    key={link.href}
-                    href={link.href}
-                    className="inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium border border-ink"
-                  >
-                    <Calculator className="w-3.5 h-3.5" />
-                    {link.label ?? link.moduleName}
-                  </Link>
-                ))}
-              </div>
-            );
+          const status: PhaseStatus = isDone ? "completed" : phase.id === currentPhase?.id ? "current" : "pending";
+          const isLast = index === phases.length - 1;
+
           return (
-            <div
-              key={phase.id}
-              className={`rounded-2xl p-5 bg-white border ${
-                isHighlighted ? "border-safety ring-1 ring-safety/30" : "border-border"
-              }`}
-            >
-              <div className="flex items-start gap-3">
-                <label className="flex items-center gap-2 cursor-pointer shrink-0 mt-0.5">
+            <div key={phase.id} className="flex gap-4">
+              <div className="flex flex-col items-center shrink-0">
+                <div
+                  className={`w-8 h-8 rounded-full border-2 flex items-center justify-center font-body text-xs font-bold ${statusDotClasses(status)}`}
+                >
+                  {status === "completed" ? <Check className="w-4 h-4" /> : index + 1}
+                </div>
+                {!isLast && (
+                  <div className={`w-0.5 flex-1 min-h-[24px] ${status === "completed" ? "bg-ds-success-600" : "bg-ds-border"}`} />
+                )}
+              </div>
+
+              <div className={`flex-1 min-w-0 ${isLast ? "pb-0" : "pb-5"}`}>
+                <div className="flex items-center gap-2 mb-1 flex-wrap">
+                  <h3 className="font-body font-semibold text-[15px] text-ds-navy-900">{phase.name}</h3>
+                  <StatusBadge status={status} />
+                </div>
+
+                <label className="inline-flex items-center gap-2 cursor-pointer mb-2">
                   <input
                     type="checkbox"
                     checked={isDone}
                     onChange={(e) => handleToggle(phase.id, e.target.checked)}
-                    className="w-4 h-4"
+                    className="w-4 h-4 accent-ds-orange-600"
                     aria-label={`Marcar "${phase.name}" como lista`}
                   />
+                  <span className="font-body text-xs text-ds-text-secondary">Marcar como lista</span>
                 </label>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1">
-                    <h3 className="font-semibold text-[15px]">{phase.name}</h3>
-                    {isDone ? (
-                      <span className="inline-flex items-center gap-1 text-[10px] font-mono px-2 py-0.5 rounded-full bg-safety-tint text-safety">
-                        <Check className="w-3 h-3" />
-                        Completada
-                      </span>
-                    ) : (
-                      <span className="inline-flex items-center gap-1 text-[10px] font-mono px-2 py-0.5 rounded-full bg-concrete text-ink-faint">
-                        <Circle className="w-3 h-3" />
-                        Pendiente
-                      </span>
-                    )}
-                  </div>
 
-                  {isContornoPhase && poolShape ? (
-                    <ContornoAreaField pool={poolShape} links={phase.links} renderLinks={renderPhaseLinks} />
-                  ) : (
-                    renderPhaseLinks(phase.links)
-                  )}
-                </div>
+                {status !== "current" && renderPhaseActions(phase)}
               </div>
             </div>
           );

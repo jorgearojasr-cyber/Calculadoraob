@@ -148,15 +148,18 @@ export default async function ProjectPlanPage({
   });
 
   return (
-    <div className="max-w-3xl mx-auto px-6 pt-8 pb-16">
-      <Link href="/" className="inline-flex items-center gap-1.5 text-sm text-ink-muted hover:text-ink">
+    <div className="max-w-[680px] mx-auto px-4 sm:px-6 pt-8 pb-16">
+      <Link href="/planificar" className="inline-flex items-center gap-1.5 font-body text-sm text-ds-text-secondary hover:text-ds-navy-900">
         <ArrowLeft className="w-4 h-4" />
-        Volver al inicio
+        Volver a Planifica
       </Link>
 
-      <p className="font-mono text-xs uppercase tracking-wider mt-6 mb-2 text-safety">Plan de fases</p>
-      <h1 className="font-display text-2xl md:text-3xl font-semibold tracking-tight mb-2">{plan.title}</h1>
-      <p className="text-sm text-ink-muted mb-8">{plan.description}</p>
+      <p className="font-body text-xs font-semibold uppercase tracking-wider mt-6 mb-2 text-ds-orange-600">Plan de fases</p>
+      <h1 className="font-display text-2xl md:text-3xl font-extrabold tracking-tight mb-2 text-ds-navy-900">{plan.title}</h1>
+      <p className="font-body text-sm text-ds-text-secondary mb-2">{plan.description}</p>
+      <p className="font-body text-xs font-semibold text-ds-text-tertiary mb-8">
+        {plan.phases.length} {plan.phases.length === 1 ? "etapa" : "etapas"}
+      </p>
 
       <PlanView
         planSlug={plan.slug}
