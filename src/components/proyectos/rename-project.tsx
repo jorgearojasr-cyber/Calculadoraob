@@ -13,10 +13,10 @@ export function RenameProject({ id, initialName }: { id: string; initialName: st
     return (
       <button
         onClick={() => setEditing(true)}
-        className="group flex items-center gap-2 font-display text-2xl md:text-3xl font-semibold tracking-tight"
+        className="group flex items-center gap-2 font-display text-2xl md:text-3xl font-extrabold tracking-tight text-ds-navy-900"
       >
         {name}
-        <Pencil className="w-4 h-4 text-ink-faint opacity-0 group-hover:opacity-100" />
+        <Pencil className="w-4 h-4 text-ds-text-tertiary opacity-0 group-hover:opacity-100" />
       </button>
     );
   }
@@ -40,10 +40,10 @@ export function RenameProject({ id, initialName }: { id: string; initialName: st
         onChange={(e) => setName(e.target.value)}
         onKeyDown={(e) => e.key === "Enter" && commit()}
         disabled={isPending}
-        className="font-display text-2xl md:text-3xl font-semibold tracking-tight bg-transparent border-b border-ink outline-none"
+        className="font-display text-2xl md:text-3xl font-extrabold tracking-tight text-ds-navy-900 bg-transparent border-b-2 border-ds-orange-600 outline-none"
       />
       <button onClick={commit} aria-label="Guardar nombre">
-        <Check className="w-5 h-5 text-safety" />
+        <Check className="w-5 h-5 text-ds-orange-600" />
       </button>
     </div>
   );

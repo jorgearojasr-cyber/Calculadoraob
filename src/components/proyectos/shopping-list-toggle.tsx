@@ -22,14 +22,14 @@ export function ShoppingListToggle({ id, initialValue }: { id: string; initialVa
     <button
       onClick={handleClick}
       disabled={isPending}
-      className={`inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-full border transition-colors disabled:opacity-50 ${
+      className={`max-w-full inline-flex items-center gap-1.5 font-body text-xs font-semibold px-3 py-1.5 rounded-full border transition-colors disabled:opacity-50 ${
         included
-          ? "bg-safety-tint border-safety-border text-safety"
-          : "bg-white border-border text-ink-muted hover:border-ink"
+          ? "bg-ds-orange-100 border-ds-orange-600/30 text-ds-orange-700"
+          : "bg-white border-ds-border text-ds-text-secondary hover:border-ds-navy-900/40"
       }`}
     >
-      {included ? <Check className="w-3.5 h-3.5" /> : <ShoppingCart className="w-3.5 h-3.5" />}
-      {included ? "Quitar de la lista" : "Incluir en lista de compras"}
+      {included ? <Check className="w-3.5 h-3.5 shrink-0" /> : <ShoppingCart className="w-3.5 h-3.5 shrink-0" />}
+      <span className="truncate min-w-0">{included ? "Quitar de la lista" : "Lista de compras"}</span>
     </button>
   );
 }

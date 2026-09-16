@@ -16,7 +16,7 @@ export function ProgressEditor({ id, initialValue }: { id: string; initialValue:
   };
 
   return (
-    <div className="flex items-center gap-2 w-full" onClick={(e) => e.stopPropagation()}>
+    <div className="flex items-center gap-3 w-full" onClick={(e) => e.stopPropagation()}>
       <input
         type="range"
         min={0}
@@ -25,12 +25,12 @@ export function ProgressEditor({ id, initialValue }: { id: string; initialValue:
         value={value}
         onChange={(e) => commit(Number(e.target.value))}
         disabled={isPending}
-        className="h-1.5 flex-1 rounded-full appearance-none cursor-pointer accent-safety"
+        className="h-1.5 flex-1 rounded-full appearance-none cursor-pointer accent-ds-orange-600"
         style={{
-          background: `linear-gradient(to right, #002152 ${value}%, #E4E1D8 ${value}%)`,
+          background: `linear-gradient(to right, oklch(64% .19 42) ${value}%, oklch(90% .008 255) ${value}%)`,
         }}
       />
-      <span className="font-mono text-xs text-ink-muted w-9 text-right flex-shrink-0">{value}%</span>
+      <span className="font-body text-xs font-semibold text-ds-text-secondary w-9 text-right flex-shrink-0">{value}%</span>
     </div>
   );
 }

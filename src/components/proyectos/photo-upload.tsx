@@ -50,11 +50,11 @@ export function PhotoUpload({
 
   if (photos.length >= MAX_PHOTOS_PER_PROJECT) {
     return (
-      <div className="mt-8 rounded-2xl p-5 bg-white border border-border">
-        <p className="text-xs font-mono uppercase tracking-wider text-ink-muted mb-3">Fotos de tu obra</p>
-        <ul className="grid gap-1.5 text-sm">
+      <div className="mt-8 rounded-ds-card p-5 bg-white border border-ds-border">
+        <p className="font-body text-xs font-semibold uppercase tracking-wider text-ds-text-tertiary mb-3">Fotos de tu obra</p>
+        <ul className="grid gap-1.5 font-body text-sm">
           {photos.map((photo) => (
-            <li key={photo.id} className="text-ink-muted">
+            <li key={photo.id} className="text-ds-text-secondary">
               {STATUS_LABELS[photo.status]}
             </li>
           ))}
@@ -64,17 +64,17 @@ export function PhotoUpload({
   }
 
   return (
-    <div className="mt-8 rounded-2xl p-5 bg-white border border-border">
-      <p className="text-xs font-mono uppercase tracking-wider text-ink-muted mb-2">Fotos de tu obra</p>
-      <p className="text-sm text-ink-muted mb-3">
+    <div className="mt-8 rounded-ds-card p-5 bg-white border border-ds-border">
+      <p className="font-body text-xs font-semibold uppercase tracking-wider text-ds-text-tertiary mb-2">Fotos de tu obra</p>
+      <p className="font-body text-sm text-ds-text-secondary mb-3">
         ¿Tienes una foto de tu obra terminada? Compártela para ayudar a otros a visualizar el resultado
         (opcional). Se revisa antes de mostrarse.
       </p>
 
       {photos.length > 0 && (
-        <ul className="grid gap-1.5 text-sm mb-3">
+        <ul className="grid gap-1.5 font-body text-sm mb-3">
           {photos.map((photo) => (
-            <li key={photo.id} className="text-ink-muted">
+            <li key={photo.id} className="text-ds-text-secondary">
               {STATUS_LABELS[photo.status]}
             </li>
           ))}
@@ -86,20 +86,21 @@ export function PhotoUpload({
           ref={fileInputRef}
           type="file"
           accept="image/jpeg,image/png,image/webp"
-          className="text-sm"
+          className="font-body text-sm text-ds-text-secondary"
         />
         <button
           onClick={handleUpload}
           disabled={isPending}
-          className="rounded-full px-4 py-2 text-sm font-medium text-white flex items-center gap-1.5 bg-ink disabled:opacity-50"
+          className="rounded-xl px-4 font-body text-sm font-semibold text-white flex items-center gap-1.5 bg-ds-navy-900 hover:bg-ds-navy-700 transition-colors disabled:opacity-50"
+          style={{ height: 40 }}
         >
           <Camera className="w-4 h-4" />
           {isPending ? "Subiendo…" : "Subir foto"}
         </button>
       </div>
 
-      {error && <p className="mt-2 text-sm text-safety">{error}</p>}
-      {done && !error && <p className="mt-2 text-sm text-success">¡Gracias! Tu foto quedó en revisión.</p>}
+      {error && <p className="mt-2 font-body text-sm text-danger">{error}</p>}
+      {done && !error && <p className="mt-2 font-body text-sm text-ds-success-600">¡Gracias! Tu foto quedó en revisión.</p>}
     </div>
   );
 }

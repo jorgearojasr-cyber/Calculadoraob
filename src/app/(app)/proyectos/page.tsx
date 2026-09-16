@@ -1,11 +1,22 @@
 import Link from "next/link";
-import { ShoppingCart } from "lucide-react";
+import { Calculator, MapIcon, ShoppingCart } from "lucide-react";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getCategoryIcon } from "@/lib/category-icons";
-import { ShoppingListToggle } from "@/components/proyectos/shopping-list-toggle";
+import { ProjectCard } from "@/components/proyectos/project-card";
+import { summarizePersistedResult } from "@/lib/project-summary";
+import { projectDateLabel } from "@/lib/project-date-label";
+import type { CalculateModuleResult } from "@/app/(app)/categorias/[slug]/[moduleSlug]/actions";
 
+// Design Spec v1.0, Parte 6 (Mis proyectos) — catálogo real de SavedProject
+// del usuario. Ordenado por `updatedAt` (más reciente primero): a
+// diferencia de `createdAt`, refleja también renombrar/ajustar avance/
+// marcar lista de compras — responde mejor "¿cuál fue el último que
+// trabajé?" que el orden de creación. Sin tabs (Activos/Completados/
+// Favoritos): el modelo no tiene ningún campo de estado o favorito real
+// para clasificar — se investigó explícitamente antes de esta fase, ver
+// reporte de arquitectura.
 export default async function ProyectosPage() {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) return null;
@@ -13,63 +24,94 @@ export default async function ProyectosPage() {
   const projects = await prisma.savedProject.findMany({
     where: { userId: session.user.id },
     include: { module: { include: { category: true } } },
-    orderBy: { createdAt: "desc" },
+    orderBy: { updatedAt: "desc" },
   });
 
   return (
-    <div className="max-w-3xl mx-auto px-6 py-10">
-      <div className="flex items-center justify-between mb-8">
-        <h1 className="font-display text-2xl md:text-3xl font-semibold tracking-tight">
-          Mis proyectos
-        </h1>
-        <Link
-          href="/lista-compras"
-          className="inline-flex items-center gap-1.5 text-sm font-medium text-navy hover:underline"
-        >
-          <ShoppingCart className="w-4 h-4" />
-          Lista de compras
-        </Link>
+    <div className="max-w-3xl lg:max-w-5xl mx-auto px-4 sm:px-10 pt-6 pb-16">
+      <div className="flex items-start justify-between gap-4 mb-8">
+        <div>
+          <p className="font-body text-xs font-semibold uppercase tracking-wider mb-2 text-ds-orange-600">Proyectos</p>
+          <h1 className="font-display text-2xl md:text-3xl font-extrabold tracking-tight mb-2 text-ds-navy-900">
+            Mis proyectos
+          </h1>
+          <p className="font-body text-sm text-ds-text-secondary">
+            Tus cálculos y proyectos guardados en un solo lugar.
+          </p>
+        </div>
+        {projects.length > 0 && (
+          <Link
+            href="/lista-compras"
+            className="hidden sm:inline-flex items-center gap-1.5 font-body text-sm font-semibold text-ds-navy-900 border-[1.5px] border-ds-border hover:border-ds-navy-900/40 rounded-xl px-4 shrink-0 transition-colors"
+            style={{ height: 40 }}
+          >
+            <ShoppingCart className="w-4 h-4" />
+            Lista de compras
+          </Link>
+        )}
       </div>
 
-      {projects.length === 0 && (
-        <p className="text-sm text-ink-muted">
-          Todavía no has guardado ningún proyecto. Calcula un módulo y usa &quot;Guardar como
-          proyecto&quot; en el resultado.
-        </p>
-      )}
-
-      <div className="grid gap-3">
-        {projects.map((project) => {
-          const Icon = getCategoryIcon(project.module.category.icon);
-          return (
+      {projects.length === 0 ? (
+        <div className="rounded-ds-card p-8 bg-white border border-ds-border text-center">
+          <div className="w-12 h-12 rounded-full flex items-center justify-center bg-ds-muted mx-auto mb-4">
+            <Calculator className="w-6 h-6 text-ds-text-tertiary" />
+          </div>
+          <p className="font-display text-lg font-bold text-ds-navy-900 mb-1.5">Aún no tienes proyectos guardados.</p>
+          <p className="font-body text-sm text-ds-text-secondary mb-6 max-w-sm mx-auto">
+            Cuando guardes un cálculo aparecerá aquí para que puedas volver a revisarlo.
+          </p>
+          <div className="flex flex-wrap items-center justify-center gap-3">
             <Link
-              key={project.id}
-              href={`/proyectos/${project.id}`}
-              className="block rounded-2xl p-5 bg-white border border-border hover:border-safety/40 transition-colors"
+              href="/calculadoras"
+              className="inline-flex items-center gap-2 rounded-xl px-6 font-body text-[15px] font-bold text-white bg-ds-orange-600 hover:bg-ds-orange-700 active:scale-[0.98] transition-all"
+              style={{ height: 48 }}
             >
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-navy/[0.07] flex-shrink-0">
-                  <Icon className="w-6 h-6 text-navy" />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="font-medium text-[15px] truncate">{project.name}</p>
-                  <p className="text-xs text-ink-muted mt-0.5 truncate">
-                    {project.module.category.name} · {project.module.name} ·{" "}
-                    {project.createdAt.toLocaleDateString("es-CL", {
-                      day: "2-digit",
-                      month: "short",
-                      year: "numeric",
-                    })}
-                  </p>
-                  <div className="mt-2">
-                    <ShoppingListToggle id={project.id} initialValue={project.inShoppingList} />
-                  </div>
-                </div>
-              </div>
+              <Calculator className="w-4 h-4" />
+              Explorar calculadoras
             </Link>
-          );
-        })}
-      </div>
+            <Link
+              href="/planificar"
+              className="inline-flex items-center gap-2 rounded-xl px-6 font-body text-[15px] font-semibold text-ds-navy-900 border-[1.5px] border-ds-border hover:border-ds-navy-900/40 transition-colors"
+              style={{ height: 48 }}
+            >
+              <MapIcon className="w-4 h-4" />
+              Planificar un proyecto
+            </Link>
+          </div>
+        </div>
+      ) : (
+        <>
+          <Link
+            href="/lista-compras"
+            className="sm:hidden inline-flex items-center gap-1.5 font-body text-sm font-semibold text-ds-navy-900 border-[1.5px] border-ds-border rounded-xl px-4 mb-4"
+            style={{ height: 40 }}
+          >
+            <ShoppingCart className="w-4 h-4" />
+            Lista de compras
+          </Link>
+
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {projects.map((project) => {
+              const Icon = getCategoryIcon(project.module.category.icon);
+              const result = project.result as unknown as CalculateModuleResult;
+              return (
+                <ProjectCard
+                  key={project.id}
+                  id={project.id}
+                  name={project.name}
+                  categoryName={project.module.category.name}
+                  moduleName={project.module.name}
+                  dateLabel={projectDateLabel(project.createdAt, project.updatedAt)}
+                  resultSummary={summarizePersistedResult(result?.results)}
+                  progressPercent={project.progressPercent}
+                  inShoppingList={project.inShoppingList}
+                  Icon={Icon}
+                />
+              );
+            })}
+          </div>
+        </>
+      )}
     </div>
   );
 }
