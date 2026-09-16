@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Wrench, FolderKanban, ShoppingCart, Images, User, LogIn, ClipboardCheck } from "lucide-react";
+import { Home, Wrench, FolderKanban, ShoppingCart, Images, User, ClipboardCheck } from "lucide-react";
 import { SignOutButton } from "@/components/auth/sign-out-button";
 import { AssistantWidget, type AssistantGroup } from "@/components/assistant/assistant-widget";
 
@@ -65,47 +65,37 @@ export function BottomNav({ user, assistantGroups }: { user: NavUser; assistantG
         />
       )}
 
-      {profileOpen && (
+      {/* Mejora UX/Auth flow (2026-09-16): este popover ahora solo puede
+          abrirse con sesión activa (ver botón "Perfil" más abajo) — se
+          quita la rama `!user` que quedó inalcanzable. */}
+      {profileOpen && user && (
         <div className="lg:hidden fixed bottom-20 right-4 z-50 rounded-2xl bg-white border border-ds-border shadow-ds-modal p-3 min-w-[180px]">
-          {user ? (
-            <>
-              <p className="text-xs text-ink-muted px-2 pb-2 truncate">{user.name ?? user.email}</p>
-              <Link
-                href="/lista-compras"
-                onClick={() => setProfileOpen(false)}
-                className="flex items-center gap-2 text-sm font-medium px-2 py-2 rounded-lg hover:bg-concrete transition-colors"
-              >
-                <ShoppingCart className="w-4 h-4" />
-                Lista de compras
-              </Link>
-              <Link
-                href="/galeria"
-                onClick={() => setProfileOpen(false)}
-                className="flex items-center gap-2 text-sm font-medium px-2 py-2 rounded-lg hover:bg-concrete transition-colors"
-              >
-                <Images className="w-4 h-4" />
-                Galería de proyectos
-              </Link>
-              <Link
-                href="/inspecciones"
-                onClick={() => setProfileOpen(false)}
-                className="flex items-center gap-2 text-sm font-medium px-2 py-2 rounded-lg hover:bg-concrete transition-colors"
-              >
-                <ClipboardCheck className="w-4 h-4" />
-                Inspecciones
-              </Link>
-              <SignOutButton className="w-full text-left text-sm font-medium px-2 py-2 rounded-lg hover:bg-concrete transition-colors" />
-            </>
-          ) : (
-            <Link
-              href="/login"
-              onClick={() => setProfileOpen(false)}
-              className="flex items-center gap-2 text-sm font-medium px-2 py-2 rounded-lg hover:bg-concrete transition-colors"
-            >
-              <LogIn className="w-4 h-4" />
-              Ingresar
-            </Link>
-          )}
+          <p className="text-xs text-ink-muted px-2 pb-2 truncate">{user.name ?? user.email}</p>
+          <Link
+            href="/lista-compras"
+            onClick={() => setProfileOpen(false)}
+            className="flex items-center gap-2 text-sm font-medium px-2 py-2 rounded-lg hover:bg-concrete transition-colors"
+          >
+            <ShoppingCart className="w-4 h-4" />
+            Lista de compras
+          </Link>
+          <Link
+            href="/galeria"
+            onClick={() => setProfileOpen(false)}
+            className="flex items-center gap-2 text-sm font-medium px-2 py-2 rounded-lg hover:bg-concrete transition-colors"
+          >
+            <Images className="w-4 h-4" />
+            Galería de proyectos
+          </Link>
+          <Link
+            href="/inspecciones"
+            onClick={() => setProfileOpen(false)}
+            className="flex items-center gap-2 text-sm font-medium px-2 py-2 rounded-lg hover:bg-concrete transition-colors"
+          >
+            <ClipboardCheck className="w-4 h-4" />
+            Inspecciones
+          </Link>
+          <SignOutButton className="w-full text-left text-sm font-medium px-2 py-2 rounded-lg hover:bg-concrete transition-colors" />
         </div>
       )}
 
@@ -141,10 +131,23 @@ export function BottomNav({ user, assistantGroups }: { user: NavUser; assistantG
           <FolderKanban className="w-5 h-5" />
           Proyectos
         </Link>
-        <button onClick={() => setProfileOpen((v) => !v)} className={itemClass(profileOpen)}>
-          <User className="w-5 h-5" />
-          Perfil
-        </button>
+        {/* Mejora UX/Auth flow (2026-09-16, punto 7 del pedido) — "Perfil:
+            sin sesión → login". Antes, sin sesión, tocar "Perfil" abría el
+            mismo popover pero con un único ítem ("Ingresar") — un paso
+            extra sin aportar nada. Ahora, sin sesión, es un link directo a
+            /login (mismo destino final, un tap menos). Con sesión se
+            mantiene el popover existente sin cambios. */}
+        {user ? (
+          <button onClick={() => setProfileOpen((v) => !v)} className={itemClass(profileOpen)}>
+            <User className="w-5 h-5" />
+            Perfil
+          </button>
+        ) : (
+          <Link href="/login" className={itemClass(false)}>
+            <User className="w-5 h-5" />
+            Perfil
+          </Link>
+        )}
       </nav>
     </>
   );

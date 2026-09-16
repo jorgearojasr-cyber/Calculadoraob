@@ -8,32 +8,33 @@ import { Logo } from "@/components/brand/logo";
 import { SignOutButton } from "@/components/auth/sign-out-button";
 import type { NavUser } from "./user-menu";
 import { isWizardRoute } from "@/lib/is-wizard-route";
-import { getMenuFeatures } from "@/lib/product-features";
 
-// Mismos ítems que no caben en las 4 pestañas fijas del BottomNav
-// (Inicio/Proyectos/Mis proyectos/Perfil ya cubren lo demás) + los
-// botones de sesión, espejo del lado derecho del TopNav de desktop.
-//
-// Cimientos de arquitectura (2026-09-14) — antes este array tenía las
-// mismas 5 entradas hardcodeadas acá Y por separado en TopNav.tsx
-// (exactamente el problema que motivó esta fase: agregar/quitar una
-// feature obligaba a acordarse de tocar los 2 archivos). Ahora
-// Guías/Inspecciones/Biblioteca vienen de `getMenuFeatures()` — la MISMA
-// fuente que ya consume TopNav.tsx y el buscador — y solo "Calculadoras"
-// (ancla al Home, no una feature) y "Acerca de nosotros" (página estática
-// informativa, no una feature) se quedan hardcodeadas acá, igual criterio
-// que en TopNav.tsx (ver ese archivo: "mantenerlos fuera del registry
-// cuando corresponda").
-function buildDrawerLinks() {
-  const featureLinks = getMenuFeatures().map((feature) => ({ href: feature.href!, label: feature.name }));
-  return [
-    // Design Spec v1.0 — Parte 2, 2026-09-15: ruta canónica real en vez
-    // del ancla al Home (ver top-nav.tsx para la misma decisión).
-    { href: "/calculadoras", label: "Calculadoras" },
-    ...featureLinks,
-    { href: "/acerca-de", label: "Acerca de nosotros" },
-  ];
-}
+// Mejora UX/Auth flow (2026-09-16, punto 6 del pedido) — el drawer
+// pasa a mostrar exactamente el set de opciones pedido, ordenado igual en
+// ambos estados de sesión: Inicio/Herramientas primero, luego el ítem que
+// cambia según sesión (Aprender siempre presente), y el bloque de cuenta
+// separado visualmente abajo. Antes esta lista se armaba dinámicamente
+// desde `getMenuFeatures()` (Guías + Inspecciones + Biblioteca) — se
+// reemplaza por una lista fija más corta a pedido explícito del punto 6
+// ("no duplicar opciones innecesariamente"): Inspecciones ya es
+// alcanzable desde la tarjeta "Revisar tu obra" del Home y desde el popover
+// de Perfil en BottomNav; Biblioteca desde ese mismo popover. "Acerca de
+// ObraBien" se mantiene solo en el estado sin sesión (mismo criterio ya
+// usado en UserMenu de desktop: para un usuario con sesión, no compite en
+// el primer nivel).
+const LOGGED_OUT_LINKS = [
+  { href: "/", label: "Inicio" },
+  { href: "/calculadoras", label: "Herramientas" },
+  { href: "/guias", label: "Aprender" },
+  { href: "/acerca-de", label: "Acerca de ObraBien" },
+];
+
+const LOGGED_IN_LINKS = [
+  { href: "/", label: "Inicio" },
+  { href: "/calculadoras", label: "Herramientas" },
+  { href: "/proyectos", label: "Mis proyectos" },
+  { href: "/guias", label: "Aprender" },
+];
 
 const SIMPLIFIED_ROUTES = new Set(["/login", "/registro"]);
 
@@ -41,7 +42,7 @@ export function MobileTopBar({ user }: { user: NavUser }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const isSimplified = SIMPLIFIED_ROUTES.has(pathname);
-  const drawerLinks = buildDrawerLinks();
+  const drawerLinks = user ? LOGGED_IN_LINKS : LOGGED_OUT_LINKS;
 
   // Mismo criterio que TopNav (desktop): el wizard trae su propio header.
   if (isWizardRoute(pathname)) return null;
@@ -102,27 +103,25 @@ export function MobileTopBar({ user }: { user: NavUser }) {
             ))}
           </nav>
 
-          <div className="pt-4 border-t border-border">
+          {/* Mejora UX/Auth flow (2026-09-16, punto 6 del pedido) — "separar
+              visualmente 'Iniciar sesión'": además del border-t ya
+              existente, ahora es un bloque con fondo propio (bg-ds-muted)
+              en vez de mezclarse con el resto de los links del nav. */}
+          <div className="pt-4 mt-1 border-t border-ds-border">
             {user ? (
-              <div className="grid gap-2">
-                <p className="text-sm font-medium px-3 truncate">{user.name ?? user.email}</p>
-                <SignOutButton className="text-left text-sm font-medium px-3 py-2 rounded-xl hover:bg-concrete transition-colors" />
+              <div className="rounded-xl bg-ds-muted p-3 grid gap-2">
+                <p className="text-xs uppercase tracking-wide text-ds-text-tertiary font-bold px-1">Mi cuenta</p>
+                <p className="text-sm font-medium px-1 truncate text-ds-navy-900">{user.name ?? user.email}</p>
+                <SignOutButton className="text-left text-sm font-medium px-1 py-1 text-ds-text-secondary hover:text-ds-navy-900 transition-colors" />
               </div>
             ) : (
-              <div className="grid gap-2">
+              <div className="rounded-xl bg-ds-muted p-3">
                 <Link
                   href="/login"
                   onClick={() => setOpen(false)}
-                  className="rounded-full px-4 py-2.5 text-sm font-medium text-center border border-border text-ink"
+                  className="block rounded-full px-4 py-2.5 text-sm font-semibold text-center text-white bg-ds-orange-600 hover:bg-ds-orange-700 transition-colors"
                 >
                   Iniciar sesión
-                </Link>
-                <Link
-                  href="/registro"
-                  onClick={() => setOpen(false)}
-                  className="rounded-full px-4 py-2.5 text-sm font-semibold text-center text-white bg-action"
-                >
-                  Comenzar gratis
                 </Link>
               </div>
             )}

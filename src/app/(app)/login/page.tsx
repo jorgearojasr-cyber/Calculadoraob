@@ -47,11 +47,28 @@ function LoginForm() {
   };
 
   return (
-    <div className="min-h-[80vh] flex items-center justify-center px-6">
+    // Última pasada de ajustes (2026-09-16, punto 2) — dos intentos
+    // previos: min-h-[80vh] y luego min-h-[70vh], ambos centrando contra
+    // un % arbitrario del alto TOTAL del viewport, sin descontar el
+    // header fijo (56px mobile / 72px lg) ni el bottom-nav fijo (80px
+    // mobile, ya reservados como padding por MainContent). Un padding fijo
+    // (probado en la iteración intermedia) tampoco resultó: al no centrar,
+    // todo el espacio sobrante caía abajo (268px en 390×844), peor que
+    // antes. La solución: centrar contra el alto REAL disponible —
+    // 100dvh menos exactamente el header+bottom-nav que MainContent ya
+    // reserva como padding — así el espacio arriba/abajo del formulario
+    // queda proporcional en cualquier alto de viewport, sin usar un
+    // porcentaje mágico. `dvh` (no `vh`) para que el teclado móvil
+    // (viewport visual más chico) no dispare un min-height mayor al
+    // espacio real disponible.
+    <div className="flex min-h-[calc(100dvh-136px)] lg:min-h-[calc(100dvh-72px)] items-center justify-center px-6 py-6">
       <div className="w-full max-w-sm">
-        <h1 className="font-display text-2xl font-semibold tracking-tight mb-6 text-center">
+        <h1 className="font-display text-2xl font-semibold tracking-tight text-center">
           Iniciar sesión
         </h1>
+        <p className="font-body text-sm text-ink-muted text-center mt-1.5 mb-6">
+          Guarda tus proyectos, revisiones y cálculos en un solo lugar.
+        </p>
 
         <button
           onClick={() => signIn("google", { callbackUrl })}

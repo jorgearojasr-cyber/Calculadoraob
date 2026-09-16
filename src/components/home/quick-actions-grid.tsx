@@ -1,6 +1,7 @@
 import { Calculator, Map as MapIcon, ClipboardCheck, ShieldCheck, BookOpen, FolderKanban, type LucideIcon } from "lucide-react";
 import { getHomeFeatures } from "@/lib/product-features";
-import { ActionCard } from "@/components/ui/action-card";
+import { isProtectedPath } from "@/lib/protected-routes";
+import { ActionCard, type ActionCardTone } from "@/components/ui/action-card";
 
 type QuickAction = {
   id: string;
@@ -8,6 +9,9 @@ type QuickAction = {
   description: string;
   href: string;
   icon: LucideIcon;
+  // Mejora UX/Auth flow (2026-09-16, punto 3 del pedido) — tono de color
+  // suave por categoría, ver paleta y justificación en action-card.tsx.
+  tone: ActionCardTone;
 };
 
 // Home ObraBien V2 (2026-09-14, punto 4 del pedido) — grilla "¿Qué quieres
@@ -48,6 +52,7 @@ const STRUCTURAL_ACTIONS: Record<"calcular" | "planificar" | "mis-proyectos", Qu
     // sin tocar su estética.
     href: "/calculadoras",
     icon: Calculator,
+    tone: "blue",
   },
   planificar: {
     id: "planificar",
@@ -55,6 +60,7 @@ const STRUCTURAL_ACTIONS: Record<"calcular" | "planificar" | "mis-proyectos", Qu
     description: "Pasos y etapas de tu proyecto",
     href: "/planificar",
     icon: MapIcon,
+    tone: "teal",
   },
   "mis-proyectos": {
     id: "mis-proyectos",
@@ -65,6 +71,7 @@ const STRUCTURAL_ACTIONS: Record<"calcular" | "planificar" | "mis-proyectos", Qu
     // verificación nueva acá.
     href: "/proyectos",
     icon: FolderKanban,
+    tone: "orange",
   },
 };
 
@@ -72,10 +79,10 @@ const STRUCTURAL_ACTIONS: Record<"calcular" | "planificar" | "mis-proyectos", Qu
 // registro central porque `FeatureEntry.description` está pensada para
 // el buscador (una oración completa), no para una tarjeta de 2-3
 // palabras como pide el punto 6 del pedido ("microdescripción").
-const HOME_FEATURE_CARD_COPY: Record<string, { label: string; description: string; icon: LucideIcon }> = {
-  inspecciones: { label: "Revisar tu obra", description: "Inspecciones", icon: ClipboardCheck },
-  regularizacion: { label: "Regularizar", description: "Ley del Mono", icon: ShieldCheck },
-  guias: { label: "Aprender", description: "Guías y consejos", icon: BookOpen },
+const HOME_FEATURE_CARD_COPY: Record<string, { label: string; description: string; icon: LucideIcon; tone: ActionCardTone }> = {
+  inspecciones: { label: "Revisar tu obra", description: "Inspecciones", icon: ClipboardCheck, tone: "amber" },
+  regularizacion: { label: "Regularizar", description: "Ley del Mono", icon: ShieldCheck, tone: "violet" },
+  guias: { label: "Aprender", description: "Guías y consejos", icon: BookOpen, tone: "sky" },
 };
 
 export function QuickActionsGrid() {
@@ -85,7 +92,7 @@ export function QuickActionsGrid() {
     .filter((f) => HOME_FEATURE_CARD_COPY[f.id] && f.href)
     .map((f) => {
       const copy = HOME_FEATURE_CARD_COPY[f.id];
-      return { id: f.id, label: copy.label, description: copy.description, href: f.href as string, icon: copy.icon };
+      return { id: f.id, label: copy.label, description: copy.description, href: f.href as string, icon: copy.icon, tone: copy.tone };
     });
 
   const byId = new Map(featureActions.map((a) => [a.id, a]));
@@ -115,7 +122,19 @@ export function QuickActionsGrid() {
           todavía) se mantiene 3 columnas × 2 filas. */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
         {actions.map((action) => (
-          <ActionCard key={action.id} href={action.href} label={action.label} description={action.description} icon={action.icon} />
+          <ActionCard
+            key={action.id}
+            href={action.href}
+            label={action.label}
+            description={action.description}
+            icon={action.icon}
+            tone={action.tone}
+            // Mejora UX/Auth flow (2026-09-16, punto 1 del pedido) — fuente
+            // única de verdad: la misma función que usa middleware.ts para
+            // proteger la ruta decide acá si se muestra el candado, en vez
+            // de mantener un flag duplicado por tarjeta.
+            requiresAuth={isProtectedPath(action.href)}
+          />
         ))}
       </div>
     </section>
