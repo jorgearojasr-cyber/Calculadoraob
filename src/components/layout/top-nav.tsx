@@ -85,6 +85,12 @@ export function TopNav({ isAdmin, user }: { isAdmin: boolean; user: NavUser }) {
 
       {!isSimplified && (
         <>
+          {/* Auditoría de accesibilidad (2026-09-16) — este nav no tenía
+              NINGÚN estado focus-visible (solo hover), y el color activo
+              (ds-orange-600 como texto 14px) medía 3.62:1, por debajo del
+              mínimo AA de texto normal (4.5:1). Se agrega focus-visible en
+              los 3 grupos de links/botones y se sube el texto activo a
+              ds-orange-700 (4.65:1) — mismo naranja, un paso más oscuro. */}
           <nav className="flex items-center gap-[22px] ml-8 whitespace-nowrap">
             {navItems.map((item) => {
               const active = item.match(pathname);
@@ -92,8 +98,9 @@ export function TopNav({ isAdmin, user }: { isAdmin: boolean; user: NavUser }) {
                 <Link
                   key={item.href}
                   href={item.href}
-                  className={`pb-[3px] font-body text-[14px] font-semibold border-b-2 transition-colors whitespace-nowrap ${
-                    active ? "border-ds-orange-600 text-ds-orange-600" : "border-transparent text-ds-text-secondary hover:text-ds-navy-900"
+                  aria-current={active ? "page" : undefined}
+                  className={`pb-[3px] font-body text-[14px] font-semibold border-b-2 transition-colors whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ds-orange-600 focus-visible:ring-offset-2 rounded-sm ${
+                    active ? "border-ds-orange-700 text-ds-orange-700" : "border-transparent text-ds-text-secondary hover:text-ds-navy-900"
                   }`}
                 >
                   {item.label}
@@ -113,14 +120,18 @@ export function TopNav({ isAdmin, user }: { isAdmin: boolean; user: NavUser }) {
               <>
                 <Link
                   href="/login"
-                  className="rounded-ds-input px-4 flex items-center font-body text-[14px] font-semibold text-ds-navy-900 border border-ds-border hover:border-ds-navy-700 transition-colors whitespace-nowrap"
+                  className="rounded-ds-input px-4 flex items-center font-body text-[14px] font-semibold text-ds-navy-900 border border-ds-border hover:border-ds-navy-700 transition-colors whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ds-orange-600 focus-visible:ring-offset-2"
                   style={{ height: 34 }}
                 >
                   Iniciar sesión
                 </Link>
+                {/* "Comenzar gratis": mismo hallazgo que el botón "Iniciar
+                    sesión" del drawer móvil — texto blanco sobre
+                    ds-orange-600 (14px bold) medía 3.62:1, no cumple AA.
+                    Reposo en ds-orange-700 (4.65:1), hover aclara a 600. */}
                 <Link
                   href="/registro"
-                  className="rounded-ds-input px-4 flex items-center font-body text-[14px] font-bold text-white bg-ds-orange-600 hover:bg-ds-orange-700 transition-colors whitespace-nowrap"
+                  className="rounded-ds-input px-4 flex items-center font-body text-[14px] font-bold text-white bg-ds-orange-700 hover:bg-ds-orange-600 transition-colors whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ds-orange-600 focus-visible:ring-offset-2"
                   style={{ height: 34 }}
                 >
                   Comenzar gratis

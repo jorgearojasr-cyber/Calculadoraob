@@ -47,12 +47,18 @@ export function BottomNav({ user, assistantGroups }: { user: NavUser; assistantG
   const [profileOpen, setProfileOpen] = useState(false);
 
   // Polish visual (2026-09-14) + Design Spec v1.0 (2026-09-15, punto 8 del
-  // pedido): barra clara (bg-white), activo en ds-orange-600 bold, inactivo
+  // pedido): barra clara (bg-white), activo en ds-orange bold, inactivo
   // en ds-text-tertiary, íconos 20px, labels 10px. Mismos hrefs y
   // comportamiento, cero cambios de arquitectura ni de rutas.
+  //
+  // Auditoría de accesibilidad (2026-09-16) — el activo usaba
+  // text-ds-orange-600 (3.62:1 sobre blanco), por debajo del mínimo AA de
+  // texto normal a 10px (4.5:1; 10px bold no califica como "texto grande"
+  // WCAG). Se sube a ds-orange-700 (4.65:1, cumple) — mismo naranja
+  // corporativo, sin cambiar la paleta.
   const itemClass = (active: boolean) =>
     `flex flex-col items-center justify-center gap-1 flex-1 text-[10px] font-bold transition-colors ${
-      active ? "text-ds-orange-600" : "text-ds-text-tertiary font-semibold"
+      active ? "text-ds-orange-700" : "text-ds-text-tertiary font-semibold"
     }`;
 
   return (
@@ -69,33 +75,40 @@ export function BottomNav({ user, assistantGroups }: { user: NavUser; assistantG
           abrirse con sesión activa (ver botón "Perfil" más abajo) — se
           quita la rama `!user` que quedó inalcanzable. */}
       {profileOpen && user && (
-        <div className="lg:hidden fixed bottom-20 right-4 z-50 rounded-2xl bg-white border border-ds-border shadow-ds-modal p-3 min-w-[180px]">
-          <p className="text-xs text-ink-muted px-2 pb-2 truncate">{user.name ?? user.email}</p>
+        <div
+          id="bottom-nav-profile-menu"
+          role="menu"
+          className="lg:hidden fixed bottom-20 right-4 z-50 rounded-2xl bg-white border border-ds-border shadow-ds-modal p-3 min-w-[180px]"
+        >
+          <p className="text-xs text-ds-text-secondary px-2 pb-2 truncate">{user.name ?? user.email}</p>
           <Link
             href="/lista-compras"
             onClick={() => setProfileOpen(false)}
-            className="flex items-center gap-2 text-sm font-medium px-2 py-2 rounded-lg hover:bg-concrete transition-colors"
+            role="menuitem"
+            className="flex items-center gap-2 text-sm font-medium px-2 py-2 rounded-lg text-ds-navy-900 hover:bg-ds-muted transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ds-orange-600"
           >
-            <ShoppingCart className="w-4 h-4" />
+            <ShoppingCart className="w-4 h-4" aria-hidden="true" />
             Lista de compras
           </Link>
           <Link
             href="/galeria"
             onClick={() => setProfileOpen(false)}
-            className="flex items-center gap-2 text-sm font-medium px-2 py-2 rounded-lg hover:bg-concrete transition-colors"
+            role="menuitem"
+            className="flex items-center gap-2 text-sm font-medium px-2 py-2 rounded-lg text-ds-navy-900 hover:bg-ds-muted transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ds-orange-600"
           >
-            <Images className="w-4 h-4" />
+            <Images className="w-4 h-4" aria-hidden="true" />
             Galería de proyectos
           </Link>
           <Link
             href="/inspecciones"
             onClick={() => setProfileOpen(false)}
-            className="flex items-center gap-2 text-sm font-medium px-2 py-2 rounded-lg hover:bg-concrete transition-colors"
+            role="menuitem"
+            className="flex items-center gap-2 text-sm font-medium px-2 py-2 rounded-lg text-ds-navy-900 hover:bg-ds-muted transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ds-orange-600"
           >
-            <ClipboardCheck className="w-4 h-4" />
+            <ClipboardCheck className="w-4 h-4" aria-hidden="true" />
             Inspecciones
           </Link>
-          <SignOutButton className="w-full text-left text-sm font-medium px-2 py-2 rounded-lg hover:bg-concrete transition-colors" />
+          <SignOutButton className="w-full text-left text-sm font-medium px-2 py-2 rounded-lg text-ds-navy-900 hover:bg-ds-muted transition-colors" />
         </div>
       )}
 
@@ -107,12 +120,16 @@ export function BottomNav({ user, assistantGroups }: { user: NavUser; assistantG
         className="lg:hidden fixed bottom-0 inset-x-0 z-30 bg-white border-t border-ds-border flex items-stretch px-2"
         style={{ height: 64, paddingBottom: "env(safe-area-inset-bottom)", boxShadow: "0 -6px 20px rgba(16,32,58,.06)" }}
       >
-        <Link href="/" className={itemClass(pathname === "/")}>
-          <Home className="w-5 h-5" />
+        <Link href="/" aria-current={pathname === "/" ? "page" : undefined} className={itemClass(pathname === "/")}>
+          <Home className="w-5 h-5" aria-hidden="true" />
           Inicio
         </Link>
-        <Link href="/calculadoras" className={itemClass(pathname.startsWith("/calculadoras"))}>
-          <Wrench className="w-5 h-5" />
+        <Link
+          href="/calculadoras"
+          aria-current={pathname.startsWith("/calculadoras") ? "page" : undefined}
+          className={itemClass(pathname.startsWith("/calculadoras"))}
+        >
+          <Wrench className="w-5 h-5" aria-hidden="true" />
           Herramientas
         </Link>
 
@@ -127,8 +144,12 @@ export function BottomNav({ user, assistantGroups }: { user: NavUser; assistantG
           <AssistantWidget groups={assistantGroups} variant="fab" />
         </div>
 
-        <Link href="/proyectos" className={itemClass(pathname.startsWith("/proyectos"))}>
-          <FolderKanban className="w-5 h-5" />
+        <Link
+          href="/proyectos"
+          aria-current={pathname.startsWith("/proyectos") ? "page" : undefined}
+          className={itemClass(pathname.startsWith("/proyectos"))}
+        >
+          <FolderKanban className="w-5 h-5" aria-hidden="true" />
           Proyectos
         </Link>
         {/* Mejora UX/Auth flow (2026-09-16, punto 7 del pedido) — "Perfil:
@@ -136,15 +157,24 @@ export function BottomNav({ user, assistantGroups }: { user: NavUser; assistantG
             mismo popover pero con un único ítem ("Ingresar") — un paso
             extra sin aportar nada. Ahora, sin sesión, es un link directo a
             /login (mismo destino final, un tap menos). Con sesión se
-            mantiene el popover existente sin cambios. */}
+            mantiene el popover existente sin cambios.
+            Auditoría de accesibilidad (2026-09-16) — aria-expanded/
+            aria-haspopup/aria-controls agregados al botón que abre el
+            popover (antes no comunicaba su estado ni lo que controla). */}
         {user ? (
-          <button onClick={() => setProfileOpen((v) => !v)} className={itemClass(profileOpen)}>
-            <User className="w-5 h-5" />
+          <button
+            onClick={() => setProfileOpen((v) => !v)}
+            aria-expanded={profileOpen}
+            aria-haspopup="menu"
+            aria-controls="bottom-nav-profile-menu"
+            className={itemClass(profileOpen)}
+          >
+            <User className="w-5 h-5" aria-hidden="true" />
             Perfil
           </button>
         ) : (
           <Link href="/login" className={itemClass(false)}>
-            <User className="w-5 h-5" />
+            <User className="w-5 h-5" aria-hidden="true" />
             Perfil
           </Link>
         )}

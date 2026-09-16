@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useState } from "react";
+import { Suspense, useId, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { signIn } from "next-auth/react";
@@ -18,12 +18,17 @@ function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get("callbackUrl") || "/";
+  const errorId = useId();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
+  // Lógica de autenticación SIN CAMBIOS (fase auth-design-system-v1,
+  // 2026-09-16) — esta fase es visual + accesibilidad, no toca callbackUrl,
+  // signIn, ni el redirect posterior. Ver protected-routes.ts/middleware.ts
+  // para la protección real, ya validada en la fase anterior.
   const handleCredentialsLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
@@ -47,79 +52,103 @@ function LoginForm() {
   };
 
   return (
-    // Última pasada de ajustes (2026-09-16, punto 2) — dos intentos
-    // previos: min-h-[80vh] y luego min-h-[70vh], ambos centrando contra
-    // un % arbitrario del alto TOTAL del viewport, sin descontar el
-    // header fijo (56px mobile / 72px lg) ni el bottom-nav fijo (80px
-    // mobile, ya reservados como padding por MainContent). Un padding fijo
-    // (probado en la iteración intermedia) tampoco resultó: al no centrar,
-    // todo el espacio sobrante caía abajo (268px en 390×844), peor que
-    // antes. La solución: centrar contra el alto REAL disponible —
-    // 100dvh menos exactamente el header+bottom-nav que MainContent ya
-    // reserva como padding — así el espacio arriba/abajo del formulario
-    // queda proporcional en cualquier alto de viewport, sin usar un
-    // porcentaje mágico. `dvh` (no `vh`) para que el teclado móvil
-    // (viewport visual más chico) no dispare un min-height mayor al
-    // espacio real disponible.
     <div className="flex min-h-[calc(100dvh-136px)] lg:min-h-[calc(100dvh-72px)] items-center justify-center px-6 py-6">
       <div className="w-full max-w-sm">
-        <h1 className="font-display text-2xl font-semibold tracking-tight text-center">
-          Iniciar sesión
-        </h1>
-        <p className="font-body text-sm text-ink-muted text-center mt-1.5 mb-6">
-          Guarda tus proyectos, revisiones y cálculos en un solo lugar.
-        </p>
+        {/* Migración a ds-* (2026-09-16, punto 3 del pedido) — mismo
+            lenguaje visual que las ActionCard del Home: contenedor blanco,
+            borde ds-border, radio ds-card-lg, sombra ds-card-rest. Antes
+            el formulario flotaba directamente sobre el fondo de página sin
+            ningún contenedor propio — el card lo alinea con el resto del
+            sistema (Home/nav) sin cambiar ningún contenido. */}
+        <div className="bg-white border border-ds-border rounded-ds-card-lg shadow-ds-card-rest p-6 sm:p-8">
+          <h1 className="font-display text-2xl font-extrabold tracking-tight text-center text-ds-navy-900">
+            Iniciar sesión
+          </h1>
+          <p className="font-body text-sm text-ds-text-secondary text-center mt-1.5 mb-6">
+            Guarda tus proyectos, revisiones y cálculos en un solo lugar.
+          </p>
 
-        <button
-          onClick={() => signIn("google", { callbackUrl })}
-          className="w-full rounded-full px-6 py-3 text-sm font-semibold border border-ink flex items-center justify-center gap-2 bg-white"
-        >
-          <LogIn className="w-4 h-4" />
-          Continuar con Google
-        </button>
-
-        <div className="flex items-center gap-3 my-6">
-          <div className="h-px flex-1 bg-border" />
-          <span className="text-xs text-ink-muted">o con tu email</span>
-          <div className="h-px flex-1 bg-border" />
-        </div>
-
-        <form onSubmit={handleCredentialsLogin} className="grid gap-3">
-          <input
-            type="email"
-            required
-            placeholder="Email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className="rounded-xl px-4 py-3 text-sm bg-white border border-border outline-none focus:border-ink"
-          />
-          <input
-            type="password"
-            required
-            placeholder="Contraseña"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="rounded-xl px-4 py-3 text-sm bg-white border border-border outline-none focus:border-ink"
-          />
-          {error && <p className="text-sm text-danger">{error}</p>}
           <button
-            type="submit"
-            disabled={isLoading}
-            className="rounded-full px-6 py-3 text-sm font-semibold text-white bg-action disabled:opacity-50"
+            onClick={() => signIn("google", { callbackUrl })}
+            className="w-full rounded-full px-6 py-3 text-sm font-semibold border border-ds-border flex items-center justify-center gap-2 bg-white text-ds-navy-900 hover:bg-ds-muted transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ds-orange-600 focus-visible:ring-offset-2"
           >
-            {isLoading ? "Ingresando…" : "Ingresar"}
+            <LogIn className="w-4 h-4" aria-hidden="true" />
+            Continuar con Google
           </button>
-        </form>
 
-        <p className="mt-6 text-sm text-ink-muted text-center">
-          ¿No tienes cuenta?{" "}
-          <Link
-            href={`/registro?callbackUrl=${encodeURIComponent(callbackUrl)}`}
-            className="text-ink font-medium underline underline-offset-4"
-          >
-            Regístrate
-          </Link>
-        </p>
+          <div className="flex items-center gap-3 my-6">
+            <div className="h-px flex-1 bg-ds-border" />
+            <span className="text-xs text-ds-text-tertiary">o con tu email</span>
+            <div className="h-px flex-1 bg-ds-border" />
+          </div>
+
+          <form onSubmit={handleCredentialsLogin} className="grid gap-3" noValidate>
+            {/* Accesibilidad (2026-09-16, punto 5/9 del pedido) — labels
+                reales asociados (antes solo había placeholder, que
+                desaparece al escribir y no es un sustituto válido de
+                label). sr-only: mismo aspecto visual exacto que antes. */}
+            <div>
+              <label htmlFor={`${errorId}-email`} className="sr-only">
+                Email
+              </label>
+              <input
+                id={`${errorId}-email`}
+                type="email"
+                required
+                placeholder="Email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                aria-invalid={error ? "true" : undefined}
+                aria-describedby={error ? `${errorId}-error` : undefined}
+                className="w-full rounded-ds-input px-4 py-3 text-sm bg-white border border-ds-border text-ds-navy-900 placeholder:text-ds-text-tertiary outline-none focus:border-ds-orange-600 focus:ring-2 focus:ring-ds-orange-600/30 transition-colors"
+              />
+            </div>
+            <div>
+              <label htmlFor={`${errorId}-password`} className="sr-only">
+                Contraseña
+              </label>
+              <input
+                id={`${errorId}-password`}
+                type="password"
+                required
+                placeholder="Contraseña"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                aria-invalid={error ? "true" : undefined}
+                aria-describedby={error ? `${errorId}-error` : undefined}
+                className="w-full rounded-ds-input px-4 py-3 text-sm bg-white border border-ds-border text-ds-navy-900 placeholder:text-ds-text-tertiary outline-none focus:border-ds-orange-600 focus:ring-2 focus:ring-ds-orange-600/30 transition-colors"
+              />
+            </div>
+            {/* role="alert" (2026-09-16, punto 7/9 del pedido) — antes el
+                error solo se comunicaba visualmente (text-danger); un
+                lector de pantalla no se enteraba de que apareció. role="alert"
+                lo anuncia automáticamente sin necesitar aria-live explícito.
+                No se inventa un mensaje nuevo, es el mismo texto funcional
+                de siempre. */}
+            {error && (
+              <p id={`${errorId}-error`} role="alert" className="text-sm text-danger font-medium">
+                {error}
+              </p>
+            )}
+            <button
+              type="submit"
+              disabled={isLoading}
+              className="rounded-full px-6 py-3 text-sm font-semibold text-white bg-ds-orange-700 hover:bg-ds-orange-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ds-orange-600 focus-visible:ring-offset-2"
+            >
+              {isLoading ? "Ingresando…" : "Ingresar"}
+            </button>
+          </form>
+
+          <p className="mt-6 text-sm text-ds-text-secondary text-center">
+            ¿No tienes cuenta?{" "}
+            <Link
+              href={`/registro?callbackUrl=${encodeURIComponent(callbackUrl)}`}
+              className="text-ds-navy-900 font-semibold underline underline-offset-4 hover:text-ds-orange-700 transition-colors"
+            >
+              Regístrate
+            </Link>
+          </p>
+        </div>
       </div>
     </div>
   );

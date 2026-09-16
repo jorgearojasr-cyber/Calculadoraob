@@ -61,9 +61,15 @@ export function MobileTopBar({ user }: { user: NavUser }) {
           <button
             onClick={() => setOpen(true)}
             aria-label="Abrir menú"
-            className="p-2 -mr-2 text-ds-navy-900 rounded-lg hover:bg-ds-muted transition-colors"
+            // Auditoría de accesibilidad (2026-09-16, punto 9 del pedido) —
+            // el botón controla la visibilidad del drawer pero no lo
+            // comunicaba: aria-expanded/aria-controls agregados, sin cambiar
+            // comportamiento ni apariencia.
+            aria-expanded={open}
+            aria-controls="mobile-menu-drawer"
+            className="p-2 -mr-2 text-ds-navy-900 rounded-lg hover:bg-ds-muted transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ds-orange-600 focus-visible:ring-offset-2"
           >
-            <Menu className="w-5 h-5" />
+            <Menu className="w-5 h-5" aria-hidden="true" />
           </button>
         )}
       </header>
@@ -78,6 +84,7 @@ export function MobileTopBar({ user }: { user: NavUser }) {
 
       {open && (
         <div
+          id="mobile-menu-drawer"
           role="dialog"
           aria-modal="true"
           aria-label="Menú"
@@ -85,8 +92,12 @@ export function MobileTopBar({ user }: { user: NavUser }) {
         >
           <div className="flex items-center justify-between mb-6">
             <Logo />
-            <button onClick={() => setOpen(false)} aria-label="Cerrar" className="p-1 text-ink-faint hover:text-ink">
-              <X className="w-5 h-5" />
+            <button
+              onClick={() => setOpen(false)}
+              aria-label="Cerrar"
+              className="p-1 text-ds-text-secondary hover:text-ds-navy-900 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ds-orange-600 focus-visible:ring-offset-2 rounded"
+            >
+              <X className="w-5 h-5" aria-hidden="true" />
             </button>
           </div>
 
@@ -96,7 +107,8 @@ export function MobileTopBar({ user }: { user: NavUser }) {
                 key={item.href}
                 href={item.href}
                 onClick={() => setOpen(false)}
-                className="rounded-xl px-3 py-2.5 text-sm font-medium text-ink hover:bg-concrete transition-colors"
+                aria-current={pathname === item.href ? "page" : undefined}
+                className="rounded-xl px-3 py-2.5 text-sm font-medium text-ds-navy-900 hover:bg-ds-muted transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ds-orange-600 focus-visible:ring-offset-2"
               >
                 {item.label}
               </Link>
@@ -116,10 +128,17 @@ export function MobileTopBar({ user }: { user: NavUser }) {
               </div>
             ) : (
               <div className="rounded-xl bg-ds-muted p-3">
+                {/* Auditoría de accesibilidad (2026-09-16, punto 10 del
+                    pedido) — texto blanco sobre bg-ds-orange-600 mide
+                    3.62:1, por debajo del mínimo AA de texto normal (4.5:1)
+                    a este tamaño (14px semibold no califica como "texto
+                    grande" WCAG). bg-ds-orange-700 en reposo mide 4.65:1
+                    (cumple); hover aclara a orange-600 en vez de oscurecer
+                    — mismo naranja corporativo, un paso de la escala. */}
                 <Link
                   href="/login"
                   onClick={() => setOpen(false)}
-                  className="block rounded-full px-4 py-2.5 text-sm font-semibold text-center text-white bg-ds-orange-600 hover:bg-ds-orange-700 transition-colors"
+                  className="block rounded-full px-4 py-2.5 text-sm font-semibold text-center text-white bg-ds-orange-700 hover:bg-ds-orange-600 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ds-orange-600 focus-visible:ring-offset-2"
                 >
                   Iniciar sesión
                 </Link>
